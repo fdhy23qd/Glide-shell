@@ -246,6 +246,7 @@ elif ask "Добавить клавиши Glide Shell в niri (Mod+D — при�
         taken "Super\+Alt\+L" || echo '    Super+Alt+L hotkey-overlay-title="Заблокировать экран" { spawn "qs" "-c" "glide-shell" "ipc" "call" "lock" "lock"; }'
         taken "XF86MonBrightnessUp" || echo '    XF86MonBrightnessUp allow-when-locked=true { spawn-sh "sh ~/.config/quickshell/glide-shell/tools/glide-brightness.sh +10"; }'
         taken "XF86MonBrightnessDown" || echo '    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "sh ~/.config/quickshell/glide-shell/tools/glide-brightness.sh -10"; }'
+        taken "XF86Tools" || echo '    XF86Tools hotkey-overlay-title="Центр управления (короткое нажатие Super через keyd)" { spawn "qs" "-c" "glide-shell" "ipc" "call" "panel" "category" "control"; }'
         taken "Mod\+Shift\+Escape" || echo '    Mod+Shift+Escape hotkey-overlay-title="Перезапустить Glide Shell" { spawn "systemctl" "--user" "restart" "glide-shell.service"; }'
         echo "}"
     } > "$glide_kdl"
@@ -258,6 +259,13 @@ elif ask "Добавить клавиши Glide Shell в niri (Mod+D — при�
         cp "$niri_cfg.before-glide-keys-$stamp" "$niri_cfg"; rm -f "$glide_kdl"
         warn "niri не принял конфиг с клавишами — вернул как было. Подробности: niri validate"
     fi
+fi
+
+# ---------------------------------------------------------------- 5б. короткое нажатие Super
+if [ "$yes" = 0 ] && ! systemctl is-active --quiet keyd 2>/dev/null && [ -f "$glide_kdl" ] \
+   && ask "Открывать центр управления коротким нажатием Super? (ставит keyd — нужен пароль sudo; удержание Super — как обычно)"; then
+    sudo sh "$src/extras/keyd/install.sh" && ok "короткое нажатие Super — центр управления (выключить: sudo sh extras/keyd/install.sh --remove)" \
+        || warn "keyd не настроен — можно позже: sudo sh extras/keyd/install.sh"
 fi
 
 # ---------------------------------------------------------------- 6. запуск вместе с niri

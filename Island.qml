@@ -29,12 +29,7 @@ PanelWindow {
         if (!p.stacked) return p.inlineAct && x >= p.inlineX ? p.activity : "idle"
         var t = 32
         if (y < t) return "idle"
-        if (y < (t += p.rowOsdH)) return "osd"
-        if (y < (t += p.rowFlashH)) return "flash"
-        if (y < (t += p.rowNotifH)) return "notif"
-        if (y < (t += p.rowMusicH)) return "music"
-        if (y < (t += p.rowTimerH)) return "timer"
-        if (y < (t += p.rowRecH)) return "rec"
+        for (var k of Prefs.islandOrder) if (y < (t += p.rowH(k))) return k   // строки — в порядке из настроек
         return "idle"
     }
 
@@ -360,7 +355,7 @@ PanelWindow {
         // OSD: громкость, микрофон, яркость, профиль питания, выход звука
         Slot {
             row: iw.p.stacked; inlineX: iw.p.inlineAct ? iw.p.inlineX : 0
-            rowY: 32
+            rowY: iw.p.rowY("osd")
             rowH: iw.p.rowOsdH
         Layer {
             on: iw.shows("osd") && iw.live
@@ -408,7 +403,7 @@ PanelWindow {
 
         Slot {
             row: iw.p.stacked; inlineX: iw.p.inlineAct ? iw.p.inlineX : 0
-            rowY: 32 + iw.p.rowOsdH + iw.p.rowFlashH + iw.p.rowNotifH
+            rowY: iw.p.rowY("music")
             rowH: iw.p.rowMusicH
         // музыка: обложка, название, эквалайзер
         Layer {
@@ -517,7 +512,7 @@ PanelWindow {
 
         Slot {
             row: iw.p.stacked; inlineX: iw.p.inlineAct ? iw.p.inlineX : 0
-            rowY: 32 + iw.p.rowOsdH + iw.p.rowFlashH + iw.p.rowNotifH + iw.p.rowMusicH
+            rowY: iw.p.rowY("timer")
             rowH: iw.p.rowTimerH
         // таймер: кольцо и остаток
         Layer {
@@ -568,7 +563,7 @@ PanelWindow {
 
         Slot {
             row: iw.p.stacked; inlineX: iw.p.inlineAct ? iw.p.inlineX : 0
-            rowY: 32 + iw.p.rowOsdH + iw.p.rowFlashH + iw.p.rowNotifH + iw.p.rowMusicH + iw.p.rowTimerH
+            rowY: iw.p.rowY("rec")
             rowH: iw.p.rowRecH
         // запись экрана: красная точка, таймер, «стоп» (клик по строке тоже останавливает)
         Layer {
@@ -604,7 +599,7 @@ PanelWindow {
 
         Slot {
             row: iw.p.stacked; inlineX: iw.p.inlineAct ? iw.p.inlineX : 0
-            rowY: 32 + iw.p.rowOsdH
+            rowY: iw.p.rowY("flash")
             rowH: iw.p.rowFlashH
         // вспышка: подтверждение действия или сообщение через ipc
         Layer {
@@ -631,7 +626,7 @@ PanelWindow {
 
         Slot {
             row: iw.p.stacked; inlineX: iw.p.inlineAct ? iw.p.inlineX : 0
-            rowY: 32 + iw.p.rowOsdH + iw.p.rowFlashH
+            rowY: iw.p.rowY("notif")
             rowH: iw.p.rowNotifH
         // уведомление: значок и строка текста
         Layer {

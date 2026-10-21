@@ -72,6 +72,78 @@ ColumnLayout {
     }
 
     // Сегменты: [{label, value}]; выбранный подсвечивается переезжающей плашкой
+    // строка острова в настройках: ↑↓ — порядок, значок, название, выключатель (у записи экрана — всегда)
+    readonly property var islandMeta: ({
+        osd:   { glyph: 0xF057E, label: Tr.t("Громкость и яркость"), hint: Tr.t("А также микрофон, профиль питания и выход звука"), pref: "islandOsd" },
+        flash: { glyph: 0xF012C, label: Tr.t("Подтверждения действий"), hint: Tr.t("«✓ название» после действия"), pref: "islandFlash" },
+        rec:   { glyph: 0xF044A, label: Tr.t("Запись экрана"), hint: Tr.t("Всегда — чтобы идущая запись не забылась"), pref: "" },
+        notif: { glyph: 0xF009A, label: Tr.t("Уведомления"), hint: Tr.t("История и колокольчик в баре — всегда"), pref: "islandNotif" },
+        music: { glyph: 0xF075A, label: Tr.t("Музыка"), hint: Tr.t("Обложка и эквалайзер; наведение — управление"), pref: "islandMusic" },
+        timer: { glyph: 0xF13AB, label: Tr.t("Таймер"), hint: Tr.t("Кольцо и остаток; наведение — отмена"), pref: "islandTimer" }
+    })
+    function moveIsland(i, d) {
+        var o = Prefs.islandOrder.slice(), j = i + d
+        if (j < 0 || j >= o.length) return
+        var t = o[i]; o[i] = o[j]; o[j] = t
+        Prefs.set("islandOrder", o)
+    }
+    component IslandRow: Rectangle {
+        id: ir
+        property string kind
+        property int pos
+        property int count
+        readonly property var meta: sv.islandMeta[kind] || ({})
+        readonly property bool on: !meta.pref || Prefs[meta.pref]
+        implicitHeight: 48
+        radius: Theme.r(14)
+        color: Theme.surface
+        border.color: Theme.outline
+        opacity: on ? 1 : 0.72
+        Behavior on opacity { NumberAnimation { duration: Prefs.ms(160) } }
+        Column {   // порядок
+            x: 6; anchors.verticalCenter: parent.verticalCenter
+            spacing: 0
+            ArrowBtn { glyph: 0xF0143; enabled: ir.pos > 0; onClicked: sv.moveIsland(ir.pos, -1) }
+            ArrowBtn { glyph: 0xF0140; enabled: ir.pos < ir.count - 1; onClicked: sv.moveIsland(ir.pos, 1) }
+        }
+        Text {
+            x: 38; anchors.verticalCenter: parent.verticalCenter
+            text: String.fromCodePoint(ir.meta.glyph || 0xF0337)
+            color: ir.on ? Prefs.accent : Theme.textMuted
+            font.family: Prefs.iconFont; font.pixelSize: Theme.fs(18)
+            Behavior on color { ColorAnimation { duration: Prefs.ms(160) } }
+        }
+        Column {
+            x: 68; anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - 68 - 64
+            spacing: 1
+            Text { width: parent.width; text: ir.meta.label || ir.kind; color: Theme.text; font.pixelSize: Theme.fs(13); elide: Text.ElideRight }
+            Text { width: parent.width; text: ir.meta.hint || ""; color: Theme.textMuted; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+        }
+        Switch {
+            visible: !!ir.meta.pref
+            anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
+            checked: ir.on
+            onToggled: Prefs.set(ir.meta.pref, !ir.on)
+        }
+    }
+    component ArrowBtn: Rectangle {
+        id: ab
+        property int glyph
+        signal clicked()
+        width: 26; height: 20; radius: Theme.r(8)
+        color: !ab.enabled ? "transparent" : abMa.pressed ? Theme.surfacePressed : abMa.containsMouse ? Theme.surfaceHigher : "transparent"
+        opacity: ab.enabled ? 1 : Theme.disabledOpacity
+        scale: abMa.pressed && ab.enabled ? 0.88 : 1
+        Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+        Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+        Text { anchors.centerIn: parent; text: String.fromCodePoint(ab.glyph); color: Theme.textSecondary
+               font.family: Prefs.iconFont; font.pixelSize: Theme.fs(14) }
+        MouseArea { id: abMa; anchors.fill: parent; hoverEnabled: true
+                    cursorShape: ab.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: if (ab.enabled) ab.clicked() }
+    }
+
     // выбор из многих вариантов: чипы с переносом строк (ChoiceRow — пилюля на 2–5 вариантов)
     component ChipChoice: ColumnLayout {
         id: cc
@@ -560,13 +632,49 @@ ColumnLayout {
             color: Theme.textMuted; font.pixelSize: Theme.fs(11)
             wrapMode: Text.WordWrap
         }
-        ToggleRow {
-            visible: sv.island || Prefs.bar
-            label: Tr.t("Играющая музыка")
-            hint: Tr.t("Обложка и эквалайзер; наведение — кнопки управления, средняя кнопка — пауза")
-            checked: Prefs.islandMusic
-            onToggled: Prefs.set("islandMusic", !Prefs.islandMusic)
+        // ---- строка часов (верх острова) ----
+        Header { visible: Prefs.bar; text: Tr.t("СТРОКА ЧАСОВ") }
+        ChoiceRow {
+            visible: Prefs.bar
+            label: Tr.t("Дата у часов")
+            options: [{ label: Tr.t("пн, 19 октября"), value: "long" }, { label: Tr.t("пн 19.10"), value: "short" },
+                      { label: Tr.t("без даты"), value: "none" }]
+            current: Prefs.clockDate
+            onPicked: (v) => Prefs.set("clockDate", v)
         }
+        ToggleRow {
+            visible: Prefs.bar
+            icon: String.fromCodePoint(0xF051B)
+            label: Tr.t("Секунды на часах")
+            checked: Prefs.clockSeconds
+            onToggled: Prefs.set("clockSeconds", !Prefs.clockSeconds)
+        }
+        ToggleRow {
+            visible: Prefs.bar && Prefs.weather
+            icon: String.fromCodePoint(0xF050F)
+            label: Tr.t("Температура у часов")
+            checked: Prefs.islandWeather
+            onToggled: Prefs.set("islandWeather", !Prefs.islandWeather)
+        }
+        // ---- строки острова: что показывать и в каком порядке (сверху — главнее в компактном виде) ----
+        Header { visible: sv.island || Prefs.bar; text: Tr.t("СТРОКИ ОСТРОВА") }
+        Text {
+            visible: sv.island || Prefs.bar
+            Layout.fillWidth: true
+            text: Tr.t("Сверху вниз — как строки под часами; в компактном виде остров показывает первую, что сейчас есть")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11)
+            wrapMode: Text.WordWrap
+        }
+        Repeater {
+            model: (sv.island || Prefs.bar) ? Prefs.islandOrder : []
+            delegate: IslandRow {
+                required property string modelData
+                required property int index
+                Layout.fillWidth: true
+                kind: modelData; pos: index; count: Prefs.islandOrder.length
+            }
+        }
+        Item { visible: sv.island || Prefs.bar; implicitHeight: 4 }
         ChoiceRow {
             visible: (sv.island || Prefs.bar) && Prefs.islandMusic
             label: Tr.t("Эквалайзер")
@@ -589,21 +697,6 @@ ColumnLayout {
                       { label: Tr.t("30 с"), value: 30 }, { label: Tr.t("не прятать"), value: -1 }]
             current: Prefs.musicGrace
             onPicked: (v) => Prefs.set("musicGrace", v)
-        }
-        ToggleRow {
-            visible: sv.island || Prefs.bar
-            label: Tr.t("Подтверждения действий")
-            hint: Tr.t("После запуска действия остров коротко показывает «✓ название»")
-            checked: Prefs.islandFlash
-            onToggled: Prefs.set("islandFlash", !Prefs.islandFlash)
-        }
-        ToggleRow {
-            visible: sv.island || Prefs.bar
-            icon: String.fromCodePoint(0xF057E)
-            label: Tr.t("Громкость и яркость в острове")
-            hint: Tr.t("А также микрофон, профиль питания и смена выхода звука")
-            checked: Prefs.islandOsd
-            onToggled: Prefs.set("islandOsd", !Prefs.islandOsd)
         }
         ToggleRow {
             visible: sv.island || Prefs.bar
@@ -1283,21 +1376,6 @@ ColumnLayout {
         spacing: 14
         // ---- бар ----
         Header { visible: Prefs.bar; text: Tr.t("БАР") }
-        ChoiceRow {
-            visible: Prefs.bar
-            label: Tr.t("Дата у часов")
-            options: [{ label: Tr.t("пн, 19 октября"), value: "long" }, { label: Tr.t("пн 19.10"), value: "short" },
-                      { label: Tr.t("без даты"), value: "none" }]
-            current: Prefs.clockDate
-            onPicked: (v) => Prefs.set("clockDate", v)
-        }
-        ToggleRow {
-            visible: Prefs.bar
-            icon: String.fromCodePoint(0xF051B)
-            label: Tr.t("Секунды на часах")
-            checked: Prefs.clockSeconds
-            onToggled: Prefs.set("clockSeconds", !Prefs.clockSeconds)
-        }
         ChoiceRow {
             visible: Prefs.bar
             label: Tr.t("Несколько мониторов")

@@ -776,5 +776,15 @@
  "плитки": "tiles",
  "сквозь": "zoom through",
  "в остров": "into the island",
- "случайная": "random"
+ "случайная": "random",
+ "СТРОКИ ОСТРОВА": "ISLAND ROWS",
+ "Сверху вниз — как строки под часами; в компактном виде остров показывает первую, что сейчас есть": "Top to bottom, as rows under the clock; in compact mode the island shows the first one that is active",
+ "СТРОКА ЧАСОВ": "CLOCK ROW",
+ "Громкость и яркость": "Volume and brightness",
+ "А также микрофон, профиль питания и выход звука": "Also microphone, power profile and audio output",
+ "«✓ название» после действия": "\"✓ name\" after an action",
+ "Всегда — чтобы идущая запись не забылась": "Always, so a running recording is not forgotten",
+ "История и колокольчик в баре — всегда": "History and the bell in the bar are always on",
+ "Обложка и эквалайзер; наведение — управление": "Cover and equalizer; hover for controls",
+ "Кольцо и остаток; наведение — отмена": "Ring and time left; hover to cancel"
 }
