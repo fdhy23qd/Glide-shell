@@ -2,9 +2,9 @@
 
 [English](README.md) · **Русский**
 
-![Glide Shell в работе: остров раскрывается в панель, разделы, уведомление с ответом](docs/demo.gif)
+![Glide Shell в работе: остров раскрывается в панель, разделы, уведомление с ответом](docs/demo.webp)
 
-<sub>26 с · [MP4](docs/demo.mp4)</sub>
+<sub>1 мин 12 с: остров и OSD, подсказки бара, меню трея и дока, разделы панели, поиск, смена акцента на лету, уведомление с ответом, экран блокировки, виджеты · [MP4](docs/demo.mp4)</sub>
 
 Оболочка рабочего стола для [niri](https://github.com/YaLTeR/niri) на [Quickshell](https://quickshell.org) (QML):
 верхний бар из капсул с **островом** по центру, который перетекает в панель с категориями, док, уведомления,
@@ -72,7 +72,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.72`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.73`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
