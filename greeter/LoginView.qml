@@ -12,32 +12,48 @@ Item {
     readonly property bool done: login.done
     function nf(code) { return String.fromCodePoint(code) }
 
-    // ---- фон: как у замка (сияние акцента, сплошной или картинка с затемнением) ----
-    Rectangle { anchors.fill: parent; color: Look.background }
-    Rectangle {
+    // ---- фон: как у замка (сияние акцента, сплошной или картинка с затемнением); после пароля уходит стилем ----
+    Item {
+        id: bg
         anchors.fill: parent
-        visible: Look.background_ === "glow" || (Look.background_ === "image" && img.status !== Image.Ready)
-        gradient: Gradient {
-            GradientStop { position: 0; color: Qt.rgba(Look.accent.r, Look.accent.g, Look.accent.b, 0.16) }
-            GradientStop { position: 0.55; color: "transparent" }
+        Rectangle { anchors.fill: parent; color: Look.background }
+        Rectangle {
+            anchors.fill: parent
+            visible: Look.background_ === "glow" || (Look.background_ === "image" && img.status !== Image.Ready)
+            gradient: Gradient {
+                GradientStop { position: 0; color: Qt.rgba(Look.accent.r, Look.accent.g, Look.accent.b, 0.16) }
+                GradientStop { position: 0.55; color: "transparent" }
+            }
         }
+        Image {
+            id: img
+            anchors.fill: parent
+            visible: Look.background_ === "image" && status === Image.Ready
+            source: Look.background_ === "image" && Look.image ? (Look.image.indexOf("://") > 0 ? Look.image : "file://" + Look.image) : ""
+            fillMode: Image.PreserveAspectCrop
+            sourceSize.width: width; sourceSize.height: height
+            asynchronous: true
+        }
+        Rectangle { anchors.fill: parent; visible: img.visible; color: Qt.rgba(0, 0, 0, 0.45) }
     }
-    Image {
-        id: img
+    property real reveal: 0
+    Reveal {
         anchors.fill: parent
-        visible: Look.background_ === "image" && status === Image.Ready
-        source: Look.background_ === "image" && Look.image ? (Look.image.indexOf("://") > 0 ? Look.image : "file://" + Look.image) : ""
-        fillMode: Image.PreserveAspectCrop
-        sourceSize.width: width; sourceSize.height: height
-        asynchronous: true
+        cover: bg
+        progress: view.reveal
+        style: view.login.revealStyle
     }
-    Rectangle { anchors.fill: parent; visible: img.visible; color: Qt.rgba(0, 0, 0, 0.45) }
 
     MouseArea { anchors.fill: parent; onClicked: input.forceActiveFocus() }
 
     Item {
         id: fg
         anchors.fill: parent
+        transform: Scale {
+            origin.x: fg.width / 2
+            origin.y: view.login.revealStyle === "island" ? 0 : fg.height * 0.53
+            xScale: view.leaveScale; yScale: view.leaveScale
+        }
 
         Rectangle {   // проверка без настоящего входа
             visible: view.login.test && view.primary
@@ -267,7 +283,24 @@ Item {
         NumberAnimation { target: content; property: "opacity"; from: 0; to: 1; duration: Look.ms(360); easing.type: Easing.OutCubic }
         NumberAnimation { target: content; property: "anchors.verticalCenterOffset"; from: 0; to: -24; duration: Look.ms(460); easing.type: Easing.OutCubic }
     }
-    ParallelAnimation {   // вход: содержимое уплывает вверх и тает, фон остаётся — как при разблокировке
+    property real lp: 0
+    readonly property real leaveScale: {
+        var to = ({ iris: 0.6, curtains: 1.04, tiles: 0.92, zoom: 1.5, island: 0.22 })[login.revealStyle]
+        return to === undefined ? 1 : 1 + (to - 1) * lp
+    }
+    // остальные стили: содержимое сжимается или летит навстречу и тает, следом фон уходит стилем
+    ParallelAnimation {
+        id: leaveStyled
+        NumberAnimation { target: view; property: "lp"; from: 0; to: 1; duration: Look.ms(300); easing.type: Easing.InCubic }
+        NumberAnimation { target: fg; property: "opacity"; to: 0; duration: Look.ms(290); easing.type: Easing.InQuad }
+    }
+    SequentialAnimation {   // фон уходит в чёрный (Reveal) — успевает до запуска сеанса (launchTimer)
+        id: revealAnim
+        PauseAnimation { duration: Look.ms(120) }
+        NumberAnimation { target: view; property: "reveal"; from: 0; to: 1; duration: Look.ms(view.login.revealMs)
+                          easing.type: view.login.revealStyle === "rise" ? Easing.OutCubic : Easing.InOutCubic }
+    }
+    ParallelAnimation {   // вход: содержимое уплывает вверх и тает (стиль «подъём»)
         id: leave
         NumberAnimation { target: fg; property: "opacity"; to: 0; duration: Look.ms(300); easing.type: Easing.InOutQuad }
         NumberAnimation { target: content; property: "anchors.verticalCenterOffset"; to: -76; duration: Look.ms(320); easing.type: Easing.OutCubic }
@@ -276,7 +309,11 @@ Item {
     Connections {
         target: view.login
         function onFailed() { shakeAnim.restart(); input.forceActiveFocus() }
-        function onDoneChanged() { if (view.login.done) leave.restart() }
+        function onDoneChanged() {
+            if (!view.login.done) return
+            if (view.login.revealStyle === "rise") leave.restart(); else leaveStyled.restart()
+            revealAnim.restart()
+        }
     }
     Component.onCompleted: { appear.restart(); if (primary) input.forceActiveFocus() }
 

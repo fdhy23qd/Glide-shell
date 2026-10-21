@@ -63,6 +63,8 @@ Singleton {
     // как на экране блокировки — чтобы вход и замок выглядели одним экраном
     readonly property int clockSize: num(data.lockClockSize, 112)
     readonly property bool clockBold: data.lockClockBold === true
+    // анимация после пароля — та же настройка, что у замка Glide Shell (Reveal.qml)
+    readonly property string unlockStyle: ["rise", "iris", "curtains", "tiles", "zoom", "island", "random"].indexOf(data.unlockStyle) >= 0 ? data.unlockStyle : "rise"
     readonly property string background_: ["glow", "solid", "image"].indexOf(data.lockBackground) >= 0 ? data.lockBackground : "glow"
     readonly property string image: typeof data.lockImage === "string" ? data.lockImage.trim().replace(/^~/, home) : ""
 }

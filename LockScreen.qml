@@ -82,8 +82,18 @@ Scope {
     property real veil: 0                // непрозрачность заслонки
     readonly property bool veilOn: entering || ((unlocking || revealing) && !previewFade)
 
+    // стиль ухода (Reveal.qml): выбирается при каждой разблокировке — «случайный» каждый раз новый
+    readonly property var unlockStyles: ["rise", "iris", "curtains", "tiles", "zoom", "island"]
+    property string revealStyle: "rise"
+    readonly property int revealMs: ({ rise: 520, iris: 760, curtains: 700, tiles: 900, zoom: 620, island: 820 })[revealStyle] || 520
+    function pickStyle() {
+        if (Prefs.unlockStyle !== "random") return Prefs.unlockStyle
+        var pool = unlockStyles.filter(x => x !== revealStyle)
+        return pool[Math.floor(Math.random() * pool.length)]
+    }
     function beginUnlock() {
         if (Prefs.anim <= 0) { finishUnlock(); return }
+        revealStyle = pickStyle()
         previewFade = mode === "preview"
         veilOut.stop()
         veil = 1
@@ -95,9 +105,12 @@ Scope {
         unlocking = false
         previewFade = false
     }
+    property bool finishing: false       // замок снимается после ухода — LockView не должен «возвращать» экран
     function finishUnlock() {
         var wasPreview = mode === "preview"
+        finishing = true
         release()
+        finishing = false
         if (Prefs.anim > 0) { revealing = true; veilOut.restart() }
         if (wasPreview) panel.flash("✓", Tr.t("Пароль принят — блокировка снимется так же"), Theme.success)
     }
@@ -112,7 +125,7 @@ Scope {
     NumberAnimation {
         id: veilOut
         target: locker; property: "veil"; from: 1; to: 0
-        duration: Prefs.ms(520); easing.type: Easing.OutCubic
+        duration: Prefs.ms(locker.revealMs); easing.type: locker.revealStyle === "rise" ? Easing.OutCubic : Easing.InOutCubic
         onStopped: { locker.revealing = false; locker.previewFade = false }
     }
     // страховка: заслонка не должна остаться на экране ни при каком раскладе
@@ -129,10 +142,24 @@ Scope {
             WlrLayershell.namespace: "glide-lock-veil"
             color: "transparent"
             mask: Region {}   // клики проходят сквозь
-            LockBackdrop { anchors.fill: parent; opacity: locker.veil }
+            // фигурное раскрытие рабочего стола (Reveal): заслонка — тот же фон, что у замка
+            LockBackdrop { id: veilBg; anchors.fill: parent }
+            Reveal {
+                anchors.fill: parent
+                cover: veilBg
+                progress: 1 - locker.veil
+                style: locker.revealStyle
+                islandRect: locker.islandRect(width)
+            }
         }
     }
 
+    // где остров (для стиля «в остров»): по центру сверху, ширина — как у часов острова
+    function islandRect(w) {
+        var iw = panel && panel.clockW ? panel.clockW : 220
+        var top = panel && panel.islandTop !== undefined ? panel.islandTop : 6
+        return Qt.rect(w / 2 - iw / 2, top, iw, 32)
+    }
     function closePreview() { if (mode === "preview") release() }   // Esc — только в предпросмотре
 
     function submit(text) {
@@ -340,6 +367,12 @@ Scope {
         function test(): void { locker.start("test") }        // снимется сама через 60 с
         function preview(): void { locker.start("preview") }  // без блокировки: проверить пароль
         function cancel(): void { locker.closePreview() }     // закрывает только предпросмотр
+        // показать уход без пароля — ТОЛЬКО в предпросмотре (там экран не заперт); настоящий замок так не снять
+        function previewUnlock(): string {
+            if (locker.mode !== "preview" || locker.unlocking) return "only in preview"
+            locker.beginUnlock()
+            return locker.revealStyle
+        }
         function status(): string { return locker.mode || "unlocked" }
     }
 }
