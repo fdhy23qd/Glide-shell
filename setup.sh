@@ -219,7 +219,7 @@ else
     disabled='"schedule"'   # расписание пар СыктГУ — включить в «Плагинах», если нужно
     cat > "$conf" <<EOF
 {
-  "panel": { "notifications": $notifs, "polkit": $polkit },
+  "panel": { "notifications": $notifs, "polkit": $polkit, "welcome": true },
   "disabled": [$disabled]
 }
 EOF

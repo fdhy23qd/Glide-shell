@@ -693,6 +693,13 @@ ShellRoot {
                                       yandex: "https://yandex.ru/search/?text=", bing: "https://www.bing.com/search?q=" })
     property var fileHits: ({ q: "", items: [] })
     property bool filesWanted: false     // помощник жив: с первого поиска и 5 мин после закрытия панели
+    // ---- мастер первого запуска ----
+    property bool welcomeOpen: false
+    Timer { running: Prefs.warm && Prefs.welcome && !Prefs.welcomeDone && !lockScreen.locked; interval: 800; onTriggered: root.welcomeOpen = true }
+    LazyLoader {
+        active: root.welcomeOpen
+        Welcome { root: root; screen: root.panelScreen; onDone: root.welcomeOpen = false }
+    }
     property string pendingSearch: ""    // IPC search до показа панели
     Connections {
         target: root
@@ -885,7 +892,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.76 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.77 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -927,6 +934,10 @@ ShellRoot {
         // настройка на лету: pref accent '"#3b82f6"' — значение JSON (как в config.json)
         function pref(key: string, value: string): string {
             try { Prefs.set(key, JSON.parse(value)); return "ok" } catch (e) { return "bad JSON: " + value }
+        }
+        function welcome(mode: string): void {   // мастер первого запуска: "" — открыть, close — закрыть
+            if (mode === "close") { root.welcomeOpen = false; return }
+            root.close(); root.welcomeOpen = true
         }
         function night(mode: string): string {   // ночной свет: on | off | auto | toggle | "" — вернуть режим
             if (mode === "toggle") NightLight.toggle()

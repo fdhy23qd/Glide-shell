@@ -39,6 +39,9 @@ Singleton {
     readonly property bool islandFlash: data.islandFlash !== false     // подтверждения действий в острове
     readonly property bool islandNotif: data.islandNotif !== false     // всплывающие уведомления в острове (история — всегда)
     // поиск: файлы домашней папки (tools/glide-files.py, свой индекс) и «искать в интернете» последним пунктом
+    // мастер первого запуска (Welcome.qml): welcome ставит setup.sh в первые настройки, welcomeDone — пройден/пропущен
+    readonly property bool welcome: data.welcome === true
+    readonly property bool welcomeDone: data.welcomeDone === true
     readonly property bool fileSearch: data.fileSearch !== false
     readonly property string webSearch: ["duckduckgo", "google", "yandex", "bing", "off"].indexOf(data.webSearch) >= 0 ? data.webSearch : "duckduckgo"
     readonly property bool islandTimer: data.islandTimer !== false     // таймер в острове
