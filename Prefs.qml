@@ -117,6 +117,8 @@ Singleton {
     // ---- вид экрана блокировки ----
     readonly property int lockClockSize: num(data.lockClockSize, 112)                  // пикселей: 56 / 80 / 112 / 140
     readonly property bool lockClockBold: data.lockClockBold === true                  // жирные цифры вместо тонких
+    // анимация после верного пароля (замок и экран входа): rise | iris | curtains | tiles | zoom | island | random
+    readonly property string unlockStyle: ["rise", "iris", "curtains", "tiles", "zoom", "island", "random"].indexOf(data.unlockStyle) >= 0 ? data.unlockStyle : "rise"
     readonly property string lockBackground: ["glow", "solid", "image"].indexOf(data.lockBackground) >= 0 ? data.lockBackground : "glow"
     readonly property string lockImage: typeof data.lockImage === "string" ? data.lockImage.trim() : ""   // путь к картинке
     readonly property string lockGreeting: typeof data.lockGreeting === "string" ? data.lockGreeting : ""

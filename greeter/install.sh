@@ -34,6 +34,7 @@ id greeter >/dev/null 2>&1 || { echo "нет пользователя greeter (�
 # ---- файлы ----
 install -d -m 755 "$share"
 install -m 644 "$src"/shell.qml "$src"/Look.qml "$src"/LoginView.qml "$share"/
+install -m 644 "$src"/Reveal.qml "$share"/   # ссылка на ../Reveal.qml (общий с Glide Shell): уход фона после пароля
 install -m 755 "$src"/glide-greeter /usr/local/bin/glide-greeter
 install -m 755 "$src"/glide-session /usr/local/bin/glide-session   # чистит консоль VT перед сеансом
 

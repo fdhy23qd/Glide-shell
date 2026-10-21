@@ -27,7 +27,15 @@ Item {
     // непрочитанные уведомления — только число, без текста
     readonly property int unread: Notifs.active ? Notifs.unread : 0
 
-    LockBackdrop { anchors.fill: parent; opacity: view.backdrop }
+    // фон; в предпросмотре после пароля он уходит тем же эффектом, что заслонка над рабочим столом
+    LockBackdrop { id: bg; anchors.fill: parent }
+    Reveal {
+        anchors.fill: parent
+        cover: bg
+        progress: 1 - view.backdrop
+        style: view.lock.revealStyle
+        islandRect: view.lock.islandRect(width)
+    }
     MouseArea {   // клик в любом месте возвращает фокус в поле
         anchors.fill: parent
         onClicked: input.forceActiveFocus()
@@ -37,6 +45,12 @@ Item {
     Item {
         id: fg
         anchors.fill: parent
+        // уход в паре со стилем (lp 0 → 1): круг — сжаться к аватару, сквозь — навстречу, остров — вверх в точку
+        transform: Scale {
+            origin.x: fg.width / 2
+            origin.y: view.lock.revealStyle === "island" ? 0 : fg.height * 0.53
+            xScale: view.leaveScale; yScale: view.leaveScale
+        }
 
         // ---- полоса режима: тест или предпросмотр ----
         Rectangle {
@@ -341,6 +355,20 @@ Item {
         NumberAnimation { target: content; property: "opacity"; from: 0; to: 1; duration: Prefs.ms(320); easing.type: Easing.OutCubic }
         NumberAnimation { target: content; property: "anchors.verticalCenterOffset"; from: 0; to: -24; duration: Prefs.ms(420); easing.type: Easing.OutCubic }
     }
+    property real lp: 0
+    readonly property real leaveScale: {
+        var to = ({ iris: 0.6, curtains: 1.04, tiles: 0.92, zoom: 1.5, island: 0.22 })[lock.revealStyle]
+        return to === undefined ? 1 : 1 + (to - 1) * lp
+    }
+    // остальные стили: содержимое сжимается или летит навстречу (leaveScale) и тает
+    SequentialAnimation {
+        id: leaveStyled
+        PauseAnimation { duration: Prefs.ms(70) }
+        ParallelAnimation {
+            NumberAnimation { target: view; property: "lp"; from: 0; to: 1; duration: Prefs.ms(300); easing.type: Easing.InCubic }
+            NumberAnimation { target: fg; property: "opacity"; to: 0; duration: Prefs.ms(290); easing.type: Easing.InQuad }
+        }
+    }
     // уход после верного пароля: галочка видна мгновение, затем всё уплывает вверх и тает
     // (длительность вместе с паузой — как unlockTimer в LockScreen, 380 мс)
     SequentialAnimation {
@@ -358,12 +386,18 @@ Item {
         function onFailed() { input.text = ""; shakeAnim.restart(); input.forceActiveFocus() }
         function onModeChanged() {
             input.text = ""
-            if (view.lock.mode) { appear.restart(); input.forceActiveFocus() }
+            if (view.lock.mode) { view.lp = 0; appear.restart(); input.forceActiveFocus() }
         }
         function onUnlockingChanged() {
-            if (view.lock.unlocking) { appear.stop(); leave.restart(); return }
-            if (!view.lock.mode) return
-            leave.stop()          // разблокировку отменили (сон) — возвращаем экран
+            if (view.lock.unlocking) {
+                appear.stop()
+                if (view.lock.revealStyle === "rise") leave.restart(); else leaveStyled.restart()
+                return
+            }
+            // замок снят после ухода (finishing) — содержимое остаётся ушедшим; раньше release() сбрасывал
+            // unlocking раньше mode, и экран «возвращался» поверх рабочего стола (виден в предпросмотре)
+            if (!view.lock.mode || view.lock.finishing) return
+            leave.stop(); leaveStyled.stop(); view.lp = 0   // разблокировку отменили (сон) — возвращаем экран
             input.text = ""
             appear.restart()
             input.forceActiveFocus()

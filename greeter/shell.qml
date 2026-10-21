@@ -140,15 +140,24 @@ ShellRoot {
             g.failed()
         }
         function onReadyToLaunch() {
+            g.revealStyle = g.pickStyle()
             g.busy = false
             g.done = true
             g.remember()
             launchTimer.start()            // сначала экран уходит (анимация), потом — сеанс
         }
     }
+    // стиль ухода после пароля (Reveal.qml): фон уходит в чёрный, дальше — чёрная консоль и рабочий стол
+    property string revealStyle: "rise"
+    readonly property int revealMs: ({ rise: 520, iris: 760, curtains: 700, tiles: 900, zoom: 620, island: 820 })[revealStyle] || 520
+    function pickStyle() {
+        if (Look.unlockStyle !== "random") return Look.unlockStyle
+        var pool = ["rise", "iris", "curtains", "tiles", "zoom", "island"]
+        return pool[Math.floor(Math.random() * pool.length)]
+    }
     Timer {
         id: launchTimer
-        interval: Math.max(50, Look.ms(420))
+        interval: Math.max(50, Look.ms(140 + g.revealMs))
         onTriggered: {
             var s = g.session
             var cmd = s ? s.exec.split(/\s+/).filter(x => x) : ["niri-session"]
@@ -227,7 +236,7 @@ ShellRoot {
             WlrLayershell.layer: WlrLayer.Overlay
             WlrLayershell.namespace: "glide-greeter"
             WlrLayershell.keyboardFocus: modelData === Quickshell.screens[0] ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-            color: Look.background
+            color: "black"   // под уходящим фоном — чёрный, как консоль после выхода
             LoginView { anchors.fill: parent; login: g; primary: modelData === Quickshell.screens[0] }
         }
     }

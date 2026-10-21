@@ -72,6 +72,53 @@ ColumnLayout {
     }
 
     // Сегменты: [{label, value}]; выбранный подсвечивается переезжающей плашкой
+    // выбор из многих вариантов: чипы с переносом строк (ChoiceRow — пилюля на 2–5 вариантов)
+    component ChipChoice: ColumnLayout {
+        id: cc
+        property string label
+        property string hint
+        property var options: []
+        property var current
+        signal picked(var value)
+        Layout.fillWidth: true
+        spacing: 6
+        Text { text: cc.label; color: Theme.text }
+        Flow {
+            Layout.fillWidth: true
+            spacing: 6
+            Repeater {
+                model: cc.options
+                delegate: Rectangle {
+                    id: chip
+                    required property var modelData
+                    readonly property bool on: modelData.value === cc.current
+                    width: chipText.implicitWidth + 26; height: 30; radius: height / 2
+                    color: on ? (chipMa.pressed ? Theme.accentPressed : chipMa.containsMouse ? Theme.accentLight : Prefs.accent)
+                              : (chipMa.pressed ? Theme.surfacePressed : chipMa.containsMouse ? Theme.surfaceHigher : Theme.surface)
+                    border.color: on ? "transparent" : Theme.outline
+                    scale: chipMa.pressed ? 0.95 : 1
+                    Behavior on color { ColorAnimation { duration: Prefs.ms(140) } }
+                    Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+                    Text {
+                        id: chipText
+                        anchors.centerIn: parent
+                        text: chip.modelData.label
+                        color: chip.on ? Theme.accentText : Theme.textSecondary
+                        font.pixelSize: Theme.fs(12)
+                    }
+                    MouseArea { id: chipMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onClicked: cc.picked(chip.modelData.value) }
+                }
+            }
+        }
+        Text {
+            Layout.fillWidth: true
+            visible: cc.hint !== ""
+            text: cc.hint
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11)
+            wrapMode: Text.WordWrap
+        }
+    }
     component ChoiceRow: ColumnLayout {
         id: cr
         property string label
@@ -1177,6 +1224,16 @@ ColumnLayout {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: Quickshell.execDetached(["qs", "-c", "glide-shell", "ipc", "call", "lock", "preview"])
             }
+        }
+        ChipChoice {
+            label: Tr.t("Анимация после пароля")
+            hint: Tr.t("И на экране входа. Посмотреть — «Предпросмотр» выше: введи пароль, и экран уйдёт выбранным стилем")
+            options: [{ label: Tr.t("подъём"), value: "rise" }, { label: Tr.t("круг"), value: "iris" },
+                      { label: Tr.t("шторки"), value: "curtains" }, { label: Tr.t("плитки"), value: "tiles" },
+                      { label: Tr.t("сквозь"), value: "zoom" }, { label: Tr.t("в остров"), value: "island" },
+                      { label: Tr.t("случайная"), value: "random" }]
+            current: Prefs.unlockStyle
+            onPicked: (v) => Prefs.set("unlockStyle", v)
         }
         ChoiceRow {
             label: Tr.t("Размер часов")

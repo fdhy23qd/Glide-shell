@@ -767,5 +767,14 @@
  "Ответ отправлен": "Reply sent",
  "Ответ… (Enter — отправить, Esc — отмена)": "Reply… (Enter — send, Esc — cancel)",
  "Ответить": "Reply",
- "нет уведомления с ответом": "no notification with reply"
+ "нет уведомления с ответом": "no notification with reply",
+ "Анимация после пароля": "Animation after password",
+ "И на экране входа. Посмотреть — «Предпросмотр» выше: введи пароль, и экран уйдёт выбранным стилем": "Also on the login screen. To see it, use \"Preview\" above: type your password and the screen leaves in the chosen style",
+ "подъём": "rise",
+ "круг": "iris",
+ "шторки": "curtains",
+ "плитки": "tiles",
+ "сквозь": "zoom through",
+ "в остров": "into the island",
+ "случайная": "random"
 }
