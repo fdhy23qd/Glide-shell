@@ -463,6 +463,21 @@ ColumnLayout {
             current: Prefs.battCrit
             onPicked: (v) => Prefs.set("battCrit", v)
         }
+        ToggleRow {
+            icon: String.fromCodePoint(0xF0214)
+            label: Tr.t("Искать файлы")
+            hint: Prefs.fileSearch ? Tr.t("В поиске панели — файлы и папки домашней папки (свой индекс, обновляется раз в 30 мин; скрытые не ищутся)")
+                                   : Tr.t("Выключено")
+            checked: Prefs.fileSearch
+            onToggled: Prefs.set("fileSearch", !Prefs.fileSearch)
+        }
+        ChoiceRow {
+            label: Tr.t("Искать в интернете")
+            options: [{ label: "DuckDuckGo", value: "duckduckgo" }, { label: "Google", value: "google" },
+                      { label: Tr.t("Яндекс"), value: "yandex" }, { label: "Bing", value: "bing" }, { label: Tr.t("нет"), value: "off" }]
+            current: Prefs.webSearch
+            onPicked: (v) => Prefs.set("webSearch", v)
+        }
         ChoiceRow {
             label: NightLight.available ? Tr.t("Ночной свет") : Tr.t("Ночной свет — нужен wlsunset (sudo pacman -S wlsunset)")
             options: [{ label: Tr.t("выкл"), value: "off" }, { label: Tr.t("всегда"), value: "on" },

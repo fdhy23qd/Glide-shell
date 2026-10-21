@@ -786,5 +786,10 @@
  "Всегда — чтобы идущая запись не забылась": "Always, so a running recording is not forgotten",
  "История и колокольчик в баре — всегда": "History and the bell in the bar are always on",
  "Обложка и эквалайзер; наведение — управление": "Cover and equalizer; hover for controls",
- "Кольцо и остаток; наведение — отмена": "Ring and time left; hover to cancel"
+ "Кольцо и остаток; наведение — отмена": "Ring and time left; hover to cancel",
+ "Искать файлы": "Search files",
+ "В поиске панели — файлы и папки домашней папки (свой индекс, обновляется раз в 30 мин; скрытые не ищутся)": "Panel search includes files and folders in your home folder (own index, refreshed every 30 min; hidden files are skipped)",
+ "Искать в интернете": "Search the web",
+ "Искать в интернете: ": "Search the web: ",
+ "Яндекс": "Yandex"
 }

@@ -38,6 +38,9 @@ Singleton {
     readonly property bool islandMusic: data.islandMusic !== false     // играющая музыка в острове
     readonly property bool islandFlash: data.islandFlash !== false     // подтверждения действий в острове
     readonly property bool islandNotif: data.islandNotif !== false     // всплывающие уведомления в острове (история — всегда)
+    // поиск: файлы домашней папки (tools/glide-files.py, свой индекс) и «искать в интернете» последним пунктом
+    readonly property bool fileSearch: data.fileSearch !== false
+    readonly property string webSearch: ["duckduckgo", "google", "yandex", "bing", "off"].indexOf(data.webSearch) >= 0 ? data.webSearch : "duckduckgo"
     readonly property bool islandTimer: data.islandTimer !== false     // таймер в острове
     // порядок строк острова (и что главнее в компактном виде): чего нет в списке — дописывается в конец
     readonly property var islandKinds: ["osd", "flash", "rec", "notif", "music", "timer"]

@@ -439,18 +439,41 @@ PanelWindow {
                                 implicitSize: 20
                                 source: visible ? Quickshell.iconPath(res.modelData.icon || "application-x-executable", "application-x-executable") : ""
                             }
+                            Text {   // файл, папка, поиск в интернете — значком по типу
+                                visible: res.modelData.kind === "file" || res.modelData.kind === "web"
+                                x: 10; width: 20; anchors.verticalCenter: parent.verticalCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                text: String.fromCodePoint(res.glyph)
+                                color: res.modelData.kind === "web" ? Prefs.accent : Theme.textVariant
+                                font.family: Prefs.iconFont; font.pixelSize: Theme.fs(16)
+                            }
+                            readonly property int glyph: {
+                                var m = res.modelData
+                                if (m.kind === "web") return 0xF059F
+                                if (m.isdir) return 0xF024B
+                                var x = (m.label || "").toLowerCase().split(".").pop()
+                                if (/^(png|jpe?g|webp|gif|svg|bmp|avif|heic)$/.test(x)) return 0xF021F
+                                if (/^(mp4|mkv|webm|mov|avi)$/.test(x)) return 0xF022B
+                                if (/^(mp3|flac|ogg|opus|m4a|wav)$/.test(x)) return 0xF0223
+                                if (x === "pdf") return 0xF0226
+                                if (/^(zip|7z|rar|tar|gz|xz|zst)$/.test(x)) return 0xF05C4
+                                return 0xF0214
+                            }
                             Text {
-                                x: res.modelData.kind === "app" ? 38 : 10
+                                x: res.modelData.kind === "app" || res.modelData.kind === "file" || res.modelData.kind === "web" ? 38 : 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - x - 110
+                                width: parent.width - x - subText.width - 24
                                 elide: Text.ElideRight
                                 text: modelData.label
                                 color: Theme.text
                             }
                             Text {
+                                id: subText
                                 anchors.right: parent.right
                                 anchors.rightMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
+                                width: Math.min(implicitWidth, res.width * 0.42)
+                                elide: Text.ElideLeft   // у путей важен конец
                                 text: modelData.sub
                                 color: Theme.textMuted
                                 font.pixelSize: Theme.fs(11)
