@@ -49,7 +49,8 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
   control centre (Wi-Fi, Bluetooth, sound, per-app mixer, brightness, power profiles, night light), today
   (calendar with Russian public holidays, weather from Open-Meteo), media, clipboard history with images,
   notifications, phone (KDE Connect), task manager, network and developer tools, text tools, an AI chat (Claude)
-  and an app launcher. Search across all of them with Ctrl+K or by just typing.
+  and an app launcher. Search across all of them with Ctrl+K or by just typing; the search also finds files
+  in your home folder (own lightweight index) and offers a web search as the last result.
 - **Context actions:** the panel remembers the selected text when it opens and offers matching actions
   (format JSON, decode a JWT, open a URL, translate…).
 - **Top bar:** workspaces with app icons, the focused window, keyboard layout, CPU and RAM, clipboard,

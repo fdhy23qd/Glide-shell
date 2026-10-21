@@ -245,6 +245,29 @@ class Widgets(Sandbox):
 
 
 # ---------------------------------------------------------------- перевод
+class Files(Sandbox):
+    """Индекс и поиск файлов: скрытое и node_modules не попадают, все слова — в имени, совпадение с начала — выше."""
+
+    def test_index_and_search(self):
+        root = self.tmp / "home"
+        for rel in ("Документы/Отчёт за год.pdf", "Документы/отчёт черновик.txt", "Видео/отпуск.mp4",
+                    ".secret/отчёт.txt", "proj/node_modules/отчёт.js", "proj/src/main.py"):
+            f = root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text("x")
+        env = dict(os.environ, GLIDE_FILES_ROOT=str(root), XDG_CACHE_HOME=str(self.cache))
+        out = subprocess.run([sys.executable, "-I", str(TOOLS / "glide-files.py"), "search", "отчёт"],
+                             env=env, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=30)
+        items = json.loads(out.stdout)
+        names = [i["name"] for i in items]
+        self.assertEqual(set(names), {"Отчёт за год.pdf", "отчёт черновик.txt"})   # без .secret и node_modules
+        out = subprocess.run([sys.executable, "-I", str(TOOLS / "glide-files.py"), "search", "год", "отч"],
+                             env=env, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=30)
+        self.assertEqual([i["name"] for i in json.loads(out.stdout)], ["Отчёт за год.pdf"])
+        idx = self.cache / "glide-shell" / "files.tsv"
+        self.assertEqual(stat.S_IMODE(idx.stat().st_mode), 0o600)
+
+
 class Holidays(unittest.TestCase):
     """Разбор строки isdayoff и встроенный список — без сети."""
 

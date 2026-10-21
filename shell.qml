@@ -680,10 +680,57 @@ ShellRoot {
                     out.push({ kind: "run", label: it.label, sub: p.name, plugin: p, spec: it })
             }
         }
-        return out.slice(0, 20)
+        out = out.slice(0, 20)
+        // файлы (ответ помощника на этот же запрос) и «искать в интернете» последним
+        if (fileHits.q === q) for (var f of fileHits.items) out.push({ kind: "file", label: f.name, sub: f.dir, path: f.path, isdir: f.isdir })
+        if (Prefs.webSearch !== "off" && q.trim().length >= 2)
+            out.push({ kind: "web", label: Tr.t("Искать в интернете: ") + q.trim(), sub: webNames[Prefs.webSearch], q: q.trim() })
+        return out
+    }
+    // ---- поиск файлов: один долгоживущий помощник держит индекс в памяти, запрос — строкой в stdin ----
+    readonly property var webNames: ({ duckduckgo: "DuckDuckGo", google: "Google", yandex: Tr.t("Яндекс"), bing: "Bing" })
+    readonly property var webUrls: ({ duckduckgo: "https://duckduckgo.com/?q=", google: "https://www.google.com/search?q=",
+                                      yandex: "https://yandex.ru/search/?text=", bing: "https://www.bing.com/search?q=" })
+    property var fileHits: ({ q: "", items: [] })
+    property bool filesWanted: false     // помощник жив: с первого поиска и 5 мин после закрытия панели
+    property string pendingSearch: ""    // IPC search до показа панели
+    Connections {
+        target: root
+        function onShownChanged() {
+            if (root.shown) { filesIdle.stop(); if (root.pendingSearch !== "") { var t = root.pendingSearch; root.pendingSearch = ""; Qt.callLater(() => win.setSearch(t)) } }
+            else if (root.filesWanted) filesIdle.restart()
+        }
+    }
+    Timer { id: filesIdle; interval: 300000; onTriggered: root.filesWanted = false }
+    Process {
+        id: filesProc
+        running: root.filesWanted && Prefs.fileSearch
+        stdinEnabled: true
+        command: ["setpriv", "--pdeathsig", "TERM", "ionice", "-c3", "nice", "-n", "10",
+                  "python3", "-I", Quickshell.shellDir + "/tools/glide-files.py", "serve"]
+        stdout: SplitParser {
+            onRead: (line) => { try { var d = JSON.parse(line); if (d.q === root.query) root.fileHits = d } catch (e) {} }
+        }
+    }
+    Timer {   // между нажатиями — пауза, чтобы не искать на каждую букву
+        id: filesAsk
+        interval: 160
+        onTriggered: if (filesProc.running && root.query.trim().length >= 2) filesProc.write(root.query + "\n")
+    }
+    onQueryChanged: {
+        selected = 0
+        if (!Prefs.fileSearch || query.trim().length < 2) return
+        if (!filesWanted) filesWanted = true
+        filesAsk.restart()
+    }
+    function openPath(p) {   // в своей scope-группе: открытое приложение не живёт в группе службы оболочки
+        Quickshell.execDetached(["systemd-run", "--user", "--scope", "--collect", "--quiet", "xdg-open", p])
+        close()
     }
     function activate(r) {
         if (r.kind === "app") launchApp(r.entry)
+        else if (r.kind === "file") openPath(r.path)
+        else if (r.kind === "web") openPath(webUrls[Prefs.webSearch] + encodeURIComponent(r.q))
         else if (r.kind === "run" && !r.spec.confirm) run(r.plugin, r.spec, "")
         else { category = r.plugin.categories[0]; clearSearch() }
     }
@@ -691,7 +738,6 @@ ShellRoot {
     function moveSelection(d) {
         if (results.length) selected = (selected + d + results.length) % results.length
     }
-    onQueryChanged: selected = 0
     function clearSearch() { query = ""; win.clearSearchUi() }
 
     // ---------- панель ----------
@@ -839,7 +885,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.75 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.76 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -874,7 +920,10 @@ ShellRoot {
         function dockMenu(key: string): string { return root.mainDock ? root.mainDock.menuFor(key) : "" }    // меню значка дока (проверка)
         function bellFly(): void { if (root.rightBar) root.rightBar.flyToBell() }                            // точка из острова в колокольчик (проверка)
         // поиск из скрипта (демо, хоткей с готовым запросом): открыть панель и вписать текст
-        function search(text: string): void { if (!root.shown) root.open(); win.setSearch(text) }
+        function search(text: string): void {   // панель открывается не сразу (снимок контекста) — запрос ждёт показа
+            if (root.shown) { win.setSearch(text); return }
+            root.pendingSearch = text; root.open()
+        }
         // настройка на лету: pref accent '"#3b82f6"' — значение JSON (как в config.json)
         function pref(key: string, value: string): string {
             try { Prefs.set(key, JSON.parse(value)); return "ok" } catch (e) { return "bad JSON: " + value }
