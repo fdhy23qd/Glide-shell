@@ -2,7 +2,9 @@
 
 **English** · [Русский](README.ru.md)
 
-![Glide Shell: bar with the island, dock and a weather widget](docs/screenshots/en/desktop.png)
+![Glide Shell in action: the island opens into the panel, categories, a notification with inline reply](docs/demo.gif)
+
+<sub>26 s, Russian interface · [MP4](docs/demo.mp4)</sub>
 
 A desktop shell for [niri](https://github.com/YaLTeR/niri), written in QML on [Quickshell](https://quickshell.org).
 A top bar of floating capsules with an **island** in the middle, which flows into a panel of categories when
@@ -19,6 +21,9 @@ Developed and used daily on Arch Linux with niri 26.04, Quickshell 0.3 and Qt 6.
 > are at your own risk for now. Bug reports are welcome. The code comments and the changelog are in Russian.
 
 ## Screenshots
+
+![Desktop: bar with the island, dock and a weather widget](docs/screenshots/en/desktop.png)
+
 
 | | |
 |---|---|

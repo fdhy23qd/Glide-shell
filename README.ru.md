@@ -2,7 +2,9 @@
 
 [English](README.md) · **Русский**
 
-![Glide Shell: бар с островом, док и виджет погоды](docs/screenshots/ru/desktop.png)
+![Glide Shell в работе: остров раскрывается в панель, разделы, уведомление с ответом](docs/demo.gif)
+
+<sub>26 с · [MP4](docs/demo.mp4)</sub>
 
 Оболочка рабочего стола для [niri](https://github.com/YaLTeR/niri) на [Quickshell](https://quickshell.org) (QML):
 верхний бар из капсул с **островом** по центру, который перетекает в панель с категориями, док, уведомления,
@@ -19,6 +21,9 @@ Quickshell 0.3, Qt 6.
 
 
 ## Скриншоты
+
+![Рабочий стол: бар с островом, док и виджет погоды](docs/screenshots/ru/desktop.png)
+
 
 | | |
 |---|---|
