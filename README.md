@@ -64,6 +64,9 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
 - **Wallpapers:** image, folder slideshow, GIF or video (decoded in a separate process, paused under windows
   and on battery). The theme colours can follow the wallpaper.
 - **Desktop widgets:** clock, date, weather, music, system, and your own widgets in QML.
+- **Device settings for niri** (niri has no GUI of its own): displays (scale, mode, rotation, with a 15-second
+  "keep or revert"), keyboard layouts and repeat, touchpad and mouse, focus follows mouse, and a searchable list of
+  key bindings. Written to separate files included from your niri config; every change is checked with `niri validate`.
 - **Theme:** accent colour, tone, corner radius, text size, opacity, and animation speed (or no animations at all).
 - **Multi-monitor modes:** unite, extend, mirror and standard. These are untested on real hardware.
 - **Reliability:** runs as a systemd user service and restarts itself after a crash. If it keeps crashing, it falls

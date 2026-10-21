@@ -268,6 +268,43 @@ class Files(Sandbox):
         self.assertEqual(stat.S_IMODE(idx.stat().st_mode), 0o600)
 
 
+class NiriSettings(Sandbox):
+    """Перенос input в glide-settings.kdl: флаги выключаются, неизвестное — дословно, config.kdl — с пометкой."""
+
+    def test_migrate_and_edit(self):
+        if not shutil.which("niri"):
+            self.skipTest("нет niri")
+        d = self.tmp / "niri"
+        d.mkdir()
+        (d / "config.kdl").write_text(
+            'input {\n    keyboard {\n        xkb {\n            layout "us,ru"\n        }\n        numlock\n    }\n'
+            '    touchpad {\n        tap\n        natural-scroll\n    }\n    warp-mouse-to-focus\n}\n\n'
+            'binds {\n    Mod+T hotkey-overlay-title="Терминал" { spawn "alacritty"; }\n}\n')
+        env = dict(os.environ, GLIDE_NIRI_DIR=str(d))
+        run = lambda *a: json.loads(subprocess.run([sys.executable, "-I", str(TOOLS / "glide-niri.py"), *a], env=env,
+                                                   capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=30).stdout)
+        r = run("read")
+        self.assertFalse(r["managed"])
+        self.assertEqual(r["input"]["keyboard"]["layout"], "us,ru")
+        self.assertTrue(r["input"]["touchpad"]["tap"])
+        self.assertEqual(r["binds"][0]["title"], "Терминал")
+        self.assertTrue(run("set-input", json.dumps({"touchpad": {"tap": False}, "keyboard": {"repeat_rate": 40}}))["ok"])
+        r = run("read")
+        self.assertTrue(r["managed"])
+        self.assertFalse(r["input"]["touchpad"]["tap"])
+        self.assertTrue(r["input"]["touchpad"]["natural_scroll"])
+        self.assertEqual(r["input"]["keyboard"]["repeat_rate"], 40)
+        self.assertTrue(r["input"]["warp_mouse_to_focus"])          # неизвестное панели — перенесено
+        conf = (d / "config.kdl").read_text()
+        self.assertIn('include "glide-settings.kdl"', conf)
+        self.assertIn("// [glide-shell] input {", conf)
+        self.assertTrue(list(d.glob("config.kdl.before-glide-*")))
+        # ошибка niri → откат обоих файлов
+        before = (d / "glide-settings.kdl").read_text()
+        self.assertFalse(run("set-input", json.dumps({"keyboard": {"repeat_rate": "много"}}))["ok"])
+        self.assertEqual((d / "glide-settings.kdl").read_text(), before)
+
+
 class Holidays(unittest.TestCase):
     """Разбор строки isdayoff и встроенный список — без сети."""
 

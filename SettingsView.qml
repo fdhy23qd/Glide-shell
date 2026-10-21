@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 
 // Экран настроек: поведение и вид панели, включение плагинов, порядок категорий.
 ColumnLayout {
@@ -403,7 +404,7 @@ ColumnLayout {
         { id: "notify", label: Tr.t("Уведомления"), icon: 0xF009A }, { id: "lock", label: Tr.t("Блокировка"), icon: 0xF033E },
         { id: "wall", label: Tr.t("Обои"), icon: 0xF024F }, { id: "widgets", label: Tr.t("Виджеты"), icon: 0xF0954 },
         { id: "weather", label: Tr.t("Погода"), icon: 0xF0595 }, { id: "behavior", label: Tr.t("Поведение"), icon: 0xF0493 },
-        { id: "plugins", label: Tr.t("Плагины"), icon: 0xF0431 }
+        { id: "niri", label: Tr.t("Устройства"), icon: 0xF0379 }, { id: "plugins", label: Tr.t("Плагины"), icon: 0xF0431 }
     ]
     Flow {
         Layout.fillWidth: true
@@ -1469,6 +1470,282 @@ ColumnLayout {
             }
         }
 
+    }
+    ColumnLayout {   // раздел «niri»: мониторы, клавиатура, тачпад, мышь, горячие клавиши (tools/glide-niri.py)
+        id: niriPage
+        visible: sv.page === "niri"
+        Layout.fillWidth: true
+        spacing: 14
+        readonly property string tool: Quickshell.shellDir + "/tools/glide-niri.py"
+        property var cfg: null            // {managed, input, binds}
+        property var outs: []             // niri msg -j outputs
+        property var pending: null        // {name, back: [аргументы niri msg output, чтобы вернуть]}
+        property int secsLeft: 0
+        property string bindFilter: ""
+        onVisibleChanged: if (visible) reload()
+        function reload() { rd.running = false; rd.running = true; od.running = false; od.running = true }
+        Process {
+            id: rd
+            command: ["python3", "-I", niriPage.tool, "read"]
+            stdout: StdioCollector { onStreamFinished: { try { niriPage.cfg = JSON.parse(text) } catch (e) {} } }
+        }
+        Process {
+            id: od
+            command: ["niri", "msg", "-j", "outputs"]
+            stdout: StdioCollector { onStreamFinished: { try { var o = JSON.parse(text); niriPage.outs = Object.keys(o).sort().map(k => o[k]) } catch (e) {} } }
+        }
+        // ввод: правка → glide-niri.py set-input (проверка niri validate, при ошибке — откат)
+        Process {
+            id: wr
+            property string patch: ""
+            command: ["python3", "-I", niriPage.tool, "set-input", patch]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    var r = {}; try { r = JSON.parse(text) } catch (e) {}
+                    if (!r.ok && sv.panel) sv.panel.flash("!", Tr.t("niri не принял настройку — вернул как было"), Theme.error)
+                    niriPage.reload()
+                }
+            }
+        }
+        function setInput(patch) {
+            var c = JSON.parse(JSON.stringify(cfg))   // сразу показать, файл догонит
+            for (var sec in patch) {
+                if (typeof patch[sec] === "object") Object.assign(c.input[sec], patch[sec]); else c.input[sec] = patch[sec]
+            }
+            cfg = c
+            wr.patch = JSON.stringify(patch); wr.running = false; wr.running = true
+        }
+        // мониторы: сразу через niri msg output, затем 15 с «оставить?»; не подтвердили — вернуть
+        function outRun(name, args) { Quickshell.execDetached(["niri", "msg", "output", name].concat(args)) }
+        function outChange(o, args, back) {
+            if (pending && pending.name !== o.name) outKeep()
+            if (!pending) pending = { name: o.name, back: [] }
+            pending.back.push(back)
+            outRun(o.name, args)
+            secsLeft = 15; countdown.restart()
+            Qt.callLater(() => { od.running = false; od.running = true })
+        }
+        function outRevert() {
+            if (!pending) return
+            for (var i = pending.back.length - 1; i >= 0; i--) outRun(pending.name, pending.back[i])
+            pending = null; countdown.stop()
+            revertRead.restart()
+        }
+        Timer { id: revertRead; interval: 400; onTriggered: { od.running = false; od.running = true } }
+        function outKeep() {
+            countdown.stop(); pending = null
+            var items = outs.map(o => {
+                var m = o.modes[o.current_mode] || o.modes[0]
+                return { name: o.name, mode: m ? m.width + "x" + m.height + "@" + (m.refresh_rate / 1000).toFixed(3) : "",
+                         scale: o.logical ? o.logical.scale : 1, transform: o.logical ? (niriPage.tfNames[o.logical.transform] || "normal") : "normal",
+                         x: o.logical ? o.logical.x : 0, y: o.logical ? o.logical.y : 0, off: !o.logical }
+            })
+            Quickshell.execDetached(["python3", "-I", tool, "save-outputs", JSON.stringify(items)])
+        }
+        Timer { id: countdown; interval: 1000; repeat: true
+                onTriggered: { niriPage.secsLeft--; if (niriPage.secsLeft <= 0) niriPage.outRevert() } }
+        readonly property var tfNames: ({ Normal: "normal", _90: "90", _180: "180", _270: "270" })
+
+        Header { text: Tr.t("МОНИТОРЫ") }
+        Rectangle {   // подтверждение после смены режима или масштаба
+            visible: !!niriPage.pending
+            Layout.fillWidth: true
+            implicitHeight: 52; radius: Theme.r(14)
+            color: Qt.rgba(Prefs.accent.r, Prefs.accent.g, Prefs.accent.b, 0.14)
+            border.color: Prefs.accent
+            RowLayout {
+                anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 8
+                Text { Layout.fillWidth: true; text: Tr.t("Оставить новые настройки? Вернутся сами через ") + niriPage.secsLeft + Tr.t(" с")
+                       color: Theme.text; font.pixelSize: Theme.fs(13); wrapMode: Text.WordWrap }
+                ActionBtn { glyph: String.fromCodePoint(0xF012C); text: Tr.t("Оставить"); onClicked: niriPage.outKeep() }
+                ActionBtn { glyph: String.fromCodePoint(0xF006A); text: Tr.t("Вернуть"); onClicked: niriPage.outRevert() }
+            }
+        }
+        Repeater {
+            model: niriPage.outs
+            delegate: ColumnLayout {
+                id: oc
+                required property var modelData
+                readonly property var o: modelData
+                readonly property var lg: o.logical || ({ scale: 1, transform: "Normal" })
+                Layout.fillWidth: true
+                spacing: 10
+                Text {
+                    Layout.fillWidth: true
+                    text: oc.o.name + " · " + [oc.o.make, oc.o.model].filter(x => x && !/^0x/.test(x)).join(" ")
+                    color: Theme.textSecondary; font.pixelSize: Theme.fs(12); font.bold: true; elide: Text.ElideRight
+                }
+                ChoiceRow {
+                    label: Tr.t("Масштаб")
+                    options: [{ label: "100%", value: 1 }, { label: "125%", value: 1.25 }, { label: "150%", value: 1.5 },
+                              { label: "175%", value: 1.75 }, { label: "200%", value: 2 }]
+                    current: oc.lg.scale
+                    onPicked: (v) => niriPage.outChange(oc.o, ["scale", String(v)], ["scale", String(oc.lg.scale)])
+                }
+                ChipChoice {
+                    visible: oc.o.modes.length > 1
+                    label: Tr.t("Разрешение и частота")
+                    options: oc.o.modes.map((m, i) => ({ label: m.width + "×" + m.height + " · " + Math.round(m.refresh_rate / 1000) + Tr.t(" Гц"), value: i }))
+                    current: oc.o.current_mode
+                    onPicked: (i) => {
+                        var m = oc.o.modes[i], c = oc.o.modes[oc.o.current_mode]
+                        niriPage.outChange(oc.o, ["mode", m.width + "x" + m.height + "@" + (m.refresh_rate / 1000).toFixed(3)],
+                                           ["mode", c.width + "x" + c.height + "@" + (c.refresh_rate / 1000).toFixed(3)])
+                    }
+                }
+                ChoiceRow {
+                    label: Tr.t("Поворот")
+                    options: [{ label: Tr.t("обычно"), value: "normal" }, { label: "90°", value: "90" },
+                              { label: "180°", value: "180" }, { label: "270°", value: "270" }]
+                    current: niriPage.tfNames[oc.lg.transform] || "normal"
+                    onPicked: (v) => niriPage.outChange(oc.o, ["transform", v], ["transform", niriPage.tfNames[oc.lg.transform] || "normal"])
+                }
+            }
+        }
+        Text {
+            Layout.fillWidth: true
+            visible: niriPage.outs.length > 1
+            text: Tr.t("Взаимное расположение мониторов niri подбирает сам; поменять — в glide-outputs.kdl (position x= y=)")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
+
+        Header { text: Tr.t("КЛАВИАТУРА") }
+        Text {
+            Layout.fillWidth: true
+            visible: !!niriPage.cfg && !niriPage.cfg.managed
+            text: Tr.t("При первой правке блок input из config.kdl переносится в ~/.config/niri/glide-settings.kdl (в config.kdl он закомментирован, копия — рядом) — дальше им управляют эти настройки")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
+        TextRow {
+            visible: !!niriPage.cfg
+            label: Tr.t("Раскладки (через запятую, Enter)")
+            placeholder: "us,ru"
+            value: niriPage.cfg ? niriPage.cfg.input.keyboard.layout : ""
+            onSubmitted: (v) => niriPage.setInput({ keyboard: { layout: v.replace(/\s+/g, "") } })
+        }
+        ChoiceRow {
+            visible: !!niriPage.cfg
+            label: Tr.t("Переключение раскладки")
+            options: [{ label: "Super+Space", value: "grp:win_space_toggle" }, { label: "Alt+Shift", value: "grp:alt_shift_toggle" },
+                      { label: "Ctrl+Shift", value: "grp:ctrl_shift_toggle" }, { label: "Caps Lock", value: "grp:caps_toggle" }]
+            current: niriPage.cfg ? niriPage.cfg.input.keyboard.options : ""
+            onPicked: (v) => niriPage.setInput({ keyboard: { options: v } })
+        }
+        ChoiceRow {
+            visible: !!niriPage.cfg
+            label: Tr.t("Задержка повтора клавиш")
+            options: [{ label: Tr.t("короткая"), value: 200 }, { label: Tr.t("обычная"), value: 300 },
+                      { label: Tr.t("длинная"), value: 500 }, { label: Tr.t("как было"), value: null }]
+            current: niriPage.cfg ? niriPage.cfg.input.keyboard.repeat_delay : null
+            onPicked: (v) => niriPage.setInput({ keyboard: { repeat_delay: v } })
+        }
+        ChoiceRow {
+            visible: !!niriPage.cfg
+            label: Tr.t("Скорость повтора")
+            options: [{ label: Tr.t("медленно"), value: 20 }, { label: Tr.t("обычно"), value: 30 },
+                      { label: Tr.t("быстро"), value: 50 }, { label: Tr.t("как было"), value: null }]
+            current: niriPage.cfg ? niriPage.cfg.input.keyboard.repeat_rate : null
+            onPicked: (v) => niriPage.setInput({ keyboard: { repeat_rate: v } })
+        }
+        ToggleRow {
+            visible: !!niriPage.cfg
+            icon: String.fromCodePoint(0xF03A0)
+            label: Tr.t("NumLock при входе")
+            checked: !!niriPage.cfg && niriPage.cfg.input.keyboard.numlock
+            onToggled: niriPage.setInput({ keyboard: { numlock: !niriPage.cfg.input.keyboard.numlock } })
+        }
+
+        Header { visible: !!niriPage.cfg; text: Tr.t("ТАЧПАД") }
+        Repeater {
+            model: niriPage.cfg ? [{ k: "tap", l: Tr.t("Касание — щелчок"), g: 0xF0B5A }, { k: "natural_scroll", l: Tr.t("Естественная прокрутка"), g: 0xF0CEF },
+                                   { k: "dwt", l: Tr.t("Не мешать при наборе текста"), g: 0xF030C },
+                                   { k: "disabled_on_external_mouse", l: Tr.t("Выключать, когда подключена мышь"), g: 0xF037D }] : []
+            delegate: ToggleRow {
+                required property var modelData
+                icon: String.fromCodePoint(modelData.g)
+                label: modelData.l
+                checked: !!niriPage.cfg && niriPage.cfg.input.touchpad[modelData.k]
+                onToggled: { var p = {}; p[modelData.k] = !niriPage.cfg.input.touchpad[modelData.k]; niriPage.setInput({ touchpad: p }) }
+            }
+        }
+        ChoiceRow {
+            visible: !!niriPage.cfg
+            label: Tr.t("Скорость указателя (тачпад)")
+            options: [{ label: Tr.t("медленно"), value: -0.4 }, { label: Tr.t("обычно"), value: 0 },
+                      { label: Tr.t("быстрее"), value: 0.3 }, { label: Tr.t("быстро"), value: 0.6 }]
+            current: niriPage.cfg ? niriPage.cfg.input.touchpad.accel_speed : 0
+            onPicked: (v) => niriPage.setInput({ touchpad: { accel_speed: v } })
+        }
+
+        Header { visible: !!niriPage.cfg; text: Tr.t("МЫШЬ") }
+        ToggleRow {
+            visible: !!niriPage.cfg
+            icon: String.fromCodePoint(0xF0CEF)
+            label: Tr.t("Естественная прокрутка")
+            checked: !!niriPage.cfg && niriPage.cfg.input.mouse.natural_scroll
+            onToggled: niriPage.setInput({ mouse: { natural_scroll: !niriPage.cfg.input.mouse.natural_scroll } })
+        }
+        ToggleRow {
+            visible: !!niriPage.cfg
+            icon: String.fromCodePoint(0xF037D)
+            label: Tr.t("Без ускорения указателя")
+            hint: Tr.t("Указатель движется ровно как мышь — удобно в играх")
+            checked: !!niriPage.cfg && niriPage.cfg.input.mouse.accel_profile === "flat"
+            onToggled: niriPage.setInput({ mouse: { accel_profile: niriPage.cfg.input.mouse.accel_profile === "flat" ? "adaptive" : "flat" } })
+        }
+        ChoiceRow {
+            visible: !!niriPage.cfg
+            label: Tr.t("Скорость указателя (мышь)")
+            options: [{ label: Tr.t("медленно"), value: -0.4 }, { label: Tr.t("обычно"), value: 0 },
+                      { label: Tr.t("быстрее"), value: 0.3 }, { label: Tr.t("быстро"), value: 0.6 }]
+            current: niriPage.cfg ? niriPage.cfg.input.mouse.accel_speed : 0
+            onPicked: (v) => niriPage.setInput({ mouse: { accel_speed: v } })
+        }
+        ToggleRow {
+            visible: !!niriPage.cfg
+            icon: String.fromCodePoint(0xF0659)
+            label: Tr.t("Фокус за мышью")
+            hint: Tr.t("Окно под указателем становится активным без щелчка")
+            checked: !!niriPage.cfg && niriPage.cfg.input.focus_follows_mouse
+            onToggled: niriPage.setInput({ focus_follows_mouse: !niriPage.cfg.input.focus_follows_mouse })
+        }
+
+        Header { visible: !!niriPage.cfg; text: Tr.t("ГОРЯЧИЕ КЛАВИШИ") }
+        TextRow {
+            visible: !!niriPage.cfg
+            label: Tr.t("Поиск по клавишам и действиям")
+            placeholder: Tr.t("например, screenshot или Mod+T")
+            value: niriPage.bindFilter
+            onSubmitted: (v) => niriPage.bindFilter = v
+        }
+        Repeater {
+            model: {
+                if (!niriPage.cfg) return []
+                var f = niriPage.bindFilter.toLowerCase()
+                var all = niriPage.cfg.binds.filter(b => !f || (b.key + " " + b.title + " " + b.action).toLowerCase().indexOf(f) >= 0)
+                return all.slice(0, 60)
+            }
+            delegate: RowLayout {
+                required property var modelData
+                Layout.fillWidth: true
+                spacing: 10
+                Rectangle {
+                    Layout.preferredWidth: Math.min(170, keyT.implicitWidth + 16)
+                    implicitHeight: 26; radius: Theme.r(8)
+                    color: Theme.surfaceHigh; border.color: Theme.outline
+                    Text { id: keyT; anchors.centerIn: parent; width: Math.min(implicitWidth, 154); elide: Text.ElideRight
+                           text: parent.parent.modelData.key; color: Theme.text; font.pixelSize: Theme.fs(12); font.family: "JetBrainsMono Nerd Font" }
+                }
+                Text { Layout.fillWidth: true; text: parent.modelData.title || parent.modelData.action
+                       color: Theme.textSecondary; font.pixelSize: Theme.fs(12); elide: Text.ElideRight }
+            }
+        }
+        Text {
+            Layout.fillWidth: true
+            visible: !!niriPage.cfg
+            text: Tr.t("Изменить клавиши — в ~/.config/niri/config.kdl (раздел binds)")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
     }
     ColumnLayout {   // раздел «plugins»
         visible: sv.page === "plugins"
