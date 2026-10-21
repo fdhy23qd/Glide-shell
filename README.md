@@ -2,9 +2,9 @@
 
 **English** · [Русский](README.ru.md)
 
-![Glide Shell in action: the island opens into the panel, categories, a notification with inline reply](docs/demo.gif)
+![Glide Shell in action: the island opens into the panel, categories, a notification with inline reply](docs/demo.webp)
 
-<sub>26 s, Russian interface · [MP4](docs/demo.mp4)</sub>
+<sub>1 min 12 s, Russian interface: island and OSD, bar tooltips, tray and dock menus, panel categories, search, live accent colour, notification with inline reply, lock screen, desktop widgets · [MP4](docs/demo.mp4)</sub>
 
 A desktop shell for [niri](https://github.com/YaLTeR/niri), written in QML on [Quickshell](https://quickshell.org).
 A top bar of floating capsules with an **island** in the middle, which flows into a panel of categories when
@@ -109,7 +109,9 @@ a reboot. If something goes wrong, press Ctrl+Alt+F2, log in, run `sudo sh greet
   - `night on|off|auto|toggle`;
   - `record [system|mic]`;
   - `awake on|off`;
-  - `wallpaper <path>|next`.
+  - `wallpaper <path>|next`;
+  - `search <text>` (open the panel with a query, e.g. from a key binding);
+  - `pref <key> <json>` (change a setting live, e.g. `pref accent '"#3b82f6"'`).
 
   The lock screen has its own target: `qs -c glide-shell ipc call lock lock`. To see all functions:
   `qs -c glide-shell ipc show`.

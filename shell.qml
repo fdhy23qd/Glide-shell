@@ -822,7 +822,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.72 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.73 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -856,6 +856,12 @@ ShellRoot {
         }
         function dockMenu(key: string): string { return root.mainDock ? root.mainDock.menuFor(key) : "" }    // меню значка дока (проверка)
         function bellFly(): void { if (root.rightBar) root.rightBar.flyToBell() }                            // точка из острова в колокольчик (проверка)
+        // поиск из скрипта (демо, хоткей с готовым запросом): открыть панель и вписать текст
+        function search(text: string): void { if (!root.shown) root.open(); win.setSearch(text) }
+        // настройка на лету: pref accent '"#3b82f6"' — значение JSON (как в config.json)
+        function pref(key: string, value: string): string {
+            try { Prefs.set(key, JSON.parse(value)); return "ok" } catch (e) { return "bad JSON: " + value }
+        }
         function night(mode: string): string {   // ночной свет: on | off | auto | toggle | "" — вернуть режим
             if (mode === "toggle") NightLight.toggle()
             else if (["on", "off", "auto"].indexOf(mode) >= 0) NightLight.setMode(mode)

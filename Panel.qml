@@ -17,6 +17,7 @@ PanelWindow {
     readonly property bool blobSettled: blob.settled          // фигура совпала с островом (root.blobAtCompact)
     function clearSearchUi() { searchInput.text = ""; content.forceActiveFocus() }
     function clearSearchField() { searchInput.text = "" }
+    function setSearch(t) { searchInput.text = t; searchInput.cursorPosition = t.length }   // IPC search
     screen: root.panelScreen
     visible: root.shown || root.reveal > 0 || root.islandClosing
     anchors { top: true; bottom: true; left: true; right: true }
