@@ -1,0 +1,11 @@
+{
+  "id": "toggles", "api": 1, "name": "Переключатели", "icon": "󰔡", "author": "glide-shell",
+  "category": ["quick", "system"],
+  "description": "Wi-Fi, Bluetooth и «не засыпать» (блокировка сна через systemd-inhibit)",
+  "keywords": ["wifi", "вайфай", "bluetooth", "блютуз", "сон", "не засыпать", "кофеин"],
+  "items": [
+    { "type": "list", "close": false, "emptyIcon": "F0219", "empty": "нет переключателей",
+      "list": ["python3", "{dir}/tg.py", "list"],
+      "command": ["python3", "{dir}/tg.py", "toggle"] }
+  ]
+}

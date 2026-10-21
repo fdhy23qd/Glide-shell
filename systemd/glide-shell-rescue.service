@@ -1,0 +1,8 @@
+[Unit]
+Description=Glide Shell не поднимается — запасной рабочий стол (DMS)
+# запускается из OnFailure= службы glide-shell, сам по себе — нет
+
+[Service]
+Type=oneshot
+# режим auto: при запертом экране ничего не трогает — падение не должно снимать блокировку
+ExecStart=/bin/sh %h/.config/quickshell/glide-shell/tools/glide-rescue.sh auto

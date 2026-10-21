@@ -1,0 +1,19 @@
+{
+  "id": "timer",
+  "api": 1,
+  "name": "Таймер",
+  "icon": "󰔛",
+  "author": "glide-shell",
+  "items": [
+    {
+      "type": "input",
+      "placeholder": "Минут → Enter",
+      "command": [
+        "sh",
+        "{dir}/timer.sh"
+      ],
+      "label": "Таймер"
+    }
+  ],
+  "category": "quick"
+}

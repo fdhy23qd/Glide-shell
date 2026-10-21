@@ -1,0 +1,7 @@
+{
+  "id": "bluetooth", "api": 1, "name": "Bluetooth", "icon": "󰂯", "author": "glide-shell",
+  "description": "Мои устройства (подключить, отключить, забыть) и поиск новых с сопряжением",
+  "category": "control", "priority": -20,
+  "keywords": ["bluetooth", "блютуз", "наушники", "сопряжение", "устройства"],
+  "qml": "Bluetooth.qml"
+}

@@ -1,0 +1,40 @@
+[Unit]
+Description=Glide Shell — бар, остров, док, уведомления, блокировка, polkit
+Documentation=file://%h/.config/quickshell/glide-shell/README.md
+PartOf=graphical-session.target
+After=graphical-session.target
+Requisite=graphical-session.target
+# падает раз за разом (5 раз за 3 минуты; цикл с записью дампа ~12 с) — запасной вариант: DMS
+# (glide-shell-rescue.service; при запертом экране он ничего не делает)
+StartLimitIntervalSec=180
+StartLimitBurst=5
+OnFailure=glide-shell-rescue.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/qs -c glide-shell
+# «запущена» — когда оболочка загрузилась: приложения автозапуска ждут её (systemd/app-.service.d)
+ExecStartPost=/bin/sh %h/.config/quickshell/glide-shell/tools/glide-ready.sh
+Restart=on-failure
+RestartSec=2
+# без direct systemd на каждом падении проходит через «failed» и зовёт OnFailure= — откат на DMS
+# останавливал службу и отменял перезапуск. С direct OnFailure — только когда лимит перезапусков исчерпан.
+RestartMode=direct
+# Свой обработчик падений Quickshell перезапускает оболочку в том же процессе (exec с тем же PID):
+# systemd этого не видит, а помощники прежнего экземпляра остаются жить (pdeathsig не срабатывает,
+# родитель формально жив) — дубли inhibitor-ов, монитора logind, слежения за буфером. Пусть падает честно.
+Environment=QS_DISABLE_CRASH_HANDLER=1
+# без темы Qt ищет значки только в hicolor: нет значков wine, терминала, сети и даже запасного
+# application-x-executable (он в breeze)
+Environment=QS_ICON_THEME=breeze-dark
+# видео-обои (GIF и видео): декодировать видеокартой, если есть драйвер VAAPI (intel-media-driver);
+# без него Qt сам откатывается на процессор
+Environment=QT_FFMPEG_DECODING_HW_DEVICE_TYPES=vaapi
+# Гасим только саму оболочку: её помощники (inhibitor-ы, монитор logind, демоны плагинов) умирают
+# вместе с ней через setpriv --pdeathsig, а приложения, запущенные до перехода на systemd-run,
+# не должны погибать при перезапуске.
+KillMode=process
+# логи: journalctl --user -u glide-shell
+
+[Install]
+WantedBy=graphical-session.target

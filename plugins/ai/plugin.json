@@ -1,0 +1,14 @@
+{
+  "id": "ai", "api": 1, "name": "Claude", "icon": "󱙺", "author": "glide-shell",
+  "category": "ai", "categoryName": "ИИ", "categoryIcon": "󱙺",
+  "description": "Чат с Claude через Claude Code (подписка, ключ не нужен) или Claude API. Подробности — в ai.py",
+  "keywords": ["ии", "ai", "claude", "чат", "спросить", "нейросеть"],
+  "qml": "Chat.qml",
+  "wide": true,
+  "contextActions": [
+    { "label": "✧ Спросить ИИ", "when": "text", "handoff": "ai", "prompt": "Объясни простыми словами:" },
+    { "label": "✧ Исправить ошибки", "when": "text", "command": ["python3", "{dir}/ai.py", "once", "fix"], "output": "copy+notify" },
+    { "label": "✧ Перевести", "when": "text", "command": ["python3", "{dir}/ai.py", "once", "translate"], "output": "copy+notify" },
+    { "label": "✧ Пересказать", "when": "multiline", "command": ["python3", "{dir}/ai.py", "once", "summary"], "output": "notify" }
+  ]
+}

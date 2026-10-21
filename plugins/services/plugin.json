@@ -1,0 +1,11 @@
+{
+  "id": "services", "api": 1, "name": "Службы пользователя (systemd --user)", "icon": "󰒓", "author": "glide-shell",
+  "category": "system",
+  "description": "Запущенные службы; клик перезапускает службу",
+  "keywords": ["systemd", "служба", "сервис", "restart"],
+  "items": [
+    { "type": "list", "max": 12, "emptyIcon": "F0EE0", "empty": "нет запущенных служб", "close": false,
+      "list": ["sh", "-c", "systemctl --user list-units --type=service --state=running --no-legend --plain | cut -d' ' -f1"],
+      "command": ["systemctl", "--user", "restart", "{text}"] }
+  ]
+}

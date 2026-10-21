@@ -1,0 +1,25 @@
+{
+  "id": "snippets",
+  "api": 1,
+  "name": "Сниппеты",
+  "icon": "󰅩",
+  "author": "glide-shell",
+  "description": "Строки из ~/.config/glide-shell/snippets.txt; клик копирует строку в буфер",
+  "items": [
+    {
+      "type": "list",
+      "emptyIcon": "F0219", "empty": "добавь строки в ~/.config/glide-shell/snippets.txt",
+      "list": [
+        "sh",
+        "-c",
+        "cat \"${XDG_CONFIG_HOME:-$HOME/.config}/glide-shell/snippets.txt\" 2>/dev/null"
+      ],
+      "command": [
+        "sh",
+        "-c",
+        "printf %s \"$QP_TEXT\" | wl-copy"
+      ]
+    }
+  ],
+  "category": "dev"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "notifications", "api": 1, "name": "Уведомления", "icon": "󰂚", "author": "glide-shell",
+  "description": "История уведомлений, «не беспокоить», действия приложений",
+  "category": "notify",
+  "keywords": ["уведомления", "не беспокоить", "история", "notifications", "dnd"],
+  "qml": "Notifications.qml"
+}

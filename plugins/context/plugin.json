@@ -1,0 +1,38 @@
+{
+  "id": "context",
+  "api": 1,
+  "name": "Папка текущего окна",
+  "icon": "󰉋",
+  "author": "glide-shell",
+  "description": "Определяет рабочую папку окна, из которого вызвали панель (для терминалов — папка самого вложенного процесса)",
+  "items": [
+    {
+      "type": "button",
+      "label": "Терминал здесь",
+      "command": [
+        "python3",
+        "{dir}/ctx.py",
+        "terminal"
+      ]
+    },
+    {
+      "type": "button",
+      "label": "Файловый менеджер здесь",
+      "command": [
+        "python3",
+        "{dir}/ctx.py",
+        "files"
+      ]
+    },
+    {
+      "type": "button",
+      "label": "Скопировать путь",
+      "command": [
+        "python3",
+        "{dir}/ctx.py",
+        "copy"
+      ]
+    }
+  ],
+  "category": "dev"
+}

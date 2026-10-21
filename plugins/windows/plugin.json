@@ -1,0 +1,11 @@
+{
+  "id": "windows", "api": 1, "name": "Окна", "icon": "󰀻", "author": "glide-shell",
+  "category": "quick",
+  "description": "Все открытые окна niri с поиском; клик переключает на окно",
+  "keywords": ["окно", "окна", "переключить", "window", "alt-tab"],
+  "items": [
+    { "type": "list", "filter": true, "max": 8, "emptyIcon": "F0B6F", "empty": "окон нет",
+      "list": ["python3", "{dir}/win.py", "list"],
+      "command": ["python3", "{dir}/win.py", "focus"] }
+  ]
+}

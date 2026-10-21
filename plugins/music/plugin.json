@@ -1,0 +1,6 @@
+{
+  "id": "music", "api": 1, "name": "Плеер", "icon": "󰐌", "author": "glide-shell",
+  "description": "Управление любым MPRIS-плеером (Spotify, браузер, mpv, ...) напрямую, без playerctl",
+  "category": "media",
+  "qml": "Music.qml"
+}

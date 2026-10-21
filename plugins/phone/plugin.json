@@ -1,0 +1,10 @@
+{
+  "id": "phone", "api": 1, "name": "Телефон", "icon": "󰄜", "author": "glide-shell",
+  "description": "KDE Connect: заряд и сеть телефона, найти, пинг, буфер, текст и файлы на телефон, файлы телефона, SMS",
+  "category": "phone", "priority": 10,
+  "keywords": ["телефон", "kde connect", "kdeconnect", "смартфон", "найти телефон", "смс", "phone"],
+  "qml": "Phone.qml",
+  "contextActions": [
+    { "label": "󰄜 На телефон", "when": "text", "command": ["python3", "-I", "{dir}/../../tools/glide-kdeconnect.py", "act", "auto", "text"], "output": "notify" }
+  ]
+}

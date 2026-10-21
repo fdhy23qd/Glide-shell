@@ -1,0 +1,8 @@
+{
+  "id": "processes", "api": 1, "name": "Диспетчер задач", "icon": "󰄪", "author": "glide-shell",
+  "category": "system",
+  "wide": true, "priority": 20,
+  "description": "Загрузка процессора и памяти за 2 минуты, процессы с поиском и сортировкой, завершение процесса",
+  "keywords": ["процесс", "процессы", "диспетчер", "задачи", "kill", "top", "htop", "нагрузка", "память", "озу", "цп"],
+  "qml": "TaskManager.qml"
+}

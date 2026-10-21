@@ -1,0 +1,7 @@
+{
+  "id": "calendar", "api": 1, "name": "Календарь", "icon": "󰃭", "author": "glide-shell",
+  "description": "Месяц сеткой: неделя с понедельника, номера недель, листание кнопками и колесом",
+  "category": "today", "priority": 20,
+  "keywords": ["календарь", "дата", "месяц", "неделя", "calendar"],
+  "qml": "Calendar.qml"
+}
