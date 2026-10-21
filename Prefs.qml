@@ -37,6 +37,15 @@ Singleton {
     readonly property bool bar: data.bar !== false                     // свой верхний бар с островом по центру (при любом виде)
     readonly property bool islandMusic: data.islandMusic !== false     // играющая музыка в острове
     readonly property bool islandFlash: data.islandFlash !== false     // подтверждения действий в острове
+    readonly property bool islandNotif: data.islandNotif !== false     // всплывающие уведомления в острове (история — всегда)
+    readonly property bool islandTimer: data.islandTimer !== false     // таймер в острове
+    // порядок строк острова (и что главнее в компактном виде): чего нет в списке — дописывается в конец
+    readonly property var islandKinds: ["osd", "flash", "rec", "notif", "music", "timer"]
+    readonly property var islandOrder: {
+        var o = Array.isArray(data.islandOrder) ? data.islandOrder.filter(k => islandKinds.indexOf(k) >= 0) : []
+        for (var k of islandKinds) if (o.indexOf(k) < 0) o.push(k)
+        return o
+    }
     readonly property bool islandPrivacy: data.islandPrivacy !== false // остров окрашивается, пока пишут камеру/микрофон
     // активности в острове с баром: inline — в строке часов (остров не ниже бара); raise — строками, но остров
     // прижимается к верхнему краю; stack — строками под часами

@@ -92,9 +92,17 @@ ShellRoot {
     Timer { running: root.islandClosing; interval: 2500; onTriggered: root.islandClosing = false }   // страховка
 
     // что сейчас показывает остров
-    readonly property string activity: !islandShown ? "" : osd ? "osd" : flashMsg ? "flash" : recOn ? "rec" : notif ? "notif"
-                                     : musicOn ? "music" : timerOn ? "timer" : "idle"
-    readonly property var notif: Notifs.popup   // всплывающее уведомление
+    // что сейчас показывает остров: первое по порядку из настроек (Prefs.islandOrder), что есть
+    function activityOn(k) {
+        return k === "osd" ? !!osd : k === "flash" ? !!flashMsg : k === "rec" ? recOn : k === "notif" ? !!notif
+             : k === "music" ? musicOn : k === "timer" ? timerOn : false
+    }
+    readonly property string activity: {
+        if (!islandShown) return ""
+        for (var k of Prefs.islandOrder) if (activityOn(k)) return k
+        return "idle"
+    }
+    readonly property var notif: Prefs.islandNotif ? Notifs.popup : null   // всплывающее уведомление
     readonly property bool notifActions: !!notif && (notif.actions.length > 0 || notif.reply)
     property bool replying: false        // в острове пишут ответ на уведомление (Island.qml)
     onNotifChanged: replying = false
@@ -130,6 +138,15 @@ ShellRoot {
     readonly property int rowTimerH: stacked && timerOn ? (islandPeek ? 64 : 32) : 0
     readonly property bool recOn: Recorder.recording           // запись экрана
     readonly property int rowRecH: stacked && recOn ? 32 : 0
+    function rowH(k) {
+        return k === "osd" ? rowOsdH : k === "flash" ? rowFlashH : k === "notif" ? rowNotifH : k === "music" ? rowMusicH
+             : k === "timer" ? rowTimerH : k === "rec" ? rowRecH : 0
+    }
+    function rowY(k) {   // строки стопки — в порядке из настроек
+        var y = 32
+        for (var x of Prefs.islandOrder) { if (x === k) return y; y += rowH(x) }
+        return y
+    }
     readonly property int rowsH: rowOsdH + rowFlashH + rowNotifH + rowMusicH + rowTimerH + rowRecH
     readonly property int osdW: osd && osd.value < 0 ? 300 : 260
     readonly property int compactRadius: barOn && rowsH ? 18 : islandRadius   // у стопки строк углы скромнее
@@ -430,7 +447,7 @@ ShellRoot {
     property bool stateReady: false
     property var timerState: null
     property double now: Date.now()
-    readonly property bool timerOn: !!timerState && timerState.end > now
+    readonly property bool timerOn: Prefs.islandTimer && !!timerState && timerState.end > now
     readonly property real timerLeft: timerOn ? Math.ceil((timerState.end - now) / 1000) : 0
     readonly property real timerTotal: timerState ? timerState.total : 0
     readonly property real timerProgress: timerOn ? Math.min(1, (timerState.end - now) / 1000 / timerState.total) : 0
@@ -822,7 +839,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.74 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.75 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
