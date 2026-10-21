@@ -20,6 +20,12 @@ Developed and used daily on Arch Linux with niri 26.04, Quickshell 0.3 and Qt 6.
 > tested on one laptop with one screen. Multi-monitor setups, other distributions and other app combinations
 > are at your own risk for now. Bug reports are welcome. The code comments and the changelog are in Russian.
 
+## Companion apps
+
+[**Glide Apps**](https://github.com/fdhy23qd/Glide-apps) are lightweight apps in the same style that follow the shell's
+theme live: Photos (with editing), Video (player and editor), PDF, Screenshots (annotation) and Archives. The
+screenshot plugin and the Print keys use Glide Apps' editor when it is installed.
+
 ## Screenshots
 
 ![Desktop: bar with the island, dock and a weather widget](docs/screenshots/en/desktop.png)
