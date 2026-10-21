@@ -96,6 +96,8 @@ The installer:
 Update after `git pull`: `sh install.sh`. It runs the tests, installs the new version and restarts the service.
 If the new version fails to load, it rolls back to the previous one, so the bar never disappears.
 
+On the first start a short wizard helps choose the language, colours, island style and dock behaviour.
+
 Remove: `sh setup.sh --uninstall` (settings and data stay; add `--purge` to delete them too).
 
 Optional login screen (needs greetd): `sudo sh greeter/install.sh --enable`. The change takes effect after

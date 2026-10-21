@@ -549,6 +549,11 @@ ColumnLayout {
             current: Prefs.lang
             onPicked: (v) => Prefs.set("lang", v)
         }
+        ActionBtn {
+            glyph: String.fromCodePoint(0xF0674)
+            text: Tr.t("Мастер первого запуска")
+            onClicked: Quickshell.execDetached(["qs", "-c", "glide-shell", "ipc", "call", "panel", "welcome", ""])
+        }
         ChoiceRow {
             label: Tr.t("Анимации")
             options: [{ label: Tr.t("выкл"), value: 0 }, { label: Tr.t("быстрые"), value: 0.6 },
