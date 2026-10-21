@@ -1,0 +1,1 @@
+{ "id": "hello-qml", "api": 1, "name": "QML-виджет", "icon": "󰓎", "author": "example", "qml": "Widget.qml" }

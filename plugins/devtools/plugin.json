@@ -1,0 +1,25 @@
+{
+  "id": "devtools", "api": 1, "name": "Инструменты", "icon": "󱁤", "author": "glide-shell",
+  "category": "dev",
+  "keywords": ["uuid", "пароль", "json", "base64", "jwt", "хеш", "regex"],
+  "items": [
+    { "type": "button", "label": "UUID v4 → буфер", "command": ["python3", "{dir}/dt.py", "uuid"], "output": "copy+notify" },
+    { "type": "button", "label": "Пароль (24 символа) → буфер", "command": ["python3", "{dir}/dt.py", "password"], "output": "copy" },
+    { "type": "button", "label": "Unix time сейчас → буфер", "command": ["python3", "{dir}/dt.py", "now"], "output": "copy+notify" },
+    { "type": "input", "placeholder": "RegEx по тексту из буфера → Enter",
+      "command": ["python3", "{dir}/dt.py", "regex"], "output": "notify" }
+  ],
+  "contextActions": [
+    { "label": "JSON: форматировать", "when": "json", "command": ["python3", "{dir}/dt.py", "json-fmt"], "output": "copy+notify" },
+    { "label": "JSON: сжать", "when": "json", "command": ["python3", "{dir}/dt.py", "json-min"], "output": "copy" },
+    { "label": "XML: форматировать", "when": "xml", "command": ["python3", "{dir}/dt.py", "xml-fmt"], "output": "copy+notify" },
+    { "label": "JWT: декодировать", "when": "jwt", "command": ["python3", "{dir}/dt.py", "jwt"], "output": "copy+notify" },
+    { "label": "Время из timestamp", "when": "timestamp", "command": ["python3", "{dir}/dt.py", "ts"], "output": "copy+notify" },
+    { "label": "Base64 → текст", "when": "base64", "command": ["python3", "{dir}/dt.py", "b64d"], "output": "copy+notify" },
+    { "label": "URL: декодировать", "when": "urlenc", "command": ["python3", "{dir}/dt.py", "urld"], "output": "copy+notify" },
+    { "label": "Текст → Base64", "when": "text", "command": ["python3", "{dir}/dt.py", "b64e"], "output": "copy" },
+    { "label": "Текст → URL-encode", "when": "text", "command": ["python3", "{dir}/dt.py", "urle"], "output": "copy" },
+    { "label": "SHA-256", "when": "text", "command": ["python3", "{dir}/dt.py", "hash", "sha256"], "output": "copy+notify" },
+    { "label": "MD5", "when": "text", "command": ["python3", "{dir}/dt.py", "hash", "md5"], "output": "copy+notify" }
+  ]
+}

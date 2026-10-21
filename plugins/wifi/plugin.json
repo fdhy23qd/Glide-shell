@@ -1,0 +1,7 @@
+{
+  "id": "wifi", "api": 1, "name": "Wi-Fi", "icon": "󰖩", "author": "glide-shell",
+  "description": "Сети рядом: подключение (с паролем), отключение, «забыть»",
+  "category": "control", "priority": -10,
+  "keywords": ["wifi", "вайфай", "сеть", "интернет", "wi-fi", "network"],
+  "qml": "Wifi.qml"
+}

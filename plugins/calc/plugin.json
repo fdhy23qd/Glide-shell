@@ -1,0 +1,13 @@
+{
+  "id": "calc", "api": 1, "name": "Калькулятор", "icon": "󰃬", "author": "glide-shell",
+  "category": "quick",
+  "description": "+ - * / // % ^ (степень), sqrt sin cos tan log exp round min max, pi, e. Результат копируется",
+  "keywords": ["посчитать", "calc"],
+  "items": [
+    { "type": "input", "placeholder": "2+2*3, sqrt(2), 2^10 → Enter",
+      "command": ["python3", "{dir}/calc.py", "eval"], "output": "copy" },
+    { "type": "list", "max": 6, "emptyIcon": "F00EC", "empty": "история пуста",
+      "list": ["python3", "{dir}/calc.py", "list"],
+      "command": ["sh", "-c", "printf %s \"$QP_TEXT\" | wl-copy"] }
+  ]
+}

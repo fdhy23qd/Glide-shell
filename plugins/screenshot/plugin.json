@@ -1,0 +1,37 @@
+{
+  "id": "screenshot",
+  "api": 1,
+  "name": "Скриншот",
+  "icon": "󰄀",
+  "author": "glide-shell",
+  "items": [
+    {
+      "type": "button",
+      "label": "Выделить область",
+      "command": [
+        "sh",
+        "-c",
+        "p=\"$HOME/.local/bin/glide-shot\"; [ -x \"$p\" ] && exec \"$p\" --capture region || exec niri msg action screenshot"
+      ]
+    },
+    {
+      "type": "button",
+      "label": "Окно",
+      "command": [
+        "sh",
+        "-c",
+        "p=\"$HOME/.local/bin/glide-shot\"; [ -x \"$p\" ] && exec \"$p\" --capture window || exec niri msg action screenshot-window"
+      ]
+    },
+    {
+      "type": "button",
+      "label": "Весь экран",
+      "command": [
+        "sh",
+        "-c",
+        "p=\"$HOME/.local/bin/glide-shot\"; [ -x \"$p\" ] && exec \"$p\" --capture screen || exec niri msg action screenshot-screen"
+      ]
+    }
+  ],
+  "category": "quick"
+}

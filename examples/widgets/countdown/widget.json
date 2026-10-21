@@ -1,0 +1,12 @@
+{
+  "name": "Обратный отсчёт",
+  "icon": "F051F",
+  "description": "Сколько дней осталось до даты — сессии, отпуска, дня рождения",
+  "settings": [
+    { "key": "title", "type": "text", "label": "Что ждём", "default": "До Нового года" },
+    { "key": "date", "type": "text", "label": "Дата (ГГГГ-ММ-ДД)", "default": "2027-01-01" },
+    { "key": "showHours", "type": "toggle", "label": "Показывать часы", "default": false },
+    { "key": "style", "type": "choice", "label": "Вид", "default": "big",
+      "options": [{ "label": "крупно", "value": "big" }, { "label": "строкой", "value": "line" }] }
+  ]
+}

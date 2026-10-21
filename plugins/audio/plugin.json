@@ -1,0 +1,17 @@
+{
+  "id": "audio", "api": 1, "name": "Звук (PipeWire/Pulse)", "icon": "󰕾", "author": "glide-shell",
+  "category": "system",
+  "description": "Громкость и устройство вывода через pactl",
+  "keywords": ["громкость", "volume", "звук", "наушники", "динамики", "mute"],
+  "items": [
+    { "type": "button", "label": "Громче +5%", "close": false,
+      "command": ["pactl", "set-sink-volume", "@DEFAULT_SINK@", "+5%"] },
+    { "type": "button", "label": "Тише −5%", "close": false,
+      "command": ["pactl", "set-sink-volume", "@DEFAULT_SINK@", "-5%"] },
+    { "type": "button", "label": "Выключить / включить звук", "close": false,
+      "command": ["pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle"] },
+    { "type": "list", "emptyIcon": "F075A", "empty": "устройства не найдены",
+      "list": ["python3", "{dir}/sinks.py"], "close": false,
+      "command": ["pactl", "set-default-sink", "{text}"] }
+  ]
+}

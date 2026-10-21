@@ -1,0 +1,7 @@
+{
+  "id": "mixer", "api": 1, "name": "Микшер", "icon": "󰕾", "author": "glide-shell",
+  "description": "Громкость каждого приложения и выбор микрофона",
+  "category": "control", "priority": -5,
+  "keywords": ["микшер", "громкость", "приложения", "микрофон", "звук", "mixer"],
+  "qml": "Mixer.qml"
+}

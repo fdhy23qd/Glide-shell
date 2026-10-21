@@ -1,0 +1,15 @@
+{
+  "id": "notes", "api": 1, "name": "Заметка", "icon": "󰏫", "author": "glide-shell",
+  "category": "quick",
+  "description": "Записывает строку в ~/glide-notes.md (или $QP_NOTES_FILE) вместе с названием окна, из которого вызвана панель",
+  "keywords": ["заметки", "notes", "записать"],
+  "items": [
+    { "type": "input", "placeholder": "Мысль → Enter", "autofocus": true, "label": "Заметка",
+      "command": ["python3", "{dir}/notes.py", "add"] },
+    { "type": "list", "max": 5, "emptyIcon": "F0219", "empty": "заметок пока нет",
+      "list": ["python3", "{dir}/notes.py", "list"],
+      "command": ["sh", "-c", "printf %s \"$QP_TEXT\" | wl-copy"] },
+    { "type": "button", "label": "Открыть все заметки",
+      "command": ["python3", "{dir}/notes.py", "open"] }
+  ]
+}

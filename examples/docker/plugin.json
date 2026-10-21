@@ -1,0 +1,8 @@
+{
+  "id": "docker", "api": 1, "name": "Docker: перезапуск", "icon": "󰡨", "author": "example",
+  "items": [
+    { "type": "list", "empty": "контейнеров нет",
+      "list": ["docker", "ps", "--format", "{{.Names}}"],
+      "command": ["docker", "restart", "{text}"] }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "power", "api": 1, "name": "Питание и сеанс", "icon": "󰐥", "author": "glide-shell",
+  "category": ["power", "system"],
+  "description": "Опасные действия срабатывают со второго нажатия",
+  "keywords": ["выключить", "перезагрузка", "сон", "блокировка", "выйти", "power", "reboot", "lock"],
+  "items": [
+    { "type": "button", "label": "Заблокировать экран", "command": ["loginctl", "lock-session"] },
+    { "type": "button", "label": "Выключить мониторы", "command": ["niri", "msg", "action", "power-off-monitors"] },
+    { "type": "button", "label": "Сон", "confirm": true, "command": ["systemctl", "suspend"] },
+    { "type": "button", "label": "Выйти из сеанса", "confirm": true, "command": ["niri", "msg", "action", "quit", "--skip-confirmation"] },
+    { "type": "button", "label": "Перезагрузить", "confirm": true, "command": ["systemctl", "reboot"] },
+    { "type": "button", "label": "Выключить", "confirm": true, "command": ["systemctl", "poweroff"] }
+  ]
+}

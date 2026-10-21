@@ -1,0 +1,24 @@
+{
+  "id": "texttools", "api": 1, "name": "Текст из выделения или буфера", "icon": "󰦨", "author": "glide-shell",
+  "category": "text",
+  "description": "Работает с выделенным текстом, а если его нет — с буфером обмена",
+  "keywords": ["регистр", "подсчёт", "qr", "сортировка", "очистить"],
+  "items": [
+    { "type": "button", "label": "Подсчёт: символы / слова / строки", "command": ["python3", "{dir}/tt.py", "count"], "output": "notify" },
+    { "type": "button", "label": "ВЕРХНИЙ РЕГИСТР", "command": ["python3", "{dir}/tt.py", "upper"], "output": "copy" },
+    { "type": "button", "label": "нижний регистр", "command": ["python3", "{dir}/tt.py", "lower"], "output": "copy" },
+    { "type": "button", "label": "Каждое Слово С Заглавной", "command": ["python3", "{dir}/tt.py", "title"], "output": "copy" },
+    { "type": "button", "label": "snake_case", "command": ["python3", "{dir}/tt.py", "snake"], "output": "copy" },
+    { "type": "button", "label": "camelCase", "command": ["python3", "{dir}/tt.py", "camel"], "output": "copy" },
+    { "type": "button", "label": "Очистить форматирование", "command": ["python3", "{dir}/tt.py", "clean"], "output": "copy" },
+    { "type": "button", "label": "Сортировать строки", "command": ["python3", "{dir}/tt.py", "sort"], "output": "copy" },
+    { "type": "button", "label": "Убрать повторы строк", "command": ["python3", "{dir}/tt.py", "uniq"], "output": "copy" },
+    { "type": "button", "label": "QR-код из текста (qrencode)", "command": ["python3", "{dir}/tt.py", "qr"] }
+  ],
+  "contextActions": [
+    { "label": "Подсчёт", "when": "text", "command": ["python3", "{dir}/tt.py", "count"], "output": "notify" },
+    { "label": "Очистить форматирование", "when": "multiline", "command": ["python3", "{dir}/tt.py", "clean"], "output": "copy" },
+    { "label": "Сортировать строки", "when": "multiline", "command": ["python3", "{dir}/tt.py", "sort"], "output": "copy" },
+    { "label": "QR-код", "when": "text", "command": ["python3", "{dir}/tt.py", "qr"] }
+  ]
+}

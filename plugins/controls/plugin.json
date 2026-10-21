@@ -1,0 +1,7 @@
+{
+  "id": "controls", "api": 1, "name": "Центр управления", "icon": "󱕂", "author": "glide-shell",
+  "description": "Wi-Fi, Bluetooth, «не беспокоить», «не засыпать», громкость, микрофон, яркость, выход звука, батарея",
+  "category": "control",
+  "keywords": ["громкость", "звук", "микрофон", "яркость", "wifi", "bluetooth", "батарея", "профиль питания", "control center"],
+  "qml": "Controls.qml"
+}

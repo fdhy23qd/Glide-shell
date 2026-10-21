@@ -1,0 +1,9 @@
+{
+  "id": "colorpick", "api": 1, "name": "Пипетка", "icon": "󰈊", "author": "glide-shell",
+  "category": "quick",
+  "keywords": ["цвет", "color", "пипетка", "hex", "picker"],
+  "items": [
+    { "type": "button", "label": "Взять цвет с экрана → HEX в буфер",
+      "command": ["python3", "{dir}/pick.py"], "output": "copy+notify" }
+  ]
+}

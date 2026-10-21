@@ -1,0 +1,13 @@
+{
+  "id": "clipboard", "api": 1, "name": "История буфера", "icon": "󰅇", "author": "glide-shell",
+  "description": "История буфера: текст и картинки (wl-paste --watch). Файлы: ~/.local/state/glide-shell/clipboard.json и clipboard-img/, права 0600",
+  "category": "clipboard",
+  "daemon": ["wl-paste", "--watch", "python3", "{dir}/clip.py", "store"],
+  "items": [
+    { "type": "list", "filter": true, "autofocus": true, "max": 30, "emptyIcon": "F014C", "empty": "история пуста",
+      "list": ["python3", "{dir}/clip.py", "list"],
+      "command": ["python3", "{dir}/clip.py", "copy"] },
+    { "type": "button", "label": "Очистить историю", "close": false,
+      "command": ["python3", "{dir}/clip.py", "clear"] }
+  ]
+}

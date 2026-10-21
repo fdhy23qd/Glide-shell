@@ -1,0 +1,7 @@
+{
+  "id": "recorder", "api": 1, "name": "Запись экрана", "icon": "󰑋", "author": "glide-shell",
+  "description": "Экран или область, без звука / со звуком системы / с микрофоном (wf-recorder). Видео — в ~/Видео/Записи экрана",
+  "category": "quick",
+  "keywords": ["запись", "видео", "экран", "скринкаст", "record", "screencast"],
+  "qml": "Recorder.qml"
+}

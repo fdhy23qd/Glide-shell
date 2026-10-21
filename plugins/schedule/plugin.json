@@ -1,0 +1,7 @@
+{
+  "id": "schedule", "api": 1, "name": "Расписание пар", "icon": "󰑴", "author": "glide-shell",
+  "description": "Расписание группы с campus.syktsu.ru: неделя по дням, идущая и следующая пара, подгруппы",
+  "category": "schedule", "priority": 10,
+  "keywords": ["расписание", "пары", "университет", "сыктгу", "занятия", "schedule"],
+  "qml": "Schedule.qml"
+}

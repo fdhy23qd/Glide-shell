@@ -1,0 +1,8 @@
+#!/bin/sh
+# Экран входа Glide для greetd (/etc/greetd/config.toml: command = "/usr/local/bin/glide-greeter"):
+# свой niri с конфигом экрана входа, внутри — Quickshell (/usr/local/share/glide-greeter/shell.qml).
+niri -c /usr/local/share/glide-greeter/niri.kdl
+# niri ушёл, а сеанс ещё запускается (несколько секунд на HDD) — на VT в это время видна текстовая консоль.
+# Стираем её и прячем курсор: между экраном входа и рабочим столом — просто чёрный экран.
+# (stdout — терминал greetd: им же пользуется текстовый agreety)
+printf '\033[2J\033[3J\033[H\033[?25l' 2>/dev/null

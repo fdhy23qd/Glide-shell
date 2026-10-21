@@ -1,0 +1,30 @@
+// niri экрана входа Glide (greetd → glide-greeter → niri -c этот файл). Создаёт install.sh: раскладки,
+// тачпад и мониторы — из конфига niri пользователя на момент установки (@USER@).
+hotkey-overlay { skip-at-startup; }
+prefer-no-csd
+
+input {
+    keyboard {
+        xkb {
+@XKB@
+        }
+        numlock
+    }
+    touchpad {
+        tap
+        natural-scroll
+    }
+}
+
+layout { background-color "#0f1115"; }
+
+environment {
+    QS_ICON_THEME "breeze-dark"
+    QS_DISABLE_CRASH_HANDLER "1"
+}
+
+// экран входа; закрылся (вход выполнен или упал) — niri выходит следом, и greetd запускает сеанс
+// (или, после падения, экран входа заново)
+spawn-sh-at-startup "qs -p @SHARE@; niri msg action quit --skip-confirmation"
+
+@OUTPUTS@

@@ -1,0 +1,7 @@
+{
+  "id": "weather", "api": 1, "name": "Погода", "icon": "󰖕", "author": "glide-shell",
+  "description": "Сейчас, по часам и на 5 дней (Open-Meteo); город — сам или вручную",
+  "category": "today", "priority": 10,
+  "keywords": ["погода", "температура", "прогноз", "дождь", "weather"],
+  "qml": "Weather.qml"
+}

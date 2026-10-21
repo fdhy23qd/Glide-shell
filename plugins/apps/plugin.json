@@ -1,0 +1,21 @@
+{
+  "id": "apps",
+  "api": 1,
+  "name": "Приложения",
+  "icon": "󰀻",
+  "author": "glide-shell",
+  "category": "apps",
+  "categoryName": "Приложения",
+  "categoryIcon": "󰀻",
+  "priority": 50,
+  "description": "Все приложения сеткой, частые — сверху. Поиск — общий: просто начни печатать (Mod+D)",
+  "keywords": [
+    "приложения",
+    "программы",
+    "запуск",
+    "лаунчер",
+    "apps",
+    "launcher"
+  ],
+  "qml": "Apps.qml"
+}

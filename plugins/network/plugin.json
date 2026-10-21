@@ -1,0 +1,19 @@
+{
+  "id": "network", "api": 1, "name": "Сетевые инструменты", "icon": "󰌗", "author": "glide-shell",
+  "category": "net",
+  "keywords": ["ping", "dns", "ssl", "сертификат", "заголовки", "ip", "curl"],
+  "items": [
+    { "type": "input", "placeholder": "ping: хост → Enter", "command": ["python3", "{dir}/net.py", "ping"], "output": "notify" },
+    { "type": "input", "placeholder": "DNS: хост", "command": ["python3", "{dir}/net.py", "dns"], "output": "notify" },
+    { "type": "input", "placeholder": "SSL-сертификат: хост", "command": ["python3", "{dir}/net.py", "ssl"], "output": "notify" },
+    { "type": "input", "placeholder": "HTTP-заголовки: URL", "command": ["python3", "{dir}/net.py", "headers"], "output": "copy+notify" },
+    { "type": "button", "label": "Мой внешний IP (api.ipify.org)", "command": ["python3", "{dir}/net.py", "myip"], "output": "copy+notify" }
+  ],
+  "contextActions": [
+    { "label": "Открыть в браузере", "when": "url", "command": ["python3", "{dir}/net.py", "open"] },
+    { "label": "HTTP-заголовки", "when": "url", "command": ["python3", "{dir}/net.py", "headers"], "output": "copy+notify" },
+    { "label": "SSL", "when": ["url", "host"], "command": ["python3", "{dir}/net.py", "ssl"], "output": "notify" },
+    { "label": "DNS", "when": ["url", "host"], "command": ["python3", "{dir}/net.py", "dns"], "output": "notify" },
+    { "label": "Ping", "when": ["url", "host"], "command": ["python3", "{dir}/net.py", "ping"], "output": "notify" }
+  ]
+}

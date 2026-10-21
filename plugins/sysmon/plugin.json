@@ -1,0 +1,6 @@
+{
+  "id": "sysmon", "api": 1, "name": "Состояние системы", "icon": "󰓅", "author": "glide-shell",
+  "category": "system",
+  "keywords": ["cpu", "ram", "память", "диск", "температура", "батарея", "сеть", "gpu"],
+  "qml": "Stats.qml"
+}

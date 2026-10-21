@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+	<meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Расписание группы</title>
+    <!-- Bootstrap core CSS -->
+    <link href="/bitrix/templates/campus/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/bitrix/templates/campus/dist/css/roboto.min.css" rel="stylesheet">
+    <link href="/bitrix/templates/campus/dist/css/material.min.css" rel="stylesheet">
+    <link href="/bitrix/templates/campus/dist/css/ripples.min.css" rel="stylesheet">
+    <link href="/bitrix/templates/campus/dist/css/material-fullpalette.min.css" rel="stylesheet">
+    <link href="/bitrix/templates/campus/css/styles.css?v=1" rel="stylesheet">
+	<link rel="stylesheet" href="/bitrix/templates/special_main/bvi/dist/css/bvi.min.css" type="text/css">
+    <script src="/bitrix/templates/campus/js/jquery-1.11.3.min.js"></script>
+	<script src="/bitrix/templates/campus/js/react/react.js"></script>
+	<script src="/bitrix/templates/campus/js/react/react-dom.js"></script>
+	<script src="/bitrix/templates/campus/ui/1.13.0/jquery-ui.js"></script>
+	<meta name="theme-color" content="#000000">
+	<link rel="apple-touch-icon" href="/images/logo/192x192.png">
+	<link rel="manifest" href="/manifest.json">
+		<script src="/bitrix/templates/campus/js/babel-core/5.8.23/browser.min.js"></script>
+		     <!-- Just for debugging purposes. Don't actually copy this line! -->
+    <!--[if lt IE 9]>-->
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="keywords" content="Расписание" />
+<meta name="description" content="Расписание занятий" />
+<link href="/bitrix/js/ui/design-tokens/dist/ui.design-tokens.css?171837114826358" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/fonts/opensans/ui.font.opensans.css?16659991502555" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/forms/ui.forms.css?178963553640406" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/layout-form/dist/layout-form.bundle.css?17029898304547" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/main/popup/dist/main.popup.bundle.css?178464057825093" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/design-tokens/air/dist/air-design-tokens.css?1784640581175933" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/cnt/ui.cnt.css?17641921105220" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/cnt/dist/cnt.bundle.css?17641921446343" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/icon-set/dist/icon-set.bundle.css?17846405812146" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/icon-set/main/dist/main.bundle.css?178464058182757" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/icon-set/outline/dist/outline.bundle.css?1789635536130526" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/switcher/dist/ui.switcher.bundle.css?17745347467550" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/buttons/dist/ui.buttons.bundle.css?178963553691514" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/alerts/src/ui.alert.css?16875122198996" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/hint/dist/ui.hint.bundle.css?17846405814817" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/js/ui/notification/dist/notification.bundle.css?17846405812732" type="text/css" rel="stylesheet"/>
+<link href="/bitrix/templates/campus/components/bitrix/menu/additional_menu/style.css?1560839890842" type="text/css" rel="stylesheet" data-template-style="true"/>
+<link href="/bitrix/templates/campus/components/bitrix/menu/main_menu/style.css?15827902661337" type="text/css" rel="stylesheet" data-template-style="true"/>
+<link href="/bitrix/templates/campus/components/bitrix/menu/bottom_menu/style.css?1560839890842" type="text/css" rel="stylesheet" data-template-style="true"/>
+<link href="/bitrix/templates/campus/template_styles.css?1676033446155" type="text/css" rel="stylesheet" data-template-style="true"/>
+<script>if(!window.BX)window.BX={};if(!window.BX.message)window.BX.message=function(mess){if(typeof mess==='object'){for(let i in mess) {BX.message[i]=mess[i];} return true;}};</script>
+<script>(window.BX||top.BX).message({"MAIN_BASELINE_BROWSER_OUTDATED":"Вы используете устаревшую версию браузера. Обновите его для безопасной и стабильной работы","MAIN_BASELINE_DETAILS":"Подробнее","MAIN_BASELINE_CLOSE":"Закрыть"});</script>
+
+<script type="extension/settings" data-extension="main.baseline">{"collectData":false,"helpUrl":"https:\/\/helpdesk.bitrix24.ru\/open\/code_27229654\/","helpCode":"redirect=detail\u0026code=27229654"}</script>
+<script src="/bitrix/js/main/baseline/dist/baseline.bundle.js?17846405716900"></script>
+
+<script>(window.BX||top.BX).message({"JS_CORE_LOADING":"Загрузка...","JS_CORE_NO_DATA":"- Нет данных -","JS_CORE_WINDOW_CLOSE":"Закрыть","JS_CORE_WINDOW_EXPAND":"Развернуть","JS_CORE_WINDOW_NARROW":"Свернуть в окно","JS_CORE_WINDOW_SAVE":"Сохранить","JS_CORE_WINDOW_CANCEL":"Отменить","JS_CORE_WINDOW_CONTINUE":"Продолжить","JS_CORE_H":"ч","JS_CORE_M":"м","JS_CORE_S":"с","JSADM_AI_HIDE_EXTRA":"Скрыть лишние","JSADM_AI_ALL_NOTIF":"Показать все","JSADM_AUTH_REQ":"Требуется авторизация!","JS_CORE_WINDOW_AUTH":"Войти","JS_CORE_IMAGE_FULL":"Полный размер"});</script>
+
+<script src="/bitrix/js/main/core/core.js?1789635458334249"></script>
+
+<script>BX.Runtime.registerExtension({"name":"main.core","namespace":"BX","loaded":true});</script>
+<script>BX.setJSList(["\/bitrix\/js\/main\/core\/core_ajax.js","\/bitrix\/js\/main\/core\/core_promise.js","\/bitrix\/js\/main\/polyfill\/promise\/js\/promise.js","\/bitrix\/js\/main\/loadext\/loadext.js","\/bitrix\/js\/main\/loadext\/extension.js","\/bitrix\/js\/main\/polyfill\/promise\/js\/promise.js","\/bitrix\/js\/main\/polyfill\/find\/js\/find.js","\/bitrix\/js\/main\/polyfill\/includes\/js\/includes.js","\/bitrix\/js\/main\/polyfill\/matches\/js\/matches.js","\/bitrix\/js\/ui\/polyfill\/closest\/js\/closest.js","\/bitrix\/js\/main\/polyfill\/fill\/main.polyfill.fill.js","\/bitrix\/js\/main\/polyfill\/find\/js\/find.js","\/bitrix\/js\/main\/polyfill\/matches\/js\/matches.js","\/bitrix\/js\/main\/polyfill\/core\/dist\/polyfill.bundle.js","\/bitrix\/js\/main\/core\/core.js","\/bitrix\/js\/main\/polyfill\/intersectionobserver\/js\/intersectionobserver.js","\/bitrix\/js\/main\/lazyload\/dist\/lazyload.bundle.js","\/bitrix\/js\/main\/polyfill\/core\/dist\/polyfill.bundle.js","\/bitrix\/js\/main\/parambag\/dist\/parambag.bundle.js"]);
+</script>
+<script>BX.Runtime.registerExtension({"name":"ui.dexie","namespace":"BX.DexieExport","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"fc","namespace":"window","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"pull.protobuf","namespace":"BX","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"rest.client","namespace":"window","loaded":true});</script>
+<script>(window.BX||top.BX).message({"pull_server_enabled":"Y","pull_config_timestamp":1764192105,"shared_worker_allowed":"Y","pull_guest_mode":"N","pull_guest_user_id":0,"pull_worker_mtime":1763983912});(window.BX||top.BX).message({"PULL_OLD_REVISION":"Для продолжения корректной работы с сайтом необходимо перезагрузить страницу."});</script>
+<script>BX.Runtime.registerExtension({"name":"pull.client","namespace":"BX","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"pull","namespace":"window","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.design-tokens","namespace":"","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.fonts.opensans","namespace":"window","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.forms","namespace":"window","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.layout-form","namespace":"BX.UI","loaded":true});</script>
+<script type="extension/settings" data-extension="ui.a11y">{"restoreLostFocus":false,"useFocusTrapInDialogs":false}</script>
+<script>BX.Runtime.registerExtension({"name":"ui.a11y","namespace":"BX.UI.Accessibility","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"main.popup","namespace":"BX.Main","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.design-tokens.air","namespace":"","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.cnt","namespace":"BX.UI","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.icon-set.api.core","namespace":"BX.UI.IconSet","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.icon-set","namespace":"","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.icon-set.main","namespace":"","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.icon-set.outline","namespace":"","loaded":true});</script>
+<script>(window.BX||top.BX).message({"UI_SWITCHER_ON":"вкл","UI_SWITCHER_OFF":"выкл"});(window.BX||top.BX).message({"UI_SWITCHER_ON":"вкл","UI_SWITCHER_OFF":"выкл"});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.switcher","namespace":"BX.UI","loaded":true});</script>
+<script>(window.BX||top.BX).message({"UI_BUTTONS_SAVE_BTN_TEXT":"Сохранить","UI_BUTTONS_CREATE_BTN_TEXT":"Создать","UI_BUTTONS_ADD_BTN_TEXT":"Добавить","UI_BUTTONS_SEND_BTN_TEXT":"Отправить","UI_BUTTONS_CANCEL_BTN_TEXT":"Отменить","UI_BUTTONS_CLOSE_BTN_TEXT":"Закрыть","UI_BUTTONS_APPLY_BTN_TEXT":"Применить"});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.buttons","namespace":"BX.UI","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.alerts","namespace":"BX.UI","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.hint","namespace":"BX.UI","loaded":true});</script>
+<script>BX.Runtime.registerExtension({"name":"ui.notification","namespace":"BX.UI.Notification","loaded":true});</script>
+<script>(window.BX||top.BX).message({"LANGUAGE_ID":"ru","FORMAT_DATE":"DD.MM.YYYY","FORMAT_DATETIME":"DD.MM.YYYY HH:MI:SS","COOKIE_PREFIX":"BITRIX_SM","SERVER_TZ_OFFSET":"10800","UTF_MODE":"Y","SITE_ID":"nc","SITE_DIR":"\/","USER_ID":"","SERVER_TIME":1792579627,"USER_TZ_OFFSET":0,"USER_TZ_AUTO":"Y","bitrix_sessid":"00000000000000000000000000000000"});</script>
+
+
+<script src="/bitrix/js/ui/dexie/dist/dexie.bundle.js?1764192110218847"></script>
+<script src="/bitrix/js/main/core/core_frame_cache.js?177453475516066"></script>
+<script src="/bitrix/js/pull/protobuf/protobuf.js?1595403893274055"></script>
+<script src="/bitrix/js/pull/protobuf/model.js?159540389370928"></script>
+<script src="/bitrix/js/rest/client/rest.client.js?161295868417414"></script>
+<script src="/bitrix/js/pull/client/pull.client.js?176398391383861"></script>
+<script src="/bitrix/js/ui/layout-form/dist/layout-form.bundle.js?17029898302801"></script>
+<script src="/bitrix/js/ui/a11y/dist/a11y.bundle.js?178963553662879"></script>
+<script src="/bitrix/js/main/popup/dist/main.popup.bundle.js?1789635458117589"></script>
+<script src="/bitrix/js/ui/cnt/dist/cnt.bundle.js?176419214416741"></script>
+<script src="/bitrix/js/ui/icon-set/api/core/dist/ui.icon-set.core.bundle.js?178963553652062"></script>
+<script src="/bitrix/js/ui/switcher/dist/ui.switcher.bundle.js?177453474614161"></script>
+<script src="/bitrix/js/ui/buttons/dist/ui.buttons.bundle.js?1789635536110549"></script>
+<script src="/bitrix/js/ui/alerts/dist/alert.bundle.js?177453475714494"></script>
+<script src="/bitrix/js/ui/hint/dist/ui.hint.bundle.js?178963553613031"></script>
+<script src="/bitrix/js/ui/notification/dist/notification.bundle.js?178464058126544"></script>
+
+
+<script src="/bitrix/templates/campus/components/bitrix/menu/additional_menu/script.js?1560839890167"></script>
+<script src="/bitrix/templates/campus/components/bitrix/menu/main_menu/script.js?1560839890167"></script>
+<script src="/bitrix/templates/campus/components/bitrix/menu/bottom_menu/script.js?1560839890167"></script>
+
+
+</head>
+<body>
+
+	<div class="body_content">
+	<div class="loader_block_campus" id="loader_block_id">
+		<div class="loader_personal">
+			<span id="loading">Пожалуйста, подождите..</span>
+		</div>
+	</div>
+	<div class="navbar navbar-inverse" role="navigation" id="slide-nav">
+		<div class="container">
+			<div class="logo">
+				<a href="/" title="Кампусная информационная система СГУ им. Питирма Cорокина" class="logo-title">Кампусная информационная система СГУ им. Питирима Cорокина</a>
+			</div>	
+			<div class="top_menu_block">
+				<div class="top_panel">
+					
+
+<ul class="nav navbar-nav navbar-right">
+	
+	
+		 
+				<li class="add_menu">
+					<a href="#" class='bvi-open' >
+					  
+							<div style='margin-top: 4px;' class="text-item-person">
+								<span class="glyphicon glyphicon-eye-open" style="font-size:1.1em; margin-right:10px;"></span><span id="versionForBadSee">Версия для слабовидящих</span>							</div>
+					 					 </a> 
+					 
+				</li>
+	 
+
+	
+	
+	
+	
+		 
+				<li class="add_menu">
+					<a href="/support/"  >
+					  
+							<div style='margin-top: 4px;' class="text-item-person">
+								<span class="glyphicon glyphicon-envelope" style="margin-right:5px"></span> Техподдержка сайта							</div>
+					 					 </a> 
+					 
+				</li>
+	 
+
+	
+	
+	
+	
+		 
+				<li class="add_menu">
+					<a href="/auth/"  >
+					  
+						<div class="menu_personal_item">
+							<div class="icon-item-elem">
+								<img src="/images/icons/ic_out_person.png" class="social-person-icon">
+							</div>
+							<div class="text-item-person">
+								Войти							</div>
+						 </div>
+										 </a> 
+					 
+				</li>
+	 
+
+	
+	
+
+
+</ul>
+
+				</div>
+			</div>
+				<div class="personal_panel_block">
+								</div>	
+			<div class="top_panel_mobile">
+				
+
+<ul class="nav navbar-nav navbar-right">
+	
+	
+		 
+				<li class="add_menu">
+					<a href="#" class='bvi-open' >
+					  
+							<div style='margin-top: 4px;' class="text-item-person">
+								<span class="glyphicon glyphicon-eye-open" style="font-size:1.1em; margin-right:10px;"></span><span id="versionForBadSee">Версия для слабовидящих</span>							</div>
+					 					 </a> 
+					 
+				</li>
+	 
+
+	
+	
+	
+	
+		 
+				<li class="add_menu">
+					<a href="/support/"  >
+					  
+							<div style='margin-top: 4px;' class="text-item-person">
+								<span class="glyphicon glyphicon-envelope" style="margin-right:5px"></span> Техподдержка сайта							</div>
+					 					 </a> 
+					 
+				</li>
+	 
+
+	
+	
+	
+	
+		 
+				<li class="add_menu">
+					<a href="/auth/"  >
+					  
+						<div class="menu_personal_item">
+							<div class="icon-item-elem">
+								<img src="/images/icons/ic_out_person.png" class="social-person-icon">
+							</div>
+							<div class="text-item-person">
+								Войти							</div>
+						 </div>
+										 </a> 
+					 
+				</li>
+	 
+
+	
+	
+
+
+</ul>
+
+			</div>
+		<!-- Brand and toggle get grouped for better mobile display -->
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+					<div class="span-icons">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</div>
+					<div class="span-toggle-menu">
+						<span class="navbar-brand-xs visible-xs-inline" href="/">МЕНЮ</span>
+					</div>
+				</button>
+				<a class="navbar-brand" href="/"><img alt="Кампусная информационная система СГУ им. Птирима Сорокина" src="/bitrix/templates/campus/img/campusuec.png"/></a> 
+			</div>
+			<!-- Collect the nav links, forms, and other content for toggling -->
+			<div id="slidemenu">
+				<div class="navbar-collapse collapse navbar-responsive-collapse" id="bs-example-navbar-collapse-1">
+					<div class="container-fluid">
+						<div class="clear_elem"></div>
+						<ul class="nav navbar-nav" id="main_menu">
+	
+		<li class="dropdown drop_menu" class="close" >
+				
+							<a href="/" class="dropdown-toggle" role="button" aria-expanded="false" >
+					Главная				</a> 
+						<ul class="dropdown-menu menu_dropdown" role="menu">
+
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/map/"  
+							 
+					>
+					 
+						Карта сайта									</a> 
+					</li>
+	
+	
+			</ul></li>	
+		<li class="dropdown drop_menu" class="close" >
+				
+							<a href="/about/" class="dropdown-toggle" role="button" aria-expanded="false" >
+					О проекте				</a> 
+						<ul class="dropdown-menu menu_dropdown" role="menu">
+
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/about/tis/"  
+							 
+					>
+					 
+						Термины и сокращения									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/about/purpose/"  
+							 
+					>
+					 
+						Цель									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/about/uec_cart/"  
+							 
+					>
+					 
+						Универсальная электронная карта									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/about/security/"  
+							 
+					>
+					 
+						Безопасность									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/about/electronic_s/"  
+							 
+					>
+					 
+						Электронная подпись									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="https://campus.syktsu.ru/upload/docs/%D0%A1%D0%B2%D0%B8%D0%B4%D0%B5%D1%82%D0%B5%D0%BB%D1%8C%D1%81%D1%82%D0%B2%D0%BE_%D0%BD%D0%B0_%D0%9F%D0%9E.pdf" target='_blank' 
+							 
+					>
+					 
+						Свидетельство на ПО									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/news"  
+							 
+					>
+					 
+						Новости									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/faq"  
+							 
+					>
+					 
+						Частые вопросы									</a> 
+					</li>
+	
+	
+			</ul></li>	
+		<li class="dropdown drop_menu" class="close" >
+				
+							<a href="/library/" class="dropdown-toggle" role="button" aria-expanded="false" >
+					Библиотека				</a> 
+						<ul class="dropdown-menu menu_dropdown" role="menu">
+
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="http://e-library.syktsu.ru/megapro/Web/ " target='_blank' 
+							 
+					>
+					 
+						Электронная библиотека СГУ									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="https://dlib.eastview.com/" target='_blank' 
+							 
+					>
+					 
+						Периодические издания									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="https://www.studentlibrary.ru/" target='_blank' 
+							 
+					>
+					 
+						ЭБС "Консультант студента"									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="https://e.lanbook.com/"  
+							 
+					>
+					 
+						ЭБС "Лань"									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="https://biblioclub.ru/" target='_blank' 
+							 
+					>
+					 
+						ЭБС "Университетская библиотека"									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="https://urait.ru/" target='_blank' 
+							 
+					>
+					 
+						ЭБС "Юрайт"									</a> 
+					</li>
+	
+	
+			</ul></li>	
+		<li class="dropdown drop_menu" class="close" >
+				
+							<a href="/services/" class="dropdown-toggle" role="button" aria-expanded="false" >
+					Сервисы				</a> 
+						<ul class="dropdown-menu menu_dropdown" role="menu">
+
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/services/fpgu/"  
+							 
+					>
+					 
+						Доступ к федеральному порталу гос. услуг									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/services/pgurk/"  
+							 
+					>
+					 
+						Доступ к порталу гос. услуг Республики Коми									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/services/nalog/"  
+							 
+					>
+					 
+						Доступ к личному кабинету налогоплательщика									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/services/bank/"  
+							 
+					>
+					 
+						Банковское платежное приложение									</a> 
+					</li>
+	
+	
+			</ul></li>	
+		
+		<li>
+
+							<a class="" href="https://www.syktsu.ru/sveden/education/"  
+							 
+					>
+					 
+						Образовательные программы и учебные планы									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="http://pps.syktsu.ru" target='_blank' 
+							 
+					>
+					 
+						Преподавателю									</a> 
+					</li>
+	
+	
+	
+		<li class="dropdown drop_menu" class="close" >
+				
+							<a href="/personal-services/" class="dropdown-toggle" role="button" aria-expanded="false" >
+					Услуги				</a> 
+						<ul class="dropdown-menu menu_dropdown" role="menu">
+
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="http://eios.syktsu.ru/" target='_blank' 
+							 
+					>
+					 
+						Дистанционное образование									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/personal-services/app_empl/"  
+							 
+					>
+					 
+						Обращения граждан									</a> 
+					</li>
+	
+	
+			</ul></li>	
+		
+		<li>
+
+							<a class="" href="/personal-services/online-payment/"  
+							 
+					>
+					 
+						Онлайн-оплата									</a> 
+					</li>
+	
+	
+	
+		<li class="dropdown drop_menu" >
+				
+							<a href="/schedule/" class="dropdown-toggle" role="button" aria-expanded="false" >
+					Расписание				</a> 
+						<ul class="dropdown-menu menu_dropdown" role="menu">
+
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/schedule/my_schedule/"  
+							 
+					>
+					 
+						Моё расписание									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/schedule/classroom"  
+							 
+					>
+					 
+						Расписание аудитории									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/schedule/group/"  
+							 
+					>
+					 
+						Расписание группы									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/schedule/teacher/"  
+							 
+					>
+					 
+						Расписание преподавателя									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/schedule/faculties/"  
+							 
+					>
+					 
+						Утверждённое расписание									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/schedule/exams/"  
+							 
+					>
+					 
+						Расписание зачётов и экзаменов									</a> 
+					</li>
+	
+	
+	
+		
+		<li>
+
+							<a class="" href="/schedule/gia/"  
+							 
+					>
+					 
+						Расписание ГИА									</a> 
+					</li>
+	
+	
+
+	</ul></li>
+</ul>
+
+					</div>
+				</div>	
+			</div><!-- /.navbar-collapse -->
+		</div><!-- /.container-fluid -->
+	</div>
+	<!-- Main jumbotron for a primary marketing message or call to action -->
+	<div class="jumbotron  container" id="content_main_block">
+		<!--wrap the page content do not style this-->
+		<div id="page-content">
+						<style>
+	#choice, #num_group {
+		border-top:0;
+		border-left:0;
+		padding:10px;
+	}
+	@media screen and (max-width: 600px) {
+		body {/*font-size:1.5em;*/}
+		table.schedule, #page-content {font-size:0.75em;}
+		button {font-size:0.75em;}
+		h3 {/*font-size:2em;*/}
+		table.schedule td, table.schedule th {padding:2px;}
+		select, input {width: 100% !important;}
+   }
+	table.schedule {width:100%;text-align:center; margin:0 auto;border:1px solid #666;color:#333;}
+	table.schedule td, table.schedule th {padding:10px; text-align: center;border:1px solid #666;}
+	table.schedule th {background-color:#f5f5f5;}
+	table.schedule tr:nth-child(2n-1) {background: #f5f5f5;}
+	button.week {color:#333; background-color:#eee; padding:5px 15px; border:1px solid #bbb; border-radius:30px; box-shadow: 0px 0px 0px rgba(0,0,0,0.4);margin:0 5px 10px 5px;}
+	button.week:hover {background-color:#666; color:#eee;border:1px solid #666;}
+	#weeks {color:#333; background-color:#eee; padding:5px 15px; border:1px solid #bbb; border-radius:30px 0 0 30px; box-shadow: 0px 0px 0px rgba(0,0,0,0.4);}
+	td.today {background-color: lemonchiffon;}
+</style>
+<h3>Поиск расписания по номеру группы</h3>
+<br>
+<form action="" method="post">
+<input type="text" id="searchgroup" name="num_group" style="width:300px;padding:8px;" placeholder="Введите номер группы">
+<button type="submit" style="padding:10px;background:#000;border:0;color:#fff;" id="searchdata" name="searchdata">ИСКАТЬ</button>
+</form>
+<br>
+<h3 style="text-align:center;font-weight:bold;">РАСПИСАНИЕ ЗАНЯТИЙ<br>
+		на неделю c 19.10.2026 по 25.10.2026<br>
+		для группы 101-ТЕСТ</h3><br><center><i>Расписание обновлено 21.10.2026 12:55:52.</i></center><br>
+		<form action="" method="post"><center>
+			<button type="submit" name="prev" value="2026-10-19_101-ТЕСТ" class="week" title="Расписание на предыдущую неделю"><< пред.</button> 
+			<button type="submit" name="curr" value="2026-10-19_101-ТЕСТ" class="week" title="Расписание на текущую неделю">тек.</button> 
+			<button type="submit" name="next" value="2026-10-19_101-ТЕСТ" class="week" title="Расписание на следующую неделю">след. >></button>
+		</center></form><br><div style="width:100%;text-align:center;"><form id="some_form" action="" method="post"><select name="weeks" id="weeks" onchange="this.form.submit();"><option disabled="disabled" selected="selected">Выберите неделю для просмотра</option><option value="1_101-ТЕСТ">1-ая неделя, числ. (31.08.2026-06.09.2026)</option><option value="2_101-ТЕСТ">2-ая неделя, знам. (07.09.2026-13.09.2026)</option><option value="3_101-ТЕСТ">3-ая неделя, числ. (14.09.2026-20.09.2026)</option><option value="4_101-ТЕСТ">4-ая неделя, знам. (21.09.2026-27.09.2026)</option><option value="5_101-ТЕСТ">5-ая неделя, числ. (28.09.2026-04.10.2026)</option><option value="6_101-ТЕСТ">6-ая неделя, знам. (05.10.2026-11.10.2026)</option><option value="7_101-ТЕСТ">7-ая неделя, числ. (12.10.2026-18.10.2026)</option><option value="8_101-ТЕСТ" selected="selected" disabled="disabled">8-ая неделя, знам. (19.10.2026-25.10.2026)</option><option value="9_101-ТЕСТ">9-ая неделя, числ. (26.10.2026-01.11.2026)</option><option value="10_101-ТЕСТ">10-ая неделя, знам. (02.11.2026-08.11.2026)</option><option value="11_101-ТЕСТ">11-ая неделя, числ. (09.11.2026-15.11.2026)</option><option value="12_101-ТЕСТ">12-ая неделя, знам. (16.11.2026-22.11.2026)</option><option value="13_101-ТЕСТ">13-ая неделя, числ. (23.11.2026-29.11.2026)</option><option value="14_101-ТЕСТ">14-ая неделя, знам. (30.11.2026-06.12.2026)</option><option value="15_101-ТЕСТ">15-ая неделя, числ. (07.12.2026-13.12.2026)</option><option value="16_101-ТЕСТ">16-ая неделя, знам. (14.12.2026-20.12.2026)</option><option value="17_101-ТЕСТ">17-ая неделя, числ. (21.12.2026-27.12.2026)</option><option value="18_101-ТЕСТ">18-ая неделя, знам. (28.12.2026-03.01.2027)</option><option value="19_101-ТЕСТ">19-ая неделя, числ. (04.01.2027-10.01.2027)</option><option value="20_101-ТЕСТ">20-ая неделя, знам. (11.01.2027-17.01.2027)</option><option value="21_101-ТЕСТ">1-ая неделя, числ. (18.01.2027-24.01.2027)</option><option value="22_101-ТЕСТ">2-ая неделя, знам. (25.01.2027-31.01.2027)</option><option value="23_101-ТЕСТ">3-ая неделя, числ. (01.02.2027-07.02.2027)</option><option value="24_101-ТЕСТ">4-ая неделя, знам. (08.02.2027-14.02.2027)</option><option value="25_101-ТЕСТ">5-ая неделя, числ. (15.02.2027-21.02.2027)</option><option value="26_101-ТЕСТ">6-ая неделя, знам. (22.02.2027-28.02.2027)</option><option value="27_101-ТЕСТ">7-ая неделя, числ. (01.03.2027-07.03.2027)</option><option value="28_101-ТЕСТ">8-ая неделя, знам. (08.03.2027-14.03.2027)</option><option value="29_101-ТЕСТ">9-ая неделя, числ. (15.03.2027-21.03.2027)</option><option value="30_101-ТЕСТ">10-ая неделя, знам. (22.03.2027-28.03.2027)</option><option value="31_101-ТЕСТ">11-ая неделя, числ. (29.03.2027-04.04.2027)</option><option value="32_101-ТЕСТ">12-ая неделя, знам. (05.04.2027-11.04.2027)</option><option value="33_101-ТЕСТ">13-ая неделя, числ. (12.04.2027-18.04.2027)</option><option value="34_101-ТЕСТ">14-ая неделя, знам. (19.04.2027-25.04.2027)</option><option value="35_101-ТЕСТ">15-ая неделя, числ. (26.04.2027-02.05.2027)</option><option value="36_101-ТЕСТ">16-ая неделя, знам. (03.05.2027-09.05.2027)</option><option value="37_101-ТЕСТ">17-ая неделя, числ. (10.05.2027-16.05.2027)</option><option value="38_101-ТЕСТ">18-ая неделя, знам. (17.05.2027-23.05.2027)</option><option value="39_101-ТЕСТ">19-ая неделя, числ. (24.05.2027-30.05.2027)</option><option value="40_101-ТЕСТ">20-ая неделя, знам. (31.05.2027-06.06.2027)</option><option value="41_101-ТЕСТ">21-ая неделя, числ. (07.06.2027-13.06.2027)</option><option value="42_101-ТЕСТ">22-ая неделя, знам. (14.06.2027-20.06.2027)</option><option value="43_101-ТЕСТ">23-ая неделя, числ. (21.06.2027-27.06.2027)</option><option value="44_101-ТЕСТ">24-ая неделя, знам. (28.06.2027-04.07.2027)</option><option value="45_101-ТЕСТ">25-ая неделя, числ. (05.07.2027-11.07.2027)</option><option value="46_101-ТЕСТ">26-ая неделя, знам. (12.07.2027-18.07.2027)</option><option value="47_101-ТЕСТ">27-ая неделя, числ. (19.07.2027-25.07.2027)</option><option value="48_101-ТЕСТ">28-ая неделя, знам. (26.07.2027-01.08.2027)</option><option value="49_101-ТЕСТ">29-ая неделя, числ. (02.08.2027-08.08.2027)</option><option value="50_101-ТЕСТ">30-ая неделя, знам. (09.08.2027-15.08.2027)</option><option value="51_101-ТЕСТ">31-ая неделя, числ. (16.08.2027-22.08.2027)</option><option value="52_101-ТЕСТ">32-ая неделя, знам. (23.08.2027-29.08.2027)</option></select></form></div><br>
+	<table border="1" class="schedule"><tbody>
+		<tr>
+			<th width="12%">День<br>недели</th>
+			<th width="6%">№</th>
+			<th width="8%">Время</th>
+			<th colspan="2" width="74%">Название дисциплины,<br>преподаватель, ауд./корп.</th>
+		</tr><tr><td rowspan="7" class="dayofweek">Понедельник<br>(19.10.2026)</td><td>1</td><td>08:30</td>
+						<td colspan="2">Иностранный язык, немецкий (пр.)<br>
+						Белова Наталья Викторовна, 313/2
+						</td></tr><td>2</td><td>10:10</td>
+						<td width="37%">Информатика и программирование (пр.)<br>
+						Виноградов Михаил Александрович, 503/1
+						 <br><b>подгруппа 1</b></td><td style="min-width:37%"></td></tr><td>3</td><td>12:40</td>
+						<td colspan="2">Математика (л.)<br>
+						Баженов Илья Иванович, 431/1
+						</td></tr><td>4</td><td>14:20</td><td colspan="2"></td></tr><td>5</td><td>16:00</td><td colspan="2"></td></tr><td>6</td><td>17:40</td><td colspan="2"></td></tr><td>7</td><td>19:20</td><td colspan="2"></td></tr><tr><td rowspan="7" class="dayofweek">Вторник<br>(20.10.2026)</td><td>1</td><td>08:30</td>
+						<td colspan="2">Основы функционирования вычислительных систем (л.)<br>
+						Плешев Дмитрий Александрович, 411/1
+						</td></tr><td>2</td><td>10:10</td>
+						<td colspan="2">Математика (пр.)<br>
+						Старцева Евгения Николаевна, 436/1
+						</td></tr><td>3</td><td>12:40</td>
+						<td colspan="2">Информатика и программирование (л.)<br>
+						Гольчевский Юрий Валентинович, 411/1
+						</td></tr><td>4</td><td>14:20</td>
+						<td width="37%">Информационные технологии (пр.)<br>
+						Туркина Марина Стефановна, 517/1
+						 <br><b>подгруппа 1</b></td><td style="min-width:37%"></td></tr><td>5</td><td>16:00</td><td colspan="2"></td></tr><td>6</td><td>17:40</td><td colspan="2"></td></tr><td>7</td><td>19:20</td><td colspan="2"></td></tr><tr><td rowspan="7" class="dayofweek today">Среда<br>(21.10.2026)<br>СЕГОДНЯ</td><td>1</td><td>08:30</td>
+						<td colspan="2">Программирование в сетевых операционных средах (л.)<br>
+						Ермоленко Андрей Васильевич, 412/1
+						</td></tr><td>2</td><td>10:10</td>
+						<td colspan="2">Иностранный язык (пр.)<br>
+						Латыпов Рустем Альбертович, 425/1
+						</td></tr><td>3</td><td>12:40</td>
+						<td colspan="2">Экономическая теория (пр.)<br>
+						Куликова Анна Николаевна, 427/1
+						</td></tr><td>4</td><td>14:20</td>
+						<td  style="min-width:37%"></td><td width="37%">Информатика и программирование (пр.)<br>
+						Виноградов Михаил Александрович, 504/1
+						 <br><b>подгруппа 2</b></td></tr><td>5</td><td>16:00</td><td colspan="2"></td></tr><td>6</td><td>17:40</td><td colspan="2"></td></tr><td>7</td><td>19:20</td><td colspan="2"></td></tr><tr><td rowspan="7" class="dayofweek">Четверг<br>(22.10.2026)</td><td>1</td><td>08:30</td><td colspan="2"></td></tr><td>2</td><td>10:10</td><td colspan="2"></td></tr><td>3</td><td>12:40</td>
+						<td colspan="2">История России (л.)<br>
+						Яковлева Светлана Ильинична, 412/1
+						</td></tr><td>4</td><td>14:20</td>
+						<td colspan="2">Физическая культура и спорт (л.)<br>
+						Голов Владимир Александрович, 412/1
+						</td></tr><td>5</td><td>16:00</td>
+						<td colspan="2">Физическая культура и спорт (пр.)<br>
+						Панченко Валерия Валерьевна, 427/1
+						</td></tr><td>6</td><td>17:40</td><td colspan="2"></td></tr><td>7</td><td>19:20</td><td colspan="2"></td></tr><tr><td rowspan="7" class="dayofweek">Пятница<br>(23.10.2026)</td><td>1</td><td>08:30</td>
+						<td width="37%">Информатика и программирование (пр.)<br>
+						Виноградов Михаил Александрович, 517/1
+						 <br><b>подгруппа 1</b></td>
+						<td width="37%">Программирование в сетевых операционных средах (пр.)<br>
+						Захаров Иван Дмитриевич, 518/1
+						 <br><b>подгруппа 2</b></td></tr><td>2</td><td>10:10</td>
+						<td width="37%">Информатика и программирование (пр.)<br>
+						Виноградов Михаил Александрович, 517/1
+						 <br><b>подгруппа 1</b></td>
+						<td width="37%">Программирование в сетевых операционных средах (пр.)<br>
+						Захаров Иван Дмитриевич, 516/1
+						 <br><b>подгруппа 2</b></td></tr><td>3</td><td>12:40</td>
+						<td colspan="2">Информационные технологии (л.)<br>
+						Бабикова Надежда Николаевна, 411/1
+						</td></tr><td>4</td><td>14:20</td><td colspan="2"></td></tr><td>5</td><td>16:00</td><td colspan="2"></td></tr><td>6</td><td>17:40</td><td colspan="2"></td></tr><td>7</td><td>19:20</td><td colspan="2"></td></tr><tr><td rowspan="7" class="dayofweek">Суббота<br>(24.10.2026)</td><td>1</td><td>08:30</td>
+						<td width="37%">Программирование в сетевых операционных средах (пр.)<br>
+						Захаров Иван Дмитриевич, 517/1
+						 <br><b>подгруппа 1</b></td>
+						<td width="37%">Информатика и программирование (пр.)<br>
+						Виноградов Михаил Александрович, 241/1
+						 <br><b>подгруппа 2</b></td></tr><td>2</td><td>10:10</td>
+						<td width="37%">Программирование в сетевых операционных средах (пр.)<br>
+						Захаров Иван Дмитриевич, 517/1
+						 <br><b>подгруппа 1</b></td>
+						<td width="37%">Информатика и программирование (пр.)<br>
+						Виноградов Михаил Александрович, 241/1
+						 <br><b>подгруппа 2</b></td></tr><td>3</td><td>12:40</td><td colspan="2"></td></tr><td>4</td><td>14:20</td><td colspan="2"></td></tr><td>5</td><td>16:00</td><td colspan="2"></td></tr><td>6</td><td>17:40</td><td colspan="2"></td></tr><td>7</td><td>19:20</td><td colspan="2"></td></tr></tbody></table><br><br>			</div>
+			<!-- /#page-content -->
+		 
+		</div>
+		 
+		</div>
+		
+		<div class="footer">
+			<div class="container">
+				
+ 
+<ul class="nav navbar-nav" id="bottom_menu">
+	
+	
+		 
+				<li>
+						
+					 <a href="https://syktsu.ru/" target='_blank' >
+					  
+ 					 	 СГУ им. Питирима Сорокина					 					</a>
+					 
+				</li>
+	 
+
+	
+	
+	
+	
+		 
+				<li>
+						
+					 <a href="/about/"  >
+					  
+ 					 	 О проекте					 					</a>
+					 
+				</li>
+	 
+
+	
+	
+	
+	
+		 
+				<li>
+						
+					 <a href="/services/"  >
+					  
+ 					 	 Сервисы					 					</a>
+					 
+				</li>
+	 
+
+	
+	
+	
+	
+		 
+				<li>
+						
+					 <a href="/library/"  >
+					  
+ 					 	 Библиотека					 					</a>
+					 
+				</li>
+	 
+
+	
+	
+	
+	
+		 
+				<li>
+						
+					 <a href="/support/"  >
+					  
+ 					 	 Техподдержка					 					</a>
+					 
+				</li>
+	 
+
+	
+	
+
+
+</ul>
+
+			</div>
+		<div class="container footer_content">
+			<p>&copy; 2016-2026 ФГБОУ ВО "СГУ им. Питирима Сорокина". 167001, г. Сыктывкар, Октябрьский пр-т, 55. тел: +7 (8212) 39-03-08.</p>
+		</div>
+		 	
+		</div>
+		<!-- Bootstrap core JavaScript
+		================================================== -->
+		<!-- Placed at the end of the document so the pages load faster -->
+		
+		<script src="/bitrix/templates/campus/dist/js/bootstrap.min.js"></script>
+		<script src="/bitrix/templates/campus/dist/js/ripples.min.js"></script>
+		<script src="/bitrix/templates/campus/dist/js/material.min.js"></script>
+		<script>
+		if('serviceWorker' in navigator) {
+		  navigator.serviceWorker.register('/pwabuilder-sw.js', { scope: '/' });
+		}
+		</script>
+		 		<script src="/bitrix/templates/campus/js/js.js?v=8"></script>
+        <script>
+            $(document).ready(function() {
+                // This command is used to initialize some elements and make them work properly
+                $.material.init();
+            });
+		</script>	
+				<!-- Yandex.Metrika counter --><script type="text/javascript"> (function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter32604370 = new Ya.Metrika({ id:32604370, clickmap:true, trackLinks:true, accurateTrackBounce:true, webvisor:true, trackHash:true }); } catch(e) { } }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = "https://mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f, false); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script><noscript><div><img src="https://mc.yandex.ru/watch/32604370" style="position:absolute; left:-9999px;" alt="" /></div></noscript><!-- /Yandex.Metrika counter -->
+		<script src="/bitrix/templates/special_main/bvi/dist/js/bvi.min.js"></script>
+        <script> 
+        new isvek.Bvi();
+        </script>
+		<script src="chatbot-widget/chatbot-widget.js"></script>
+	</body>
+</html>
