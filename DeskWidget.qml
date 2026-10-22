@@ -20,8 +20,8 @@ Item {
     readonly property real k: Math.max(0.5, Math.min(3, Number(cfg.size) || 1))
     readonly property string anchorPos: cfg.anchor || "c"
     readonly property bool interactive: type === "music"
-    readonly property color tint: cfg.color === "accent" ? Theme.accent : cfg.color === "muted" ? Theme.textSecondary : Theme.text
-    readonly property color sub: cfg.color === "muted" ? Theme.textMuted : Theme.textSecondary
+    readonly property color tint: cfg.color === "accent" ? Theme.accent : cfg.color === "muted" ? Theme.deskTextSecondary : Theme.deskText
+    readonly property color sub: cfg.color === "muted" ? Theme.deskTextMuted : Theme.deskTextSecondary
     function nf(code) { return String.fromCodePoint(code) }
 
     visible: type !== "music" || !!hub.player || editing
