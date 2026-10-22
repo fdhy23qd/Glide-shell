@@ -2664,8 +2664,24 @@ ColumnLayout {
                             current: plRow.val(pso.modelData)
                             onPicked: (v) => Prefs.setPluginSetting(plRow.modelData.id, pso.modelData.key, v)
                         }
+                        ChoiceRow {   // число с небольшим диапазоном (min/max/step, до 12 значений) — выбором
+                            readonly property var m: pso.modelData
+                            readonly property var steps: {
+                                if (m.type !== "number" || m.min === undefined || m.max === undefined) return []
+                                var out = [], st = m.step || 1
+                                for (var v = m.min; v <= m.max + 1e-9 && out.length <= 12; v += st) out.push({ label: String(+v.toFixed(3)), value: +v.toFixed(3) })
+                                return out.length <= 12 ? out : []
+                            }
+                            visible: steps.length > 0
+                            label: m.label || m.key
+                            options: steps
+                            current: Number(plRow.val(m))
+                            onPicked: (v) => Prefs.setPluginSetting(plRow.modelData.id, m.key, v)
+                        }
                         TextRow {
                             visible: pso.modelData.type !== "toggle" && pso.modelData.type !== "choice"
+                                     && !(pso.modelData.type === "number" && pso.modelData.min !== undefined && pso.modelData.max !== undefined
+                                          && (pso.modelData.max - pso.modelData.min) / (pso.modelData.step || 1) < 12)
                             label: (pso.modelData.label || pso.modelData.key) + Tr.t(" (Enter — применить)")
                             value: String(plRow.val(pso.modelData) ?? "")
                             onSubmitted: (v) => Prefs.setPluginSetting(plRow.modelData.id, pso.modelData.key,

@@ -49,6 +49,19 @@ QtObject {
     property real cpu: 0
     property real mem: 0
 
+    // ---------- дата: обновляется на границе минуты и после сна (таймеры Qt во сне стоят) ----------
+    property date date: new Date()
+    readonly property string today: Qt.formatDate(date, "yyyy-MM-dd")   // смена дня — привязки к today пересчитаются
+    property Timer minuteTick: Timer {
+        running: true; repeat: true
+        interval: 60050 - Date.now() % 60000
+        onTriggered: { api.date = new Date(); interval = 60050 - Date.now() % 60000 }
+    }
+    property Connections resumeConn: Connections {
+        target: LockScreen
+        function onResumed() { api.date = new Date() }
+    }
+
     // ---------- система ----------
     readonly property var niri: Niri                                         // windows, workspaces, focused…, action(…)
     readonly property var players: Mpris.players.values                     // все плееры MPRIS
@@ -103,7 +116,16 @@ QtObject {
     // значения — в config.json (panel.pluginSettings[id]): попадают в резервную копию; меняются во вкладке «Плагины»
     readonly property var settings: {
         var saved = (Prefs.pluginSettings || {})[owner] || {}, out = {}
-        for (var s of (manifest.settings || [])) out[s.key] = saved[s.key] !== undefined ? saved[s.key] : s["default"]
+        for (var s of (manifest.settings || [])) {
+            var v = saved[s.key] !== undefined ? saved[s.key] : s["default"]
+            if (s.type === "number") {   // число: в пределах min/max (если заданы), не число — default
+                v = Number(v)
+                if (!isFinite(v)) v = Number(s["default"]) || 0
+                if (s.min !== undefined) v = Math.max(s.min, v)
+                if (s.max !== undefined) v = Math.min(s.max, v)
+            }
+            out[s.key] = v
+        }
         return out
     }
     function setSetting(key, value) { Prefs.setPluginSetting(owner, key, value) }

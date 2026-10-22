@@ -21,6 +21,78 @@
 
 ---
 
+## 0. Полный пример
+
+Счётчик воды: раздел в панели, элемент бара и две настройки. Те же файлы лежат в
+[`examples/plugins/water`](../examples/plugins/water): скопируй папку в `~/.config/glide-shell/plugins/water/`.
+
+`plugin.json`:
+```json
+{
+  "id": "water", "api": 1, "name": "Вода", "icon": "󰖌", "category": "quick",
+  "qml": "Main.qml", "bar": "Bar.qml",
+  "settings": [
+    { "key": "goal",    "type": "number", "label": "Норма, стаканов в день", "default": 8, "min": 4, "max": 14, "step": 1 },
+    { "key": "showBar", "type": "toggle", "label": "Показывать в баре", "default": true }
+  ]
+}
+```
+
+`Main.qml` — раздел в панели:
+```qml
+import QtQuick
+import QtQuick.Layouts
+import qs
+
+ColumnLayout {
+    id: root
+    property var api                     // приходит сразу после создания, до этого null
+    spacing: 12
+    readonly property int goal: api ? api.settings.goal : 8
+    // api.today меняется в полночь — вчерашний счёт сам перестаёт считаться
+    readonly property int count: api && api.storage.get("day", "") === api.today ? api.storage.get("count", 0) : 0
+    function add(n) {
+        api.storage.set("day", api.today)
+        api.storage.set("count", Math.max(0, count + n))
+    }
+    Text { text: root.count + " / " + root.goal; color: Theme.text; font.pixelSize: Theme.fs(18) }
+    Rectangle {
+        Layout.fillWidth: true; implicitHeight: 8; radius: Theme.r(4); color: Theme.surface
+        Rectangle { width: parent.width * Math.min(1, root.count / root.goal); height: parent.height
+                    radius: parent.radius; color: Theme.accent }
+    }
+    Rectangle {   // кнопка с наведением и нажатием
+        implicitWidth: 120; implicitHeight: 32; radius: Theme.r(16)
+        color: ma.pressed ? Theme.accentPressed : ma.containsMouse ? Theme.accentLight : Theme.accent
+        Text { anchors.centerIn: parent; text: "+1 стакан"; color: Theme.accentText; font.pixelSize: Theme.fs(13) }
+        MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                    onClicked: root.add(1) }
+    }
+}
+```
+
+`Bar.qml` — элемент бара:
+```qml
+import QtQuick
+import qs
+
+Item {
+    id: chip
+    property var api
+    readonly property bool want: !!api && api.settings.showBar
+    readonly property int count: api && api.storage.get("day", "") === api.today ? api.storage.get("count", 0) : 0
+    implicitWidth: row.implicitWidth
+    implicitHeight: 24
+    Row { id: row; anchors.verticalCenter: parent.verticalCenter; spacing: 4
+          Text { text: "󰖌"; color: Theme.accent; font.family: chip.api ? chip.api.iconFont : "" }
+          Text { text: chip.count + "/" + (chip.api ? chip.api.settings.goal : 8); color: Theme.textVariant
+                 font.pixelSize: Theme.fs(12) } }
+    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: chip.api.openCategory("quick") }
+}
+```
+
+---
+
 ## 1. plugin.json
 
 ```json
@@ -47,10 +119,19 @@
 | `items` | Кнопки, поля и списки, запускающие команды. Код не нужен (см. README). |
 | `qml` | Свой интерфейс раздела в панели. Корневой элемент получает `api` (раздел 3). |
 | `bar` | QML-элемент для бара (раздел 5). Появляется в «Настройки» → «Бар» и сразу включён. |
-| `settings` | Настройки в «Настройки» → «Плагины», под плагином. Типы: `text`, `number`, `toggle`, `choice`. Читаются как `api.settings.<key>`. |
+| `settings` | Настройки в «Настройки» → «Плагины», под плагином (типы ниже). Читаются как `api.settings.<key>`. |
 | `contextActions` | Кнопки над выделенным текстом или буфером. |
 | `daemon` | Фоновый процесс, стартует вместе с оболочкой. |
 | `wide`, `keywords`, `output`, `confirm`, `close`, `handoff` | См. README. |
+
+Типы настроек (у каждой — `key`, `label`, `default`, по желанию `hint` — серая строка под названием):
+
+| `type` | Как выглядит | Дополнительно |
+|---|---|---|
+| `text` | Поле, Enter применяет | — |
+| `number` | Кнопки со всеми значениями, если от `min` до `max` не больше 12 шагов, иначе поле | `min`, `max`, `step` (по умолчанию 1); `api.settings` всегда отдаёт число в этих пределах |
+| `toggle` | Переключатель | — |
+| `choice` | Ряд вариантов | `options: [{label, value}]` |
 
 Команды получают `$QP_TEXT`, `$QP_DIR` (папка плагина), `$QP_FOCUSED` (окно в фокусе, JSON), `$QP_SELECTION`,
 `$QP_CLIPBOARD`, `$QP_STYLE`, а в argv — подстановки `{text}` и `{dir}`.
@@ -89,7 +170,8 @@
 | `api.version` | `1` |
 | `api.owner` | id плагина (у виджета — `widget-<id>`) |
 | `api.theme` | Все токены дизайна: `theme.surface`, `theme.text`, `theme.accent`, `theme.r(16)` (скругление), `theme.fs(13)` (размер шрифта), `theme.isLight`… С `import qs` доступен и сам `Theme`. |
-| `api.accent`, `api.accentText`, `api.iconFont` | Сокращения |
+| `api.accent`, `api.accentText`, `api.iconFont` | Акцентный цвет; цвет текста на заливке акцентом (белый, а на светлых акцентах тёмный); шрифт значков (Nerd Font) |
+| `api.date`, `api.today` | Текущая дата (обновляется на каждой минуте и после сна) и `"ГГГГ-ММ-ДД"`. Привяжись к `api.today`, чтобы заметить новый день. |
 | `api.shown` | Панель открыта |
 | `api.contextText` | Выделение или буфер на момент открытия панели |
 
@@ -99,7 +181,7 @@
 |---|---|
 | `api.run(argv, text)` | Запустить программу (без shell); `text` — в `$QP_TEXT` |
 | `api.copy(text)` | Скопировать в буфер |
-| `api.flash(icon, text, color)` | Короткое сообщение в острове |
+| `api.flash(icon, text, color)` | Короткое сообщение в острове. Пустой `icon` — галочка, пустой `color` — `Theme.success`. |
 | `api.notify(title, body, icon)` | Уведомление от имени плагина |
 | `api.close()` | Закрыть панель |
 | `api.openCategory(id)` | Перейти в категорию панели |
@@ -119,7 +201,8 @@ onClicked: api.storage.set("clicks", clicks + 1)
 ```
 
 `api.storage.get(key, default)`, `api.storage.set(key, value)` (любое значение JSON), `api.storage.remove(key)`,
-`api.storage.all`.
+`api.storage.all`. Любая привязка, где вызывается `api.storage.get`, обновится при смене значения, даже внутри
+условия (`a ? api.storage.get(…) : 0`). У раздела плагина и его элемента бара хранилище общее.
 
 ### Настройки
 
@@ -183,6 +266,10 @@ ColumnLayout {
     Text { text: api ? api.settings.greeting : ""; color: Theme.text; font.pixelSize: Theme.fs(14) }
 }
 ```
+
+`api` назначается сразу после создания элемента, поэтому в первый момент это `null`. Привязки пиши как
+`api ? … : значение`, обработчики — как `root.api.…` (они срабатывают позже). Ширину раздела задаёт панель, высоту
+берёт из `implicitHeight`. Корню-`ColumnLayout` или `Column` размер задавать не нужно, фиксированную высоту не ставь.
 
 Цвета, скругления и шрифты бери только из `Theme` (`Theme.r(16)`, `Theme.fs(13)`). Тогда плагин следует за тоном,
 акцентом, светлой темой, скруглениями и размером текста пользователя. Длительности анимаций — через
@@ -288,3 +375,30 @@ bus.emit_signal(None, "/com/example/app", "com.canonical.Unity.LauncherEntry", "
                 GLib.Variant("(sa{sv})", ("application://my-app.desktop",
                                           {"count": GLib.Variant("x", 3), "count-visible": GLib.Variant("b", True)})))
 ```
+
+---
+
+## 9. Токены Theme
+
+`import qs` даёт `Theme`, тот же объект — `api.theme`. Эти имена стабильны в пределах версии API 1:
+
+| Токен | Для чего |
+|---|---|
+| `background` | Фон панели и острова |
+| `surface`, `surfaceLow`, `surfaceHigh`, `surfaceHigher`, `surfacePressed` | Карточки и кнопки; наведение — `surfaceHigher`, нажатие — `surfacePressed` |
+| `outline`, `outlineHover`, `divider` | Обводки и разделители |
+| `text`, `textVariant`, `textSecondary`, `textMuted`, `textFaint` | Текст, от главного к самому второстепенному |
+| `accent`, `accentSoft`, `accentHover`, `accentLight`, `accentPressed` | Акцент пользователя; кнопка под курсором — `accentLight`, нажатая — `accentPressed`, мягкая заливка — `accentSoft` |
+| `accentText` | Текст на заливке акцентом: белый, а на светлых акцентах — тёмный |
+| `error`, `errorContainer`, `errorHover`, `errorText`, `success`, `warning` | Цвета состояний |
+| `isLight` | Включена светлая тема |
+| `r(n)`, `radiusSm/Md/Lg/Xl` | Скругление с учётом настройки пользователя |
+| `fs(n)` | Размер шрифта с учётом настройки пользователя |
+| `disabledOpacity` | Прозрачность недоступного элемента |
+
+Всё остальное, что видно через `import qs` (`Prefs`, `Niri`, `Notifs`…), — внутреннее и может меняться между
+версиями. Где есть поле `api`, бери его. Исключение — стабильная `Prefs.ms(n)`: длительность анимации с учётом
+настройки «Анимации».
+
+Чтобы элемент выглядел как остальные, у него должны быть три состояния. Под курсором — светлее и курсор-рука.
+При нажатии — темнее и чуть меньше (0.95). Недоступный — `Theme.disabledOpacity` и обычная стрелка.
