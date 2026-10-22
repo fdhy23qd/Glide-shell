@@ -77,6 +77,51 @@ QtObject {
     function setMuted(on) { if (shell.sink && shell.sink.audio) shell.sink.audio.muted = on }
     readonly property bool dnd: Notifs.quiet
 
+    // ---------- запуск с результатом: api.exec(argv, {stdin, timeout, env}, (code, out, err) => …) ----------
+    // argv — без shell (кавычки и переносы в аргументах передаются как есть). Возвращает задачу с cancel() и running.
+    // code: код выхода; -1 — не запустилась, прервана cancel() или по timeout (по умолчанию 60 с). Обратный вызов — один раз.
+    property Component execComp: Component {
+        Process {
+            id: job
+            property var cb: null
+            property string input: ""
+            property int timeoutMs: 60000
+            property bool aborted: false
+            property bool finished: false
+            property bool outDone: false
+            property bool errDone: false
+            property var exitCode: null
+            stdinEnabled: input !== ""
+            stdout: StdioCollector { id: jout; onStreamFinished: { job.outDone = true; job.tryFinish() } }
+            stderr: StdioCollector { id: jerr; onStreamFinished: { job.errDone = true; job.tryFinish() } }
+            onStarted: if (input !== "") { write(input); stdinEnabled = false }   // записали — закрыть stdin
+            onExited: (code) => { job.exitCode = job.aborted ? -1 : code; job.tryFinish() }
+            function tryFinish() {
+                if (finished || exitCode === null || !outDone || !errDone) return
+                finished = true
+                try { if (cb) cb(exitCode, jout.text, jerr.text) } catch (e) { console.warn("glide-shell: api.exec: " + e) }
+                destroy()
+            }
+            function cancel() { if (running) { aborted = true; signal(15) } }
+            property Timer limit: Timer { interval: job.timeoutMs; running: job.running && job.timeoutMs > 0; onTriggered: job.cancel() }
+            property Timer startCheck: Timer {
+                interval: 200
+                // не запустилась (нет программы): не идёт и кода выхода нет
+                onTriggered: if (!job.running && job.exitCode === null) { job.exitCode = -1; job.outDone = job.errDone = true; job.tryFinish() }
+            }
+        }
+    }
+    function exec(argv, opts, cb) {
+        if (typeof opts === "function") { cb = opts; opts = {} }
+        opts = opts || {}
+        var env = Object.assign({ QP_DIR: manifest.dir || "" }, opts.env || {})
+        var j = execComp.createObject(api, { command: argv, environment: env, cb: cb || null, input: opts.stdin || "",
+                                             timeoutMs: opts.timeout === undefined ? 60000 : opts.timeout })
+        j.running = true
+        j.startCheck.start()
+        return j
+    }
+
     // ---------- уведомление от имени плагина ----------
     function notify(title, body, icon) {
         Quickshell.execDetached(["notify-send", "-a", ownerName || "Glide Shell", "-i", icon || "dialog-information",

@@ -190,7 +190,8 @@ Every plugin and widget gets its own object. Storage, settings and notifications
 
 | | |
 |---|---|
-| `api.run(argv, text)` | Run a program (no shell). `text` goes to `$QP_TEXT`. |
+| `api.run(argv, text)` | Run a program and forget it (no shell, returns nothing). `text` goes to `$QP_TEXT`. |
+| `api.exec(argv, opts, callback)` | Run a program and get the result: `callback(code, stdout, stderr)` is called once. `opts`: `stdin` (text), `timeout` in ms (60000 by default, 0 means none), `env` (extra variables; `$QP_DIR` is always the plugin folder). Returns a job with `cancel()` and `running`. `code` is -1 when the program could not start, was cancelled or timed out. Arguments go to the program as they are, with no shell: quotes, newlines and `{text}` are not interpreted. `opts` can be omitted: `api.exec(["date"], (code, out) => …)`. |
 | `api.copy(text)` | Copy to the clipboard |
 | `api.flash(icon, text, color)` | A short message in the island. An empty `icon` shows ✓, an empty `color` means `Theme.success`. |
 | `api.notify(title, body, icon)` | A notification under the plugin's name. An empty `icon` means the standard information icon. |

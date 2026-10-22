@@ -58,6 +58,9 @@ cat_order = cfg.get("categoryOrder", list(DEFAULT_CATS))
 placement = {**(cfg.get("placement") or {}), **(prof.get("placement") or {})}
 
 
+
+API_VERSION = 1   # какую версию API плагинов понимает оболочка (docs/API.md)
+
 def norm(c):
     if isinstance(c, list):
         return [str(x) for x in c if x] or ["quick"]
@@ -75,8 +78,20 @@ for root in roots:
         except (OSError, ValueError, KeyError) as e:
             print(f"qp-discover: skip {d}: {e}", file=sys.stderr)
             continue
+        # версия API: нет поля — 1 (так писались первые плагины); новее, чем знает оболочка, или не число — не грузим,
+        # причина видна в «Настройки» → «Плагины»
+        api = m.get("api", 1)
+        problem = ""
+        if not isinstance(api, int) or isinstance(api, bool):
+            problem = f"поле api должно быть числом, а не {json.dumps(api, ensure_ascii=False)}"
+        elif api > API_VERSION:
+            problem = f"нужна более новая Glide Shell (API {api}, эта знает {API_VERSION})"
         every[pid] = {"id": pid, "name": m["name"], "icon": m.get("icon", ""),
-                      "disabled": pid in disabled or m.get("enabled") is False}
+                      "disabled": pid in disabled or m.get("enabled") is False, "problem": problem}
+        if problem:
+            print(f"qp-discover: {pid}: {problem}", file=sys.stderr)
+            found.pop(pid, None)
+            continue
         if pid in disabled or m.get("enabled") is False:
             found.pop(pid, None)
             continue

@@ -2642,7 +2642,8 @@ ColumnLayout {
                 ToggleRow {
                     icon: plRow.modelData.icon || ""
                     label: plRow.modelData.name
-                    checked: !plRow.modelData.disabled
+                    hint: plRow.modelData.problem ? Tr.t("Не загружен: ") + plRow.modelData.problem : ""
+                    checked: !plRow.modelData.disabled && !plRow.modelData.problem
                     onToggled: sv.panel.togglePlugin(plRow.modelData.id)
                 }
                 Repeater {
