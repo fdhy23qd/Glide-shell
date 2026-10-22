@@ -57,6 +57,10 @@ Singleton {
     readonly property color textVariant: isLight ? "#364050" : "#c3cbd6"      // значки и второстепенные надписи
     readonly property color textSecondary: isLight ? "#5a6473" : "#9aa5b5"    // TextSecondary
     readonly property color textMuted: isLight ? "#7f8999" : "#6b7686"        // подсказки
+    // текст прямо на обоях (виджеты рабочего стола): от темы панели не зависит — обои светлее не становятся
+    readonly property color deskText: "#f5f7fa"
+    readonly property color deskTextSecondary: "#9aa5b5"
+    readonly property color deskTextMuted: "#6b7686"
     readonly property color textFaint: isLight ? "#a3abb8" : "#4b5563"        // совсем вторичное (дни чужого месяца, номера недель)
 
     // ---- акцент (выбирается в настройках) ----
