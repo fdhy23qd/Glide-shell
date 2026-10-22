@@ -46,12 +46,12 @@ Singleton {
     readonly property string webSearch: ["duckduckgo", "google", "yandex", "bing", "off"].indexOf(data.webSearch) >= 0 ? data.webSearch : "duckduckgo"
     readonly property bool islandTimer: data.islandTimer !== false     // таймер в острове
     // значки у часов острова: [{id, side: left|right, on}] — порядок, сторона, включён; видны, только когда есть что показать
-    readonly property var islandIconIds: ["weather", "battery", "notif", "dnd", "vpn", "mic", "volume", "bt", "awake", "night", "layout"]
+    readonly property var islandIconIds: ["weather", "battery", "notif", "dnd", "vpn", "mic", "volume", "bt", "awake", "night", "layout", "ptimer"]
     readonly property var islandIcons: {
         var out = Array.isArray(data.islandIcons)
             ? data.islandIcons.filter(x => x && islandIconIds.indexOf(x.id) >= 0).map(x => ({ id: x.id, side: x.side === "left" ? "left" : "right", on: x.on === true }))
             : [{ id: "weather", side: "right", on: data.islandWeather !== false }]   // прежняя настройка «температура у часов»
-        for (var id of islandIconIds) if (!out.some(x => x.id === id)) out.push({ id: id, side: "right", on: false })
+        for (var id of islandIconIds) if (!out.some(x => x.id === id)) out.push({ id: id, side: "right", on: id === "ptimer" })   // таймер выключения — виден сразу
         return out
     }
     // порядок строк острова (и что главнее в компактном виде): чего нет в списке — дописывается в конец
@@ -75,6 +75,11 @@ Singleton {
     readonly property color accentHover: Qt.rgba(accent.r, accent.g, accent.b, 0.42)
     readonly property real bounce: num(data.bounce, 1)                 // упругость пружин: 0 — без отскока
     // ---- тема (Theme.qml) ----
+    // тема: dark | light | auto (днём светлая, после заката тёмная — закат и восход из погоды); тон — у тёмной
+    readonly property string themeMode: ["dark", "light", "auto"].indexOf(data.themeMode) >= 0 ? data.themeMode : "dark"
+    readonly property bool niriAccent: data.niriAccent === true   // рамка фокуса и обводка окон niri — цветом акцента
+    readonly property bool themeApps: data.themeApps !== false     // светлая/тёмная схема и акцент — приложениям (gsettings)
+    readonly property bool themeGtk3: data.themeGtk3 === true      // и тема GTK3: Adwaita / Adwaita-dark
     readonly property string themeTone: ["glide", "amoled", "soft"].indexOf(data.themeTone) >= 0 ? data.themeTone : "glide"
     readonly property real themeRadius: Math.max(0, Math.min(1.6, num(data.themeRadius, 1)))     // масштаб скруглений
     readonly property real themeFont: Math.max(0.85, Math.min(1.2, num(data.themeFont, 1)))      // масштаб шрифта
@@ -117,6 +122,12 @@ Singleton {
 
     // ---- уведомления: свой сервер вместо DMS (имя на шине одно — пока жив DMS, оно у него) ----
     readonly property bool notifications: data.notifications === true
+    readonly property var notifMuted: Array.isArray(data.notifMuted) ? data.notifMuted : []   // приложения без всплывашек
+    function notifMute(app, on) {
+        var m = notifMuted.filter(x => x !== app)
+        if (on) m.push(app)
+        set("notifMuted", m)
+    }
     readonly property bool notifKeep: data.notifKeep !== false             // история уведомлений переживает перезапуск
     readonly property bool polkit: data.polkit === true                 // своё окно пароля polkit (агент тоже один)
     // «не беспокоить» сам: ночью (часы с dndFrom до dndTo) и пока идёт демонстрация экрана

@@ -124,8 +124,16 @@ PanelWindow {
                         }
                     }
                 }
-                Label { text: Tr.t("Тон фона") }
+                Label { text: Tr.t("Тема") }
                 Pills {
+                    options: [{ label: Tr.t("тёмная"), value: "dark" }, { label: Tr.t("светлая"), value: "light" },
+                              { label: Tr.t("авто (по солнцу)"), value: "auto" }]
+                    current: Prefs.themeMode
+                    onPicked: (v) => Prefs.set("themeMode", v)
+                }
+                Label { visible: Prefs.themeMode !== "light"; text: Tr.t("Тон фона") }
+                Pills {
+                    visible: Prefs.themeMode !== "light"
                     options: [{ label: Tr.t("графит Glide"), value: "glide" }, { label: Tr.t("AMOLED-чёрный"), value: "amoled" },
                               { label: Tr.t("мягкий"), value: "soft" }]
                     current: Prefs.themeTone

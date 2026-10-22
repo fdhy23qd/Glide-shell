@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import Quickshell.Widgets
 
 // Экран настроек: поведение и вид панели, включение плагинов, порядок категорий.
 ColumnLayout {
@@ -174,7 +175,8 @@ ColumnLayout {
         bt:      { glyph: 0xF00B1, label: "Bluetooth", hint: Tr.t("пока подключено устройство") },
         awake:   { glyph: 0xF0176, label: Tr.t("Не засыпать"), hint: Tr.t("пока включено") },
         night:   { glyph: 0xF0594, label: Tr.t("Ночной свет"), hint: Tr.t("пока включён") },
-        layout:  { glyph: 0xF030C, label: Tr.t("Раскладка"), hint: Tr.t("EN / RU, если раскладок несколько") }
+        layout:  { glyph: 0xF030C, label: Tr.t("Раскладка"), hint: Tr.t("EN / RU, если раскладок несколько") },
+        ptimer:  { glyph: 0xF0425, label: Tr.t("Выключение по таймеру"), hint: Tr.t("остаток, пока таймер идёт") }
     })
     function iconOn(id) { var x = Prefs.islandIcons.find(i => i.id === id); return !!x && x.on }
     function setIcon(id, patch) { Prefs.set("islandIcons", Prefs.islandIcons.map(i => i.id === id ? Object.assign({}, i, patch) : i)) }
@@ -617,6 +619,63 @@ ColumnLayout {
             current: Prefs.battCrit
             onPicked: (v) => Prefs.set("battCrit", v)
         }
+        // ---- резервная копия настроек (tools/glide-backup.py) ----
+        Header { text: Tr.t("РЕЗЕРВНАЯ КОПИЯ") }
+        Text {
+            Layout.fillWidth: true
+            text: Tr.t("Все настройки, свои плагины и виджеты, настройки niri из «Устройств» — одним файлом в домашней папке. История буфера, уведомления и ключи в копию не попадают.")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
+        RowLayout {
+            id: bkRow
+            spacing: 8
+            property var found: []
+            property string pending: ""          // файл, который восстановим вторым нажатием
+            function reload() { bkList.running = false; bkList.running = true }
+            Component.onCompleted: reload()
+            Process {
+                id: bkList
+                command: ["python3", "-I", Quickshell.shellDir + "/tools/glide-backup.py", "list"]
+                stdout: StdioCollector { onStreamFinished: { try { bkRow.found = JSON.parse(text) } catch (e) { bkRow.found = [] } } }
+            }
+            Process {
+                id: bkSave
+                command: ["python3", "-I", Quickshell.shellDir + "/tools/glide-backup.py", "export"]
+                stdout: StdioCollector { onStreamFinished: { if (sv.panel && text.trim()) sv.panel.flash(String.fromCodePoint(0xF0193), Tr.t("Сохранено: ") + text.trim().replace(Quickshell.env("HOME"), "~"), Theme.success); bkRow.reload() } }
+            }
+            Process {
+                id: bkLoad
+                property string file: ""
+                command: ["python3", "-I", Quickshell.shellDir + "/tools/glide-backup.py", "import", file]
+                stdout: StdioCollector { onStreamFinished: { if (text.indexOf('"ok": true') >= 0) Quickshell.execDetached(["systemctl", "--user", "restart", "glide-shell.service"]) } }
+                stderr: StdioCollector { onStreamFinished: if (text.trim() && sv.panel) sv.panel.flash("!", text.trim().split("\n").pop(), Theme.error) }
+            }
+            ActionBtn { glyph: String.fromCodePoint(0xF0193); text: Tr.t("Сохранить настройки в файл"); onClicked: { bkSave.running = false; bkSave.running = true } }
+        }
+        Flow {
+            visible: bkRow.found.length > 0
+            Layout.fillWidth: true
+            spacing: 6
+            Repeater {
+                model: bkRow.found
+                delegate: ActionBtn {
+                    required property var modelData
+                    glyph: String.fromCodePoint(0xF0B6A)
+                    text: bkRow.pending === modelData.path ? Tr.t("Ещё раз — восстановить") : modelData.name.replace("glide-shell-settings-", "").replace(".tar.gz", "")
+                    onClicked: {
+                        if (bkRow.pending !== modelData.path) { bkRow.pending = modelData.path; bkPend.restart(); return }
+                        bkRow.pending = ""; bkLoad.file = modelData.path; bkLoad.running = false; bkLoad.running = true
+                    }
+                }
+            }
+            Timer { id: bkPend; interval: 4000; onTriggered: bkRow.pending = "" }
+        }
+        Text {
+            visible: bkRow.found.length > 0
+            Layout.fillWidth: true
+            text: Tr.t("Восстановить — щелчок по копии и ещё раз; текущие настройки перед этим сохраняются рядом (…-before-import), оболочка перезапустится")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
         ToggleRow {
             icon: String.fromCodePoint(0xF0214)
             label: Tr.t("Искать файлы")
@@ -722,6 +781,35 @@ ColumnLayout {
             onPicked: (v) => Prefs.set("accent", v)
         }
         ChoiceRow {
+            label: Tr.t("Тема")
+            options: [{ label: Tr.t("тёмная"), value: "dark" }, { label: Tr.t("светлая"), value: "light" },
+                      { label: Tr.t("авто (по солнцу)"), value: "auto" }]
+            current: Prefs.themeMode
+            onPicked: (v) => Prefs.set("themeMode", v)
+        }
+        Text {
+            visible: Prefs.themeMode === "auto"
+            Layout.fillWidth: true
+            text: Tr.t("Светлая с восхода до заката (время — из погоды: ") + NightLight.sunrise + "–" + NightLight.sunset + ")"
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
+        ToggleRow {
+            icon: String.fromCodePoint(0xF03D8)
+            label: Tr.t("Тема и акцент — приложениям")
+            hint: Tr.t("Светлая/тёмная схема и акцент для GTK-, Qt-приложений и браузеров (через системную настройку)")
+            checked: Prefs.themeApps
+            onToggled: Prefs.set("themeApps", !Prefs.themeApps)
+        }
+        ToggleRow {
+            visible: Prefs.themeApps
+            icon: String.fromCodePoint(0xF03D8)
+            label: Tr.t("И старые GTK3-приложения")
+            hint: Tr.t("Меняет тему Adwaita ↔ Adwaita-dark (только если стоит одна из них)")
+            checked: Prefs.themeGtk3
+            onToggled: Prefs.set("themeGtk3", !Prefs.themeGtk3)
+        }
+        ChoiceRow {
+            visible: Prefs.themeMode !== "light"
             label: Tr.t("Тон фона")
             options: [{ label: Tr.t("графит Glide"), value: "glide" }, { label: Tr.t("AMOLED-чёрный"), value: "amoled" },
                       { label: Tr.t("мягкий"), value: "soft" }]
@@ -1408,6 +1496,26 @@ ColumnLayout {
             checked: Prefs.notifKeep
             onToggled: Prefs.set("notifKeep", !Prefs.notifKeep)
         }
+        Text {
+            visible: Prefs.notifMuted.length > 0
+            Layout.fillWidth: true
+            text: Tr.t("Без всплывашек (уведомления только в истории; отключить приложение — колокольчик у его уведомлений в панели):")
+            color: Theme.textSecondary; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+        }
+        Flow {
+            visible: Prefs.notifMuted.length > 0
+            Layout.fillWidth: true
+            spacing: 6
+            Repeater {
+                model: Prefs.notifMuted
+                delegate: ActionBtn {
+                    required property string modelData
+                    glyph: String.fromCodePoint(0xF009B)
+                    text: modelData + "  ✕"
+                    onClicked: Prefs.notifMute(modelData, false)
+                }
+            }
+        }
         ToggleRow {
             icon: String.fromCodePoint(0xF009A)
             label: Tr.t("Свои уведомления (вместо DMS)")
@@ -1634,7 +1742,7 @@ ColumnLayout {
         property int secsLeft: 0
         property string bindFilter: ""
         onVisibleChanged: if (visible) reload()
-        function reload() { rd.running = false; rd.running = true; od.running = false; od.running = true }
+        function reload() { rd.running = false; rd.running = true; od.running = false; od.running = true; asList.running = false; asList.running = true }
         Process {
             id: rd
             command: ["python3", "-I", niriPage.tool, "read"]
@@ -1689,13 +1797,22 @@ ColumnLayout {
                 var m = o.modes[o.current_mode] || o.modes[0]
                 return { name: o.name, mode: m ? m.width + "x" + m.height + "@" + (m.refresh_rate / 1000).toFixed(3) : "",
                          scale: o.logical ? o.logical.scale : 1, transform: o.logical ? (niriPage.tfNames[o.logical.transform] || "normal") : "normal",
-                         x: o.logical ? o.logical.x : 0, y: o.logical ? o.logical.y : 0, off: !o.logical }
+                         x: o.logical ? o.logical.x : 0, y: o.logical ? o.logical.y : 0, off: !o.logical, vrr: !!o.vrr_enabled }
             })
             Quickshell.execDetached(["python3", "-I", tool, "save-outputs", JSON.stringify(items)])
         }
         Timer { id: countdown; interval: 1000; repeat: true
                 onTriggered: { niriPage.secsLeft--; if (niriPage.secsLeft <= 0) niriPage.outRevert() } }
         readonly property var tfNames: ({ Normal: "normal", _90: "90", _180: "180", _270: "270" })
+        function sideOf(a, b) {   // a относительно b: left | right | above | below
+            if (a.x >= b.x + b.width) return "right"
+            if (a.x + a.width <= b.x) return "left"
+            return a.y + a.height / 2 < b.y + b.height / 2 ? "above" : "below"
+        }
+        function placeAt(a, b, side) {   // новое место a вплотную к b, выровнять по верху/левому краю
+            return side === "right" ? { x: b.x + b.width, y: b.y } : side === "left" ? { x: b.x - a.width, y: b.y }
+                 : side === "above" ? { x: b.x, y: b.y - a.height } : { x: b.x, y: b.y + b.height }
+        }
 
         Header { text: Tr.t("МОНИТОРЫ") }
         Rectangle {   // подтверждение после смены режима или масштаба
@@ -1726,7 +1843,19 @@ ColumnLayout {
                     text: oc.o.name + " · " + [oc.o.make, oc.o.model].filter(x => x && !/^0x/.test(x)).join(" ")
                     color: Theme.textSecondary; font.pixelSize: Theme.fs(12); font.bold: true; elide: Text.ElideRight
                 }
+                ToggleRow {   // выключить можно любой, кроме последнего включённого
+                    visible: niriPage.outs.length > 1
+                    label: Tr.t("Включён")
+                    hint: !oc.o.logical ? Tr.t("Монитор выключен — niri его не использует")
+                          : niriPage.outs.filter(x => x.logical).length < 2 ? Tr.t("Последний включённый монитор выключить нельзя") : ""
+                    checked: !!oc.o.logical
+                    onToggled: {
+                        if (oc.o.logical && niriPage.outs.filter(x => x.logical).length < 2) return
+                        niriPage.outChange(oc.o, [oc.o.logical ? "off" : "on"], [oc.o.logical ? "on" : "off"])
+                    }
+                }
                 ChoiceRow {
+                    visible: !!oc.o.logical
                     label: Tr.t("Масштаб")
                     options: [{ label: "100%", value: 1 }, { label: "125%", value: 1.25 }, { label: "150%", value: 1.5 },
                               { label: "175%", value: 1.75 }, { label: "200%", value: 2 }]
@@ -1734,7 +1863,7 @@ ColumnLayout {
                     onPicked: (v) => niriPage.outChange(oc.o, ["scale", String(v)], ["scale", String(oc.lg.scale)])
                 }
                 ChipChoice {
-                    visible: oc.o.modes.length > 1
+                    visible: !!oc.o.logical && oc.o.modes.length > 1
                     label: Tr.t("Разрешение и частота")
                     options: oc.o.modes.map((m, i) => ({ label: m.width + "×" + m.height + " · " + Math.round(m.refresh_rate / 1000) + Tr.t(" Гц"), value: i }))
                     current: oc.o.current_mode
@@ -1744,7 +1873,27 @@ ColumnLayout {
                                            ["mode", c.width + "x" + c.height + "@" + (c.refresh_rate / 1000).toFixed(3)])
                     }
                 }
+                ToggleRow {
+                    visible: !!oc.o.logical && oc.o.vrr_supported
+                    label: Tr.t("Переменная частота (VRR)")
+                    hint: Tr.t("Меньше разрывов в играх и видео; на некоторых мониторах мерцает")
+                    checked: oc.o.vrr_enabled
+                    onToggled: niriPage.outChange(oc.o, ["vrr", oc.o.vrr_enabled ? "off" : "on"], ["vrr", oc.o.vrr_enabled ? "on" : "off"])
+                }
+                ChoiceRow {   // где стоит относительно соседнего монитора
+                    readonly property var ref: niriPage.outs.find(x => x.name !== oc.o.name && x.logical) || null
+                    visible: !!oc.o.logical && !!ref
+                    label: Tr.t("Расположение относительно ") + (ref ? ref.name : "")
+                    options: [{ label: Tr.t("слева"), value: "left" }, { label: Tr.t("справа"), value: "right" },
+                              { label: Tr.t("сверху"), value: "above" }, { label: Tr.t("снизу"), value: "below" }]
+                    current: ref ? niriPage.sideOf(oc.lg, ref.logical) : ""
+                    onPicked: (v) => {
+                        var p = niriPage.placeAt(oc.lg, ref.logical, v)
+                        niriPage.outChange(oc.o, ["position", "set", String(p.x), String(p.y)], ["position", "set", String(oc.lg.x), String(oc.lg.y)])
+                    }
+                }
                 ChoiceRow {
+                    visible: !!oc.o.logical
                     label: Tr.t("Поворот")
                     options: [{ label: Tr.t("обычно"), value: "normal" }, { label: "90°", value: "90" },
                               { label: "180°", value: "180" }, { label: "270°", value: "270" }]
@@ -1753,11 +1902,33 @@ ColumnLayout {
                 }
             }
         }
-        Text {
+        Item {   // схема расположения включённых мониторов
+            id: omap
+            readonly property var on: niriPage.outs.filter(o => o.logical)
+            readonly property real x0: Math.min.apply(null, on.map(o => o.logical.x))
+            readonly property real y0: Math.min.apply(null, on.map(o => o.logical.y))
+            readonly property real w: Math.max.apply(null, on.map(o => o.logical.x + o.logical.width)) - x0
+            readonly property real h: Math.max.apply(null, on.map(o => o.logical.y + o.logical.height)) - y0
+            readonly property real k: on.length ? Math.min(width / w, 120 / h) : 1
+            visible: on.length > 1
             Layout.fillWidth: true
-            visible: niriPage.outs.length > 1
-            text: Tr.t("Взаимное расположение мониторов niri подбирает сам; поменять — в glide-outputs.kdl (position x= y=)")
-            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+            implicitHeight: on.length ? h * k : 0
+            Repeater {
+                model: omap.on
+                delegate: Rectangle {
+                    required property var modelData
+                    readonly property var lg: modelData.logical
+                    x: (omap.width - omap.w * omap.k) / 2 + (lg.x - omap.x0) * omap.k + 2
+                    y: (lg.y - omap.y0) * omap.k + 2
+                    width: lg.width * omap.k - 4; height: lg.height * omap.k - 4
+                    radius: Theme.r(8)
+                    color: modelData.name === (niriPage.pending ? niriPage.pending.name : "") ? Qt.rgba(Prefs.accent.r, Prefs.accent.g, Prefs.accent.b, 0.25) : Theme.surfaceHigh
+                    border.color: Theme.outline
+                    Behavior on x { NumberAnimation { duration: Prefs.ms(220); easing.type: Easing.OutCubic } }
+                    Behavior on y { NumberAnimation { duration: Prefs.ms(220); easing.type: Easing.OutCubic } }
+                    Text { anchors.centerIn: parent; text: modelData.name; color: Theme.textSecondary; font.pixelSize: Theme.fs(11) }
+                }
+            }
         }
 
         Header { text: Tr.t("КЛАВИАТУРА") }
@@ -1861,7 +2032,413 @@ ColumnLayout {
             onToggled: niriPage.setInput({ focus_follows_mouse: !niriPage.cfg.input.focus_follows_mouse })
         }
 
+        // ---- окна, анимации, курсор, угол (glide-niri.py set-look) ----
+        Process {
+            id: lk
+            property string patch: ""
+            command: ["python3", "-I", niriPage.tool, "set-look", patch]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    var r = {}; try { r = JSON.parse(text) } catch (e) {}
+                    if (!r.ok && sv.panel) sv.panel.flash("!", Tr.t("niri не принял настройку — вернул как было"), Theme.error)
+                    niriPage.reload()
+                }
+            }
+        }
+        function setLook(patch) {
+            var c = JSON.parse(JSON.stringify(cfg))
+            for (var k in patch) {
+                if (typeof patch[k] === "object" && patch[k] !== null) Object.assign(c.look[k], patch[k]); else c.look[k] = patch[k]
+            }
+            cfg = c
+            lk.patch = JSON.stringify(patch); lk.running = false; lk.running = true
+        }
+        readonly property var look: cfg ? cfg.look : null
+        Header { visible: !!niriPage.look; text: Tr.t("ОКНА") }
+        ChoiceRow {
+            visible: !!niriPage.look
+            label: Tr.t("Зазоры между окнами")
+            options: [{ label: "0", value: 0 }, { label: "4", value: 4 }, { label: "6", value: 6 }, { label: "10", value: 10 },
+                      { label: "16", value: 16 }, { label: "24", value: 24 }]
+            current: niriPage.look ? niriPage.look.gaps : 0
+            onPicked: (v) => niriPage.setLook({ gaps: v })
+        }
+        ChoiceRow {
+            visible: !!niriPage.look
+            label: Tr.t("Скругление углов окон")
+            options: [{ label: Tr.t("нет"), value: 0 }, { label: "8", value: 8 }, { label: "12", value: 12 },
+                      { label: "16", value: 16 }, { label: "20", value: 20 }]
+            current: niriPage.look ? niriPage.look.radius : 0
+            onPicked: (v) => niriPage.setLook({ radius: v })
+        }
+        ToggleRow {
+            visible: !!niriPage.look
+            icon: String.fromCodePoint(0xF0E5F)
+            label: Tr.t("Рамка вокруг активного окна")
+            checked: !!niriPage.look && niriPage.look.ring.on
+            onToggled: niriPage.setLook({ ring: { on: !niriPage.look.ring.on } })
+        }
+        ChoiceRow {
+            visible: !!niriPage.look && niriPage.look.ring.on
+            label: Tr.t("Толщина рамки")
+            options: [{ label: "1", value: 1 }, { label: "2", value: 2 }, { label: "3", value: 3 }, { label: "4", value: 4 }, { label: "6", value: 6 }]
+            current: niriPage.look ? niriPage.look.ring.width : 2
+            onPicked: (v) => niriPage.setLook({ ring: { width: v } })
+        }
+        ToggleRow {
+            visible: !!niriPage.look && niriPage.look.ring.on
+            icon: String.fromCodePoint(0xF03D8)
+            label: Tr.t("Рамка — цветом акцента Glide")
+            hint: Tr.t("Меняется вместе с акцентом в «Виде»")
+            checked: Prefs.niriAccent
+            onToggled: { Prefs.set("niriAccent", !Prefs.niriAccent)
+                         if (!Prefs.niriAccent) niriPage.setLook({ ring: { color: Prefs.accent.toString() }, border: { color: Prefs.accent.toString() } }) }
+        }
+        ToggleRow {
+            visible: !!niriPage.look
+            icon: String.fromCodePoint(0xF0E5F)
+            label: Tr.t("Обводка у всех окон")
+            hint: Tr.t("Тонкая рамка и у неактивных окон")
+            checked: !!niriPage.look && niriPage.look.border.on
+            onToggled: niriPage.setLook({ border: { on: !niriPage.look.border.on } })
+        }
+        ChoiceRow {
+            visible: !!niriPage.look
+            label: Tr.t("Ширина нового окна")
+            options: [{ label: "⅓", value: 0.33333 }, { label: "½", value: 0.5 }, { label: "⅔", value: 0.66667 }, { label: Tr.t("во всю"), value: 1.0 }]
+            current: niriPage.look ? [0.33333, 0.5, 0.66667, 1.0].reduce((a, b) => Math.abs(b - niriPage.look.colw) < Math.abs(a - niriPage.look.colw) ? b : a) : 0.5
+            onPicked: (v) => niriPage.setLook({ colw: v })
+        }
+        ChoiceRow {
+            visible: !!niriPage.look
+            label: Tr.t("Активное окно — по центру")
+            options: [{ label: Tr.t("нет"), value: "never" }, { label: Tr.t("если не влезает"), value: "on-overflow" }, { label: Tr.t("всегда"), value: "always" }]
+            current: niriPage.look ? niriPage.look.center : "never"
+            onPicked: (v) => niriPage.setLook({ center: v })
+        }
+        ToggleRow {
+            visible: !!niriPage.look
+            icon: String.fromCodePoint(0xF0A8A)
+            label: Tr.t("Обзор окон — мышью в левый верхний угол")
+            checked: !!niriPage.look && niriPage.look.hotcorner
+            onToggled: niriPage.setLook({ hotcorner: !niriPage.look.hotcorner })
+        }
+        Header { visible: !!niriPage.look; text: Tr.t("АНИМАЦИИ NIRI") }
+        ChoiceRow {
+            visible: !!niriPage.look
+            label: Tr.t("Окна и рабочие столы")
+            options: [{ label: Tr.t("обычные"), value: "normal" }, { label: Tr.t("быстрые"), value: "fast" }, { label: Tr.t("выкл"), value: "off" }]
+            current: niriPage.look ? niriPage.look.anim : "normal"
+            onPicked: (v) => niriPage.setLook({ anim: v })
+        }
+        Header { visible: !!niriPage.look; text: Tr.t("КУРСОР") }
+        ChipChoice {
+            visible: !!niriPage.cfg && niriPage.cfg.cursors.length > 0
+            label: Tr.t("Тема курсора")
+            options: [{ label: Tr.t("по умолчанию"), value: "" }].concat(niriPage.cfg ? niriPage.cfg.cursors.map(c => ({ label: c, value: c })) : [])
+            current: niriPage.look ? niriPage.look.cursor.theme : ""
+            onPicked: (v) => niriPage.setLook({ cursor: { theme: v } })
+        }
+        ChoiceRow {
+            visible: !!niriPage.look
+            label: Tr.t("Размер курсора")
+            options: [{ label: Tr.t("обычный"), value: 24 }, { label: Tr.t("крупнее"), value: 32 }, { label: Tr.t("большой"), value: 48 }]
+            current: niriPage.look ? niriPage.look.cursor.size : 24
+            onPicked: (v) => niriPage.setLook({ cursor: { size: v } })
+        }
+        ToggleRow {
+            visible: !!niriPage.look
+            icon: String.fromCodePoint(0xF030C)
+            label: Tr.t("Прятать курсор при наборе текста")
+            checked: !!niriPage.look && niriPage.look.cursor.hide_typing
+            onToggled: niriPage.setLook({ cursor: { hide_typing: !niriPage.look.cursor.hide_typing } })
+        }
+
+        // ---- приложения при входе: XDG-автозапуск (tools/glide-autostart.py) ----
+        Header { visible: !!niriPage.cfg; text: Tr.t("ПРИЛОЖЕНИЯ ПРИ ВХОДЕ") }
+        property var autos: []
+        property string addFilter: ""
+        Process {
+            id: asList
+            command: ["python3", "-I", Quickshell.shellDir + "/tools/glide-autostart.py", "list"]
+            stdout: StdioCollector { onStreamFinished: { try { niriPage.autos = JSON.parse(text) } catch (e) { niriPage.autos = [] } } }
+        }
+        Process { id: asAct; onExited: { asList.running = false; asList.running = true } }
+        function autostart(args) { asAct.command = ["python3", "-I", Quickshell.shellDir + "/tools/glide-autostart.py"].concat(args); asAct.running = false; asAct.running = true }
+        Repeater {
+            model: niriPage.cfg ? niriPage.autos : []
+            delegate: Rectangle {
+                id: ar
+                required property var modelData
+                Layout.fillWidth: true
+                implicitHeight: 44; radius: Theme.r(14)
+                color: Theme.surface; border.color: Theme.outline
+                opacity: modelData.enabled ? 1 : 0.7
+                Behavior on opacity { NumberAnimation { duration: Prefs.ms(160) } }
+                IconImage {
+                    id: arIcon
+                    readonly property string path: (ar.modelData.icon && (ar.modelData.icon.startsWith("/") ? "file://" + ar.modelData.icon
+                                                     : Quickshell.iconPath(ar.modelData.icon, true))) || Quickshell.iconPath("application-x-executable", true)
+                    visible: path !== ""
+                    x: 12; anchors.verticalCenter: parent.verticalCenter
+                    implicitSize: 22
+                    source: path
+                }
+                Text {   // значка нет и в теме — глиф приложения
+                    visible: !arIcon.visible
+                    x: 12; anchors.verticalCenter: parent.verticalCenter
+                    text: String.fromCodePoint(0xF003B); color: Theme.textSecondary
+                    font.family: Prefs.iconFont; font.pixelSize: Theme.fs(20)
+                }
+                Column {
+                    x: 44; anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - 44 - 100
+                    Text { width: parent.width; text: ar.modelData.name; color: Theme.text; font.pixelSize: Theme.fs(13); elide: Text.ElideRight }
+                    Text { width: parent.width; text: ar.modelData.system ? Tr.t("системное") : Tr.t("добавлено"); color: Theme.textMuted; font.pixelSize: Theme.fs(11) }
+                }
+                Rectangle {   // убрать (своё)
+                    visible: ar.modelData.mine
+                    anchors.right: arSw.left; anchors.rightMargin: 6; anchors.verticalCenter: parent.verticalCenter
+                    width: 26; height: 26; radius: 13
+                    color: arX.pressed ? Theme.surfacePressed : arX.containsMouse ? Theme.surfaceHigher : "transparent"
+                    scale: arX.pressed ? 0.88 : 1
+                    Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+                    Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+                    Text { anchors.centerIn: parent; text: String.fromCodePoint(0xF0156); color: Theme.textSecondary
+                           font.family: Prefs.iconFont; font.pixelSize: Theme.fs(13) }
+                    MouseArea { id: arX; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onClicked: niriPage.autostart(["remove", ar.modelData.file]) }
+                }
+                Switch {
+                    id: arSw
+                    anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
+                    checked: ar.modelData.enabled
+                    onToggled: niriPage.autostart(["set", ar.modelData.file, ar.modelData.enabled ? "off" : "on"])
+                }
+            }
+        }
+        TextRow {
+            visible: !!niriPage.cfg
+            label: Tr.t("Добавить приложение (начни вводить имя, Enter)")
+            placeholder: Tr.t("например, Telegram")
+            value: niriPage.addFilter
+            onSubmitted: (v) => niriPage.addFilter = v
+        }
+        Flow {
+            visible: niriPage.addFilter.length > 0
+            Layout.fillWidth: true
+            spacing: 6
+            Repeater {
+                model: {
+                    var f = niriPage.addFilter.toLowerCase(), have = niriPage.autos.map(a => a.file)
+                    return f ? DesktopEntries.applications.values.filter(e => !e.noDisplay && e.name.toLowerCase().indexOf(f) >= 0
+                                                                          && have.indexOf(e.id + ".desktop") < 0).slice(0, 8) : []
+                }
+                delegate: ActionBtn {
+                    required property var modelData
+                    glyph: String.fromCodePoint(0xF0415)
+                    text: modelData.name
+                    onClicked: { niriPage.autostart(["add", modelData.id + ".desktop"]); niriPage.addFilter = "" }
+                }
+            }
+        }
+        Text {
+            Layout.fillWidth: true
+            visible: !!niriPage.cfg
+            text: Tr.t("Действует со следующего входа. Служебные команды niri (spawn-at-startup) — только для просмотра: ") +
+                  (niriPage.cfg ? niriPage.cfg.spawns.map(x => x.split(" ")[0].split("/").pop()).join(", ") : "")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
+
         Header { visible: !!niriPage.cfg; text: Tr.t("ГОРЯЧИЕ КЛАВИШИ") }
+        // ---- редактор клавиш (glide-niri.py bind): новые и изменённые — в glide-settings.kdl ----
+        property var be: null                     // {key, argv, title, old, kind}
+        property string appFilter: ""
+        Process {
+            id: bw
+            property string op: ""
+            command: ["python3", "-I", niriPage.tool, "bind", op]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    var r = {}; try { r = JSON.parse(text) } catch (e) {}
+                    if (r.ok) { niriPage.be = null; if (sv.panel) sv.panel.flash(String.fromCodePoint(0xF012C), Tr.t("Клавиши сохранены"), Theme.success) }
+                    else if (sv.panel) sv.panel.flash("!", Tr.t("niri не принял — проверь сочетание и действие"), Theme.error)
+                    niriPage.reload()
+                }
+            }
+        }
+        function bindRun(op) { bw.op = JSON.stringify(op); bw.running = false; bw.running = true }
+        function keyName(e) {   // событие клавиши Qt → имя niri (Mod — Super)
+            var k = e.key, base = ""
+            if (k >= Qt.Key_A && k <= Qt.Key_Z) base = String.fromCharCode(k)
+            else if (k >= Qt.Key_0 && k <= Qt.Key_9) base = String.fromCharCode(k)
+            else if (k >= Qt.Key_F1 && k <= Qt.Key_F24) base = "F" + (k - Qt.Key_F1 + 1)
+            else base = ({ [Qt.Key_Left]: "Left", [Qt.Key_Right]: "Right", [Qt.Key_Up]: "Up", [Qt.Key_Down]: "Down",
+                           [Qt.Key_Return]: "Return", [Qt.Key_Enter]: "Return", [Qt.Key_Space]: "Space", [Qt.Key_Tab]: "Tab",
+                           [Qt.Key_Escape]: "Escape", [Qt.Key_Backspace]: "BackSpace", [Qt.Key_Delete]: "Delete",
+                           [Qt.Key_Home]: "Home", [Qt.Key_End]: "End", [Qt.Key_PageUp]: "Page_Up", [Qt.Key_PageDown]: "Page_Down",
+                           [Qt.Key_Print]: "Print", [Qt.Key_Minus]: "Minus", [Qt.Key_Equal]: "Equal", [Qt.Key_Comma]: "Comma",
+                           [Qt.Key_Period]: "Period", [Qt.Key_Slash]: "Slash", [Qt.Key_Semicolon]: "Semicolon",
+                           [Qt.Key_Apostrophe]: "Apostrophe", [Qt.Key_BracketLeft]: "BracketLeft", [Qt.Key_BracketRight]: "BracketRight",
+                           [Qt.Key_Backslash]: "Backslash", [Qt.Key_QuoteLeft]: "Grave",
+                           [Qt.Key_VolumeUp]: "XF86AudioRaiseVolume", [Qt.Key_VolumeDown]: "XF86AudioLowerVolume", [Qt.Key_VolumeMute]: "XF86AudioMute",
+                           [Qt.Key_MediaPlay]: "XF86AudioPlay", [Qt.Key_MediaNext]: "XF86AudioNext", [Qt.Key_MediaPrevious]: "XF86AudioPrev" })[k] || ""
+            if (!base) return ""
+            var m = []
+            if (e.modifiers & Qt.MetaModifier) m.push("Mod")
+            if (e.modifiers & Qt.ControlModifier) m.push("Ctrl")
+            if (e.modifiers & Qt.AltModifier) m.push("Alt")
+            if (e.modifiers & Qt.ShiftModifier) m.push("Shift")
+            return m.concat([base]).join("+")
+        }
+        readonly property var niriActions: [
+            { l: Tr.t("Закрыть окно"), a: ["close-window"] }, { l: Tr.t("Во весь экран"), a: ["fullscreen-window"] },
+            { l: Tr.t("Развернуть колонку"), a: ["maximize-column"] }, { l: Tr.t("Плавающее окно"), a: ["toggle-window-floating"] },
+            { l: Tr.t("Колонку по центру"), a: ["center-column"] }, { l: Tr.t("Следующая ширина колонки"), a: ["switch-preset-column-width"] },
+            { l: Tr.t("Обзор окон"), a: ["toggle-overview"] }, { l: Tr.t("Стол ниже"), a: ["focus-workspace-down"] },
+            { l: Tr.t("Стол выше"), a: ["focus-workspace-up"] }, { l: Tr.t("Окно — на стол ниже"), a: ["move-column-to-workspace-down"] },
+            { l: Tr.t("Окно — на стол выше"), a: ["move-column-to-workspace-up"] }, { l: Tr.t("Колонка левее"), a: ["focus-column-left"] },
+            { l: Tr.t("Колонка правее"), a: ["focus-column-right"] }, { l: Tr.t("Скриншот niri"), a: ["screenshot"] },
+            { l: Tr.t("Выключить мониторы"), a: ["power-off-monitors"] }, { l: Tr.t("Подсказка по клавишам"), a: ["show-hotkey-overlay"] }
+        ].concat([1, 2, 3, 4, 5].map(n => ({ l: Tr.t("Перейти на стол ") + n, a: ["focus-workspace", String(n)] })))
+         .concat([1, 2, 3, 4, 5].map(n => ({ l: Tr.t("Окно на стол ") + n, a: ["move-column-to-workspace", String(n)] })))
+        readonly property var glideActions: [
+            { l: Tr.t("Центр управления"), a: ["panel", "category", "control"] }, { l: Tr.t("Приложения"), a: ["panel", "launcher"] },
+            { l: Tr.t("Панель"), a: ["panel", "toggle"] }, { l: Tr.t("Буфер обмена"), a: ["panel", "category", "clipboard"] },
+            { l: Tr.t("Уведомления"), a: ["panel", "category", "notify"] }, { l: Tr.t("Сегодня"), a: ["panel", "category", "today"] },
+            { l: Tr.t("Настройки"), a: ["panel", "settings"] }, { l: Tr.t("Заблокировать экран"), a: ["lock", "lock"] },
+            { l: Tr.t("Ночной свет"), a: ["panel", "night", "toggle"] }, { l: Tr.t("Не засыпать"), a: ["panel", "awake", "toggle"] },
+            { l: Tr.t("Запись экрана"), a: ["panel", "record", ""] }
+        ]
+        function glideArgv(a) { return ["spawn", "qs", "-c", "glide-shell", "ipc", "call"].concat(a) }
+        function describe(argv) {   // понятное имя действия для списка
+            if (!argv || !argv.length) return ""
+            var j = JSON.stringify(argv)
+            var n = niriActions.find(x => JSON.stringify(x.a) === j); if (n) return n.l
+            var g = glideActions.find(x => JSON.stringify(glideArgv(x.a)) === j); if (g) return "Glide · " + g.l
+            if (argv[0] === "spawn" && argv[5] === "call" && argv[6] === "panel" && argv[7] === "launch") {
+                var e = DesktopEntries.byId(argv[8]); return Tr.t("Запустить ") + (e ? e.name : argv[8])
+            }
+            return argv.join(" ")
+        }
+        ActionBtn {
+            visible: !!niriPage.cfg && !niriPage.be
+            glyph: String.fromCodePoint(0xF0415); text: Tr.t("Новая клавиша")
+            onClicked: niriPage.be = { key: "", argv: [], title: "", old: "", kind: "app" }
+        }
+        Rectangle {   // карточка редактора
+            visible: !!niriPage.be
+            Layout.fillWidth: true
+            implicitHeight: edCol.implicitHeight + 28
+            radius: Theme.r(18)
+            color: Theme.surface; border.color: Theme.accent
+            ColumnLayout {
+                id: edCol
+                x: 14; y: 14; width: parent.width - 28
+                spacing: 10
+                Text { text: niriPage.be && niriPage.be.old ? Tr.t("Изменить: ") + niriPage.be.old : Tr.t("Новая клавиша"); color: Theme.text; font.bold: true; font.pixelSize: Theme.fs(14) }
+                // запись сочетания
+                Rectangle {
+                    id: capBox
+                    Layout.fillWidth: true
+                    implicitHeight: 40; radius: Theme.r(12)
+                    color: Theme.surfaceHigh
+                    border.width: capBox.activeFocus ? 2 : 1
+                    border.color: capBox.activeFocus ? Theme.accent : Theme.outline
+                    activeFocusOnTab: true
+                    Keys.onPressed: (e) => {
+                        var n = niriPage.keyName(e)
+                        if (n) { var b = Object.assign({}, niriPage.be); b.key = n; niriPage.be = b }
+                        e.accepted = true
+                    }
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: capBox.forceActiveFocus() }
+                    Text {
+                        anchors.centerIn: parent
+                        text: niriPage.be && niriPage.be.key ? niriPage.be.key : capBox.activeFocus ? Tr.t("Нажми сочетание…") : Tr.t("Щёлкни и нажми сочетание")
+                        color: niriPage.be && niriPage.be.key ? Theme.text : Theme.textMuted
+                        font.pixelSize: Theme.fs(14); font.family: niriPage.be && niriPage.be.key ? "JetBrainsMono Nerd Font" : Theme.fontFamily || ""
+                    }
+                }
+                TextRow {
+                    label: Tr.t("…или впиши (Enter): Mod+Shift+T, Ctrl+Alt+Delete")
+                    value: niriPage.be ? niriPage.be.key : ""
+                    onSubmitted: (v) => { var b = Object.assign({}, niriPage.be); b.key = v.replace(/\s+/g, ""); niriPage.be = b }
+                }
+                Text {   // занятость
+                    readonly property var other: niriPage.be && niriPage.cfg ? niriPage.cfg.binds.find(b => b.key.toLowerCase() === niriPage.be.key.toLowerCase()
+                                                                                   && b.key.toLowerCase() !== (niriPage.be.old || "").toLowerCase()) : null
+                    visible: !!other
+                    Layout.fillWidth: true
+                    text: other ? Tr.t("Уже занято: ") + (other.title || niriPage.describe(other.argv)) + Tr.t(" — сохранение заменит") : ""
+                    color: Theme.warning; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+                }
+                ChoiceRow {
+                    label: Tr.t("Что делать")
+                    options: [{ label: Tr.t("приложение"), value: "app" }, { label: "niri", value: "niri" },
+                              { label: "Glide Shell", value: "glide" }, { label: Tr.t("команда"), value: "cmd" }]
+                    current: niriPage.be ? niriPage.be.kind : "app"
+                    onPicked: (v) => { var b = Object.assign({}, niriPage.be); b.kind = v; niriPage.be = b }
+                }
+                TextRow {
+                    visible: !!niriPage.be && niriPage.be.kind === "app"
+                    label: Tr.t("Приложение (начни вводить, Enter)")
+                    value: niriPage.appFilter
+                    onSubmitted: (v) => niriPage.appFilter = v
+                }
+                Flow {
+                    visible: !!niriPage.be && (niriPage.be.kind !== "cmd")
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Repeater {
+                        model: !niriPage.be ? []
+                             : niriPage.be.kind === "niri" ? niriPage.niriActions
+                             : niriPage.be.kind === "glide" ? niriPage.glideActions.map(x => ({ l: x.l, a: niriPage.glideArgv(x.a) }))
+                             : (niriPage.appFilter ? DesktopEntries.applications.values.filter(e => !e.noDisplay && e.name.toLowerCase().indexOf(niriPage.appFilter.toLowerCase()) >= 0).slice(0, 10) : [])
+                               .map(e => ({ l: e.name, a: ["spawn", "qs", "-c", "glide-shell", "ipc", "call", "panel", "launch", e.id] }))
+                        delegate: Rectangle {
+                            id: ac
+                            required property var modelData
+                            readonly property bool sel: !!niriPage.be && JSON.stringify(niriPage.be.argv) === JSON.stringify(modelData.a)
+                            width: acT.implicitWidth + 22; height: 30; radius: 15
+                            color: sel ? (acM.containsMouse ? Theme.accentLight : Theme.accent) : acM.pressed ? Theme.surfacePressed : acM.containsMouse ? Theme.surfaceHigher : Theme.surfaceHigh
+                            scale: acM.pressed ? 0.95 : 1
+                            Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+                            Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+                            Text { id: acT; anchors.centerIn: parent; text: ac.modelData.l; font.pixelSize: Theme.fs(12)
+                                   color: ac.sel ? Theme.accentText : Theme.text }
+                            MouseArea { id: acM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                        onClicked: { var b = Object.assign({}, niriPage.be); b.argv = ac.modelData.a; if (!b.title) b.title = ac.modelData.l; niriPage.be = b } }
+                        }
+                    }
+                }
+                TextRow {
+                    visible: !!niriPage.be && niriPage.be.kind === "cmd"
+                    label: Tr.t("Команда (как в терминале, Enter)")
+                    placeholder: "alacritty -e btop"
+                    value: niriPage.be && niriPage.be.argv[0] === "spawn-sh" ? niriPage.be.argv[1] : ""
+                    onSubmitted: (v) => { var b = Object.assign({}, niriPage.be); b.argv = ["spawn-sh", v]; niriPage.be = b }
+                }
+                TextRow {
+                    label: Tr.t("Подпись в подсказке niri (Enter)")
+                    value: niriPage.be ? niriPage.be.title : ""
+                    onSubmitted: (v) => { var b = Object.assign({}, niriPage.be); b.title = v; niriPage.be = b }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: !!niriPage.be && niriPage.be.argv.length > 0
+                    text: niriPage.be ? Tr.t("Действие: ") + niriPage.describe(niriPage.be.argv) : ""
+                    color: Theme.textSecondary; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+                }
+                RowLayout {
+                    spacing: 8
+                    ActionBtn { glyph: String.fromCodePoint(0xF012C); text: Tr.t("Сохранить"); enabled: !!niriPage.be && !!niriPage.be.key && niriPage.be.argv.length > 0
+                                onClicked: niriPage.bindRun({ key: niriPage.be.key, argv: niriPage.be.argv, title: niriPage.be.title, old: niriPage.be.old }) }
+                    ActionBtn { visible: !!niriPage.be && !!niriPage.be.old; glyph: String.fromCodePoint(0xF0A79); text: Tr.t("Удалить")
+                                onClicked: niriPage.bindRun({ delete: niriPage.be.old }) }
+                    ActionBtn { glyph: String.fromCodePoint(0xF0156); text: Tr.t("Отмена"); onClicked: niriPage.be = null }
+                }
+            }
+        }
         TextRow {
             visible: !!niriPage.cfg
             label: Tr.t("Поиск по клавишам и действиям")
@@ -1873,28 +2450,42 @@ ColumnLayout {
             model: {
                 if (!niriPage.cfg) return []
                 var f = niriPage.bindFilter.toLowerCase()
-                var all = niriPage.cfg.binds.filter(b => !f || (b.key + " " + b.title + " " + b.action).toLowerCase().indexOf(f) >= 0)
-                return all.slice(0, 60)
+                var all = niriPage.cfg.binds.filter(b => !f || (b.key + " " + b.title + " " + b.action + " " + niriPage.describe(b.argv)).toLowerCase().indexOf(f) >= 0)
+                return all.slice(0, 80)
             }
-            delegate: RowLayout {
+            delegate: Rectangle {
+                id: brow
                 required property var modelData
                 Layout.fillWidth: true
-                spacing: 10
+                implicitHeight: 34; radius: Theme.r(10)
+                color: bma.pressed ? Theme.surfacePressed : bma.containsMouse && modelData.editable ? Theme.surfaceHigh : "transparent"
+                Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+                MouseArea {
+                    id: bma; anchors.fill: parent; hoverEnabled: true
+                    cursorShape: brow.modelData.editable ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: if (brow.modelData.editable) {
+                        var a = brow.modelData.argv
+                        var kind = a[0] === "spawn" && a[1] === "qs" ? (a[7] === "launch" ? "app" : "glide") : a[0] === "spawn" || a[0] === "spawn-sh" ? "cmd" : "niri"
+                        niriPage.be = { key: brow.modelData.key, argv: a[0] === "spawn" && kind === "cmd" ? ["spawn-sh", a.slice(1).join(" ")] : a,
+                                        title: brow.modelData.title, old: brow.modelData.key, kind: kind }
+                    }
+                }
                 Rectangle {
-                    Layout.preferredWidth: Math.min(170, keyT.implicitWidth + 16)
-                    implicitHeight: 26; radius: Theme.r(8)
+                    x: 4; anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(170, keyT.implicitWidth + 16); height: 26; radius: Theme.r(8)
                     color: Theme.surfaceHigh; border.color: Theme.outline
                     Text { id: keyT; anchors.centerIn: parent; width: Math.min(implicitWidth, 154); elide: Text.ElideRight
-                           text: parent.parent.modelData.key; color: Theme.text; font.pixelSize: Theme.fs(12); font.family: "JetBrainsMono Nerd Font" }
+                           text: brow.modelData.key; color: Theme.text; font.pixelSize: Theme.fs(12); font.family: "JetBrainsMono Nerd Font" }
                 }
-                Text { Layout.fillWidth: true; text: parent.modelData.title || parent.modelData.action
-                       color: Theme.textSecondary; font.pixelSize: Theme.fs(12); elide: Text.ElideRight }
+                Text { x: 184; width: parent.width - 184 - 10; anchors.verticalCenter: parent.verticalCenter
+                       text: brow.modelData.title || niriPage.describe(brow.modelData.argv)
+                       color: brow.modelData.editable ? Theme.textSecondary : Theme.textMuted; font.pixelSize: Theme.fs(12); elide: Text.ElideRight }
             }
         }
         Text {
             Layout.fillWidth: true
             visible: !!niriPage.cfg
-            text: Tr.t("Изменить клавиши — в ~/.config/niri/config.kdl (раздел binds)")
+            text: Tr.t("Щелчок по клавише — изменить. Серые — из файлов DMS (он их перезаписывает), их меняют новой клавишей с тем же сочетанием. Сочетания, занятые niri, в поле записи не ловятся — впиши их текстом.")
             color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
         }
     }

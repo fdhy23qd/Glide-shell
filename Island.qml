@@ -184,6 +184,11 @@ PanelWindow {
         case "bt": return { show: iw.btConnected.length > 0, glyph: iw.nf(0xF00B1), text: "", color: Theme.textVariant }
         case "awake": return { show: p.awake, glyph: iw.nf(0xF0176), text: "", color: Theme.warning }
         case "night": return { show: NightLight.on, glyph: iw.nf(0xF0594), text: "", color: Theme.textVariant }
+        case "ptimer": {
+            var t = p.powerTimer, left = t ? Math.max(0, Math.ceil((t.end * 1000 - p.now) / 60000)) : 0
+            return { show: !!t && left > 0, glyph: iw.nf(t && t.action === "suspend" ? 0xF04B2 : 0xF0425),
+                     text: left >= 60 ? Math.floor(left / 60) + ":" + ("0" + left % 60).slice(-2) : left + Tr.t(" мин"), color: Theme.warning }
+        }
         case "layout": {
             var n = Niri.layouts[Niri.layoutIdx] || "", first = n.split(/[\s(]/)[0]
             var known = { English: "EN", Russian: "RU", Ukrainian: "UA", Belarusian: "BY", German: "DE", French: "FR", Spanish: "ES", Polish: "PL", Kazakh: "KZ" }
@@ -191,6 +196,23 @@ PanelWindow {
         }
         }
         return { show: false }
+    }
+    // ---- громкость плеера колесом над островом с музыкой ----
+    readonly property bool musicHere: !!player && (iw.kind === "music" || iw.shows("music"))
+    property real volAcc: 0
+    function playerVolume(dy) {
+        var pl = iw.player
+        if (!pl) return
+        volAcc += dy
+        if (Math.abs(volAcc) < 60) return                           // тачпад шлёт мелкие шаги — копим до «щелчка»
+        var step = volAcc > 0 ? 0.05 : -0.05; volAcc = 0
+        var name = pl.identity || Tr.t("Плеер")
+        if (pl.volumeSupported && pl.canControl) {
+            pl.volume = Math.max(0, Math.min(1, pl.volume + step))
+            iw.p.showOsd(iw.nf(pl.volume <= 0 ? 0xF0581 : pl.volume > 0.66 ? 0xF057E : pl.volume > 0.33 ? 0xF0580 : 0xF057F), name, pl.volume, Math.round(pl.volume * 100) + "%")
+        } else {
+            iw.p.flash(iw.nf(0xF075A), name + Tr.t(": громкость не меняется отсюда"), Theme.textVariant)
+        }
     }
     function plain(s) { return s.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim() }
     Binding { target: Notifs; property: "hold"; value: iw.peek && iw.shows("notif") }
@@ -304,6 +326,8 @@ PanelWindow {
             id: tap
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+            // колесо, пока в острове музыка, — громкость этого плеера (MPRIS Volume), а не всей системы
+            onWheel: (w) => { if (iw.musicHere) iw.playerVolume(w.angleDelta.y); else w.accepted = false }
             onClicked: (e) => {
                 if (e.button === Qt.MiddleButton) { if (iw.player && iw.player.canTogglePlaying) iw.player.togglePlaying() }
                 else iw.p.openFromIsland(iw.kindAt(e.x, e.y))

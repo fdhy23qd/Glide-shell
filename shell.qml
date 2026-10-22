@@ -520,6 +520,8 @@ ShellRoot {
         readonly property var appCounts: root.appCounts                 // id приложения → число запусков
         function launchApp(entry) { root.launchApp(entry) }
         readonly property bool awake: root.awake                        // «не засыпать»
+        readonly property var powerTimer: root.powerTimer               // выключение по таймеру: {action, end} или null
+        readonly property real now: root.now
         readonly property var notifs: Notifs                            // уведомления: list, dnd, setDnd, remove…
         readonly property var weather: Weather                          // погода: data, ok, refresh, temp, icon, describe
         readonly property var recorder: Recorder                        // запись экрана: start, stop, recording, elapsed
@@ -700,6 +702,20 @@ ShellRoot {
     LazyLoader {
         active: root.welcomeOpen
         Welcome { root: root; screen: root.panelScreen; onDone: root.welcomeOpen = false }
+    }
+    // ---- выключение по таймеру (tools/glide-powertimer.sh): состояние для острова и раздела «Питание» ----
+    property var powerTimer: null
+    FileView {
+        path: root.stateDir + "/powertimer"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: { try { var d = JSON.parse(text()); root.powerTimer = d.end * 1000 > Date.now() ? d : null } catch (e) { root.powerTimer = null } }
+        onLoadFailed: root.powerTimer = null
+    }
+    Timer {   // остаток в острове и разделе; после срока — убрать (сон: после пробуждения файла уже нет)
+        running: !!root.powerTimer; repeat: true; interval: 20000; triggeredOnStart: true
+        onTriggered: { root.now = Date.now(); if (root.powerTimer && root.powerTimer.end * 1000 <= root.now) root.powerTimer = null }
     }
     property string pendingSearch: ""    // IPC search до показа панели
     Connections {
@@ -893,7 +909,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.81 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.83 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -919,6 +935,11 @@ ShellRoot {
         function flash(text: string): void { root.flash("•", text, Prefs.accent) }
         function brightnessOsd(pct: int): void { root.brightnessOsd(pct) }
         function launcher(): void { root.openCategory("apps") }   // Mod+D
+        function launch(id: string): string {   // запустить приложение по id .desktop (для клавиш niri из «Устройств»)
+            var e = DesktopEntries.byId(id) || DesktopEntries.applications.values.find(x => x.id === id || x.id === id.replace(/\.desktop$/, ""))
+            if (!e) return Tr.t("нет приложения ") + id
+            root.launchApp(e); return "ok"
+        }
         function trayMenu(id: string): string { return root.rightBar ? root.rightBar.openTrayMenu(id) : "" }
         function barTip(key: string): string {   // капля из капсулы бара (проверка): сначала справа, потом слева
             if (key === "") { for (var b of bars.instances) b.showTip(""); return "closed" }

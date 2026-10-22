@@ -33,6 +33,45 @@ Scope {
     onPaletteChanged: debounce.restart()
     onOnChanged: debounce.restart()
     Timer { id: debounce; interval: 300; onTriggered: if (writer.running) restart(); else ts.sync() }
-    Component.onCompleted: debounce.restart()
+    Component.onCompleted: { debounce.restart(); appsDebounce.restart() }
     Process { id: writer }
+
+    // ---- светлая/тёмная схема и акцент — приложениям: gsettings (GTK4/libadwaita, браузеры и Qt через портал) ----
+    readonly property string scheme: Theme.isLight ? "prefer-light" : "prefer-dark"
+    // акцент GNOME — ближайший из девяти по оттенку (серые — slate)
+    readonly property string gnomeAccent: {
+        var c = Prefs.accent
+        if (c.hsvSaturation < 0.2) return "slate"
+        var h = c.hsvHue * 360
+        var hues = [["red", 0], ["orange", 28], ["yellow", 50], ["green", 135], ["teal", 175], ["blue", 215], ["purple", 270], ["pink", 330], ["red", 360]]
+        var best = "blue", d = 999
+        for (var x of hues) { var dd = Math.abs(h - x[1]); if (dd < d) { d = dd; best = x[0] } }
+        return best
+    }
+    function syncApps() {
+        if (!Prefs.themeApps) return
+        var cmd = "gsettings set org.gnome.desktop.interface color-scheme " + scheme
+                + "; gsettings set org.gnome.desktop.interface accent-color " + gnomeAccent + " 2>/dev/null"
+        if (Prefs.themeGtk3)
+            cmd += "; t=$(gsettings get org.gnome.desktop.interface gtk-theme); case $t in \"'Adwaita'\"|\"'Adwaita-dark'\") gsettings set org.gnome.desktop.interface gtk-theme "
+                 + (Theme.isLight ? "Adwaita" : "Adwaita-dark") + ";; esac"
+        appsProc.command = ["sh", "-c", cmd]
+        appsProc.running = false; appsProc.running = true
+    }
+    Process { id: appsProc }
+    // рамка фокуса niri — акцентом Glide (Prefs.niriAccent): при смене акцента перекрасить
+    Process { id: niriProc }
+    function syncNiri() {
+        if (!Prefs.niriAccent) return
+        var c = Prefs.accent.toString()
+        niriProc.command = ["python3", "-I", Quickshell.shellDir + "/tools/glide-niri.py", "set-look",
+                            JSON.stringify({ ring: { color: c }, border: { color: c } })]
+        niriProc.running = false; niriProc.running = true
+    }
+    Timer { id: niriDebounce; interval: 600; onTriggered: ts.syncNiri() }
+    Connections { target: Prefs; function onAccentChanged() { niriDebounce.restart() } function onNiriAccentChanged() { niriDebounce.restart() } }
+    Timer { id: appsDebounce; interval: 400; onTriggered: ts.syncApps() }
+    onSchemeChanged: appsDebounce.restart()
+    onGnomeAccentChanged: appsDebounce.restart()
+    Connections { target: Prefs; function onThemeAppsChanged() { appsDebounce.restart() } function onThemeGtk3Changed() { appsDebounce.restart() } }
 }

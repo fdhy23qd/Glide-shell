@@ -17,7 +17,23 @@ Singleton {
         soft:   { background: "#161a22", surface: "#212733", surfaceLow: "#262c39", surfaceHigh: "#2a313e",
                   surfaceHigher: "#343c4b", surfacePressed: "#3e4757", outline: "#37445a", divider: "#3d4a5f" }
     })
-    readonly property var t: tones[Prefs.themeTone] || tones.glide
+    // светлая: белые карточки на светло-сером, тёмный текст (те же роли, что у тёмных тонов)
+    readonly property var lightTone: ({ background: "#eef0f4", surface: "#ffffff", surfaceLow: "#f6f7f9", surfaceHigh: "#e8ebf0",
+                                         surfaceHigher: "#dde2e9", surfacePressed: "#d1d7e0", outline: "#d3d9e2", divider: "#c8d0db" })
+    // «авто»: светлая с восхода до заката (время — из погоды, без неё 7:00–21:00), проверка раз в минуту
+    property bool dayNow: true
+    function checkDay() {
+        var n = new Date(), m = n.getHours() * 60 + n.getMinutes()
+        function mins(s) { var a = String(s || "").split(":"); return a.length === 2 ? (+a[0]) * 60 + (+a[1]) : NaN }
+        var up = mins(NightLight.sunrise), down = mins(NightLight.sunset)
+        if (isNaN(up)) up = 420
+        if (isNaN(down)) down = 1260
+        dayNow = m >= up && m < down
+    }
+    Timer { running: Prefs.themeMode === "auto"; repeat: true; interval: 60000; triggeredOnStart: true; onTriggered: theme.checkDay() }
+    Connections { target: NightLight; function onSunsetChanged() { theme.checkDay() } function onSunriseChanged() { theme.checkDay() } }
+    readonly property bool isLight: Prefs.themeMode === "light" || (Prefs.themeMode === "auto" && dayNow)
+    readonly property var t: isLight ? lightTone : (tones[Prefs.themeTone] || tones.glide)
 
     // ---- поверхности: от фона к выделенным слоям ----
     readonly property color background: t.background       // остров, бар, панель
@@ -37,11 +53,11 @@ Singleton {
     readonly property color backgroundBar: Qt.rgba(background.r, background.g, background.b, Prefs.themeOpacity)
 
     // ---- текст ----
-    readonly property color text: "#f5f7fa"             // TextPrimary
-    readonly property color textVariant: "#c3cbd6"      // значки и второстепенные надписи
-    readonly property color textSecondary: "#9aa5b5"    // TextSecondary
-    readonly property color textMuted: "#6b7686"        // подсказки
-    readonly property color textFaint: "#4b5563"        // совсем вторичное (дни чужого месяца, номера недель)
+    readonly property color text: isLight ? "#14171c" : "#f5f7fa"             // TextPrimary
+    readonly property color textVariant: isLight ? "#364050" : "#c3cbd6"      // значки и второстепенные надписи
+    readonly property color textSecondary: isLight ? "#5a6473" : "#9aa5b5"    // TextSecondary
+    readonly property color textMuted: isLight ? "#7f8999" : "#6b7686"        // подсказки
+    readonly property color textFaint: isLight ? "#a3abb8" : "#4b5563"        // совсем вторичное (дни чужого месяца, номера недель)
 
     // ---- акцент (выбирается в настройках) ----
     readonly property color accent: Prefs.accent
@@ -50,14 +66,14 @@ Singleton {
     readonly property color accentLight: Qt.lighter(Prefs.accent, 1.12)    // залитая акцентом кнопка под курсором
     readonly property color accentPressed: Qt.darker(Prefs.accent, 1.15)   // … и нажатая
     // текст на акценте: белый, а на светлых акцентах — тёмный, как onPrimary в MD3
-    readonly property color accentText: 0.299 * accent.r + 0.587 * accent.g + 0.114 * accent.b > 0.62 ? background : "#ffffff"
+    readonly property color accentText: 0.299 * accent.r + 0.587 * accent.g + 0.114 * accent.b > 0.62 ? "#0f1115" : "#ffffff"
 
     // ---- смысловые цвета ----
     readonly property color error: "#ef5b5b"            // ErrorRed
-    readonly property color errorSoft: "#e58a8a"        // выходные в календаре
-    readonly property color errorContainer: "#3a1f24"
-    readonly property color errorHover: "#4a2328"
-    readonly property color errorText: "#ffdad6"
+    readonly property color errorSoft: isLight ? "#d65c5c" : "#e58a8a"        // выходные в календаре
+    readonly property color errorContainer: isLight ? "#fde4e4" : "#3a1f24"
+    readonly property color errorHover: isLight ? "#fbd2d2" : "#4a2328"
+    readonly property color errorText: isLight ? "#8b1d1d" : "#ffdad6"
     readonly property color success: "#34c77b"
     readonly property color warning: "#f5a623"
 

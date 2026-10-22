@@ -78,7 +78,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.81`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.83`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -167,6 +167,14 @@ idle:sleep` (система не засыпает). Включается в це
 Пока работает DMS, его бар нужно выключить (`barConfigs[].enabled: false` в
 `~/.config/DankMaterialShell/settings.json`).
 Свой бар выключается в настройках панели: «Свой верхний бар». Значки — из JetBrainsMono Nerd Font.
+
+## Настройки niri («Устройства»)
+
+У niri нет своего окна настроек — вкладка «Устройства» правит его мышкой: мониторы (масштаб, разрешение и частота,
+поворот, включить/выключить, VRR, расположение со схемой — сразу, с 15 с на «оставить или вернуть»), клавиатура,
+тачпад и мышь, зазоры, скругление и рамки окон, анимации niri, курсор, горячий угол, приложения при входе
+(XDG-автозапуск) и редактор горячих клавиш. Пишется в отдельные файлы (`glide-outputs.kdl` подключён первым,
+`glide-settings.kdl` — последним), каждое изменение проверяет `niri validate`, при ошибке — откат.
 
 ## Уведомления и окно пароля
 Свой сервер уведомлений: новое уведомление встаёт строкой под часами острова (наведение — текст,

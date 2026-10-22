@@ -1,0 +1,7 @@
+{
+  "id": "powertimer", "api": 1, "name": "Выключение по таймеру", "icon": "󰔟", "author": "glide-shell",
+  "category": ["power"], "priority": -10,
+  "description": "Выключить или усыпить компьютер через 15–120 минут; за минуту — предупреждение, остаток — в острове",
+  "keywords": ["таймер", "выключить через", "сон через", "sleep timer", "shutdown timer"],
+  "qml": "PowerTimer.qml"
+}
