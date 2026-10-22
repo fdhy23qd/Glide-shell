@@ -32,6 +32,11 @@ if [ "${GLIDE_SKIP_TESTS:-}" != 1 ] && [ -d "$src/tests" ]; then
 fi
 
 # Glide Shell работает службой systemd (перезапуск при падении, запасной DMS — см. systemd/)
+# Пока идёт установка, автоматический откат на DMS не нужен: сломанная версия падает 5 раз за секунды, systemd
+# зовёт glide-rescue.sh auto — и DMS запускался рядом (22.10.2026). Метка — для него; откатывает сам install.sh.
+installing="${XDG_RUNTIME_DIR:-/tmp}/glide-shell-installing"
+: > "$installing"
+trap 'rm -f "$installing"' EXIT
 stop() {
     systemctl --user stop glide-shell.service 2>/dev/null || true
     pkill -f "^qs -c glide-shell$" 2>/dev/null || true   # запущенный по-старому, не службой

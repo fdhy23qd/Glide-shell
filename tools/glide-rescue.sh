@@ -15,6 +15,12 @@
 set -u
 dms_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/settings.json"
 mode="${1:-rescue}"
+# идёт install.sh (метка свежее 5 минут) — он сам вернёт прежнюю версию; DMS не запускать
+inst="${XDG_RUNTIME_DIR:-/tmp}/glide-shell-installing"
+if [ "$mode" = "auto" ] && [ -n "$(find "$inst" -mmin -5 2>/dev/null)" ]; then
+    echo "glide-rescue: идёт установка Glide Shell — откат на DMS не нужен" >&2
+    exit 0
+fi
 run="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
 # Что из DMS выключено, пока работает Glide Shell: бар, док, всплывашки громкости/яркости (их показывает
