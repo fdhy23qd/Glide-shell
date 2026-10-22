@@ -682,10 +682,11 @@ PanelWindow {
                     Behavior on width { NumberAnimation { duration: Prefs.ms(300); easing.type: Easing.OutCubic } }
                 }
                 Rectangle {   // ожидание без процента: бесконечный индикатор (не через Prefs.ms — см. CLAUDE.md)
+                    id: liveRun
                     visible: liveL.prog < 0 && liveL.on
                     width: parent.width * 0.3; height: parent.height; radius: 2
                     color: liveL.tone
-                    NumberAnimation on x { from: -width; to: parent.width; duration: 1300; loops: Animation.Infinite; running: liveL.prog < 0 && liveL.on }
+                    NumberAnimation on x { from: -liveRun.width; to: liveRun.parent.width; duration: 1300; loops: Animation.Infinite; running: liveL.prog < 0 && liveL.on }
                 }
             }
         }
