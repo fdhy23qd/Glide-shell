@@ -459,3 +459,51 @@ class Translation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Update(Sandbox):
+    """Обновление из git: видит новую версию и её записи CHANGELOG, не трогает папку со своими правками."""
+
+    def git(self, cwd, *a):
+        subprocess.run(["git", "-C", str(cwd), *a], check=True, capture_output=True, stdin=subprocess.DEVNULL,
+                       env=dict(self.env, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
+                                GIT_COMMITTER_EMAIL="t@t"))
+
+    def commit(self, repo, ver, entries):
+        (repo / "shell.qml").write_text(f'console.log("Glide Shell {ver} (x)")\n')
+        (repo / "CHANGELOG.md").write_text("# что нового\n\n" + "".join(f"- **{v}** — {t}\n" for v, t in entries))
+        self.git(repo, "add", "-A"); self.git(repo, "commit", "-qm", ver)
+
+    def test_status_and_apply(self):
+        if not shutil.which("git"):
+            self.skipTest("нет git")
+        # настоящий systemctl внутри юнита обновления ответил бы «идёт» — и обновлять было бы нельзя
+        self.shim("systemctl", "#!/bin/sh\nexit 3\n")
+        up, work, src = self.tmp / "up.git", self.tmp / "work", self.tmp / "src"
+        self.git(self.tmp, "init", "-q", "--bare", "-b", "main", str(up))
+        self.git(self.tmp, "clone", "-q", str(up), str(work))
+        self.commit(work, "v0.1", [("v0.1", "первая")])
+        self.git(work, "push", "-q", "origin", "HEAD:main")
+        self.git(self.tmp, "clone", "-q", str(up), str(src))
+        (self.state / "glide-shell").mkdir()
+        (self.state / "glide-shell" / "source").write_text(str(src) + "\n")
+        self.commit(work, "v0.2", [("v0.2", "светлая тема"), ("v0.1", "первая")])
+        self.git(work, "push", "-q", "origin", "HEAD:main")
+        env = {"GLIDE_UPDATE_INLINE": "1", "GLIDE_UPDATE_INSTALL": "echo ok > installed"}
+        st = json.loads(self.run_py(TOOLS / "glide-update.py", "status", "--fetch", env=env).stdout)
+        sh = st["shell"]
+        self.assertEqual((sh["current"], sh["latest"], sh["behind"]), ("v0.1", "v0.2", 1))
+        self.assertEqual(sh["changes"], ["v0.2 — светлая тема"])
+        self.assertTrue(sh["canUpdate"])
+        self.assertFalse(st["apps"]["git"])                          # приложения не поставлены — не из git
+        (src / "shell.qml").write_text("своя правка\n")             # свои правки — не обновлять
+        self.assertFalse(json.loads(self.run_py(TOOLS / "glide-update.py", "apply", "shell", env=env).stdout)["ok"])
+        self.git(src, "checkout", "--", "shell.qml")
+        r = json.loads(self.run_py(TOOLS / "glide-update.py", "apply", "shell", env=env, timeout=60).stdout)
+        self.assertTrue(r["ok"], r)
+        self.assertEqual((r["from"], r["to"]), ("v0.1", "v0.2"))
+        self.assertTrue((src / "installed").exists())
+        res = json.loads((self.state / "glide-shell" / "update.json").read_text())
+        self.assertFalse(res["shown"])
+        self.run_py(TOOLS / "glide-update.py", "ack", env=env)
+        self.assertTrue(json.loads((self.state / "glide-shell" / "update.json").read_text())["shown"])

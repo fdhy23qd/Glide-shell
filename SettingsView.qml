@@ -619,6 +619,87 @@ ColumnLayout {
             current: Prefs.battCrit
             onPicked: (v) => Prefs.set("battCrit", v)
         }
+        // ---- обновления из git (Updates.qml, tools/glide-update.py) ----
+        Header { text: Tr.t("ОБНОВЛЕНИЯ") }
+        ToggleRow {
+            icon: String.fromCodePoint(0xF06B0)
+            label: Tr.t("Проверять обновления")
+            hint: Tr.t("Раз в 6 часов — git fetch в папке, откуда поставлена оболочка; о новой версии — одно уведомление")
+            checked: Prefs.updateCheck
+            onToggled: Prefs.set("updateCheck", !Prefs.updateCheck)
+        }
+        Repeater {
+            model: [{ id: "shell", name: "Glide Shell" }, { id: "apps", name: Tr.t("Приложения Glide") }]
+            delegate: Rectangle {
+                id: uc
+                required property var modelData
+                readonly property var s: Updates[modelData.id]
+                readonly property bool working: !!s.running || (Updates.applying && Updates.busy)
+                visible: modelData.id === "shell" || !!s.git
+                Layout.fillWidth: true
+                implicitHeight: ucCol.implicitHeight + 24
+                radius: Theme.r(16)
+                color: Theme.surface
+                border.color: s.behind > 0 ? Prefs.accent : Theme.outline
+                Behavior on border.color { ColorAnimation { duration: Prefs.ms(160) } }
+                ColumnLayout {
+                    id: ucCol
+                    x: 14; y: 12; width: parent.width - 28
+                    spacing: 6
+                    Text {
+                        text: uc.modelData.name + (uc.s.current ? "  " + uc.s.current : "")
+                        color: Theme.text; font.pixelSize: Theme.fs(14); font.bold: true
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: Theme.fs(12)
+                        color: uc.s.behind > 0 ? Prefs.accent : uc.s.error ? Theme.error : Theme.textSecondary
+                        text: !uc.s.git ? (uc.s.source ? Tr.t("Поставлено не из git-папки — обновить можно, скачав заново (git clone) и запустив sh setup.sh")
+                                                       : Tr.t("Не знаю, откуда поставлено: один раз запусти sh install.sh из папки с исходниками"))
+                            : uc.s.local ? Tr.t("Папка без удалённого репозитория — проверять негде")
+                            : uc.working ? (uc.modelData.id === "shell" ? Tr.t("Обновляется… оболочка перезапустится сама")
+                                                                        : Tr.t("Обновляется… сборка займёт пару минут"))
+                            : uc.s.error ? Tr.t("Не удалось проверить: ") + uc.s.error
+                            : uc.s.behind > 0 ? Tr.t("Доступно: ") + (uc.s.latest || "") + " (" + uc.s.behind + Tr.t(" изм.)")
+                                + (uc.s.canUpdate ? "" : Tr.t(" — но в папке свои правки или коммиты, обновляй вручную: git pull"))
+                            : Tr.t("Установлена последняя версия")
+                    }
+                    Repeater {   // что нового
+                        model: (uc.s.changes || []).slice(0, 6)
+                        delegate: Text {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            text: "•  " + modelData
+                            color: Theme.textVariant; font.pixelSize: Theme.fs(12)
+                            wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
+                        }
+                    }
+                    Text {
+                        visible: !!uc.s.checked
+                        text: Tr.t("Проверено: ") + (uc.s.checked ? Tr.date(new Date(uc.s.checked * 1000), "d MMMM, HH:mm") : "")
+                        color: Theme.textMuted; font.pixelSize: Theme.fs(11)
+                    }
+                    RowLayout {
+                        visible: !!uc.s.git && !uc.s.local
+                        spacing: 8
+                        ActionBtn {
+                            glyph: String.fromCodePoint(0xF0450)
+                            text: Updates.checking ? Tr.t("Проверяю…") : Tr.t("Проверить")
+                            enabled: !Updates.checking && !uc.working
+                            onClicked: Updates.check(true)
+                        }
+                        ActionBtn {
+                            visible: uc.s.behind > 0
+                            glyph: String.fromCodePoint(0xF01DA)
+                            text: Tr.t("Обновить")
+                            enabled: !!uc.s.canUpdate && !Updates.busy
+                            onClicked: Updates.apply(uc.modelData.id)
+                        }
+                    }
+                }
+            }
+        }
         // ---- резервная копия настроек (tools/glide-backup.py) ----
         Header { text: Tr.t("РЕЗЕРВНАЯ КОПИЯ") }
         Text {
