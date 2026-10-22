@@ -78,7 +78,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.89`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.90`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -175,6 +175,12 @@ idle:sleep` (система не засыпает). Включается в це
 тачпад и мышь, зазоры, скругление и рамки окон, анимации niri, курсор, горячий угол, приложения при входе
 (XDG-автозапуск) и редактор горячих клавиш. Пишется в отдельные файлы (`glide-outputs.kdl` подключён первым,
 `glide-settings.kdl` — последним), каждое изменение проверяет `niri validate`, при ошибке — откат.
+
+## API для других программ
+
+Любая программа может показать прогресс в острове, узнать тему и следить за её сменой, открыть панель — через службу
+D-Bus `org.glide.Shell` (запускается сама при первом обращении) или команду `glide-shell`
+(`glide-shell activity start backup --title "Копия" --progress 0.3`). Подробно — [docs/API.ru.md](docs/API.ru.md), раздел 7.
 
 ## Быстрый просмотр и обновления Arch
 

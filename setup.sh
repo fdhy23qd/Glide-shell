@@ -39,6 +39,7 @@ if [ "$mode" = uninstall ]; then
           "$cfg/systemd/user/app-.service.d/glide-after-shell.conf"
     systemctl --user daemon-reload 2>/dev/null
     rm -rf "$cfg/quickshell/glide-shell" "$cfg/quickshell/glide-shell.prev"; ok "оболочка удалена"
+    rm -f "$HOME/.local/bin/glide-shell" "${XDG_DATA_HOME:-$HOME/.local/share}/dbus-1/services/org.glide.Shell.service"
     if [ -f "$niri_cfg" ] && grep -q 'include "glide-shell.kdl"' "$niri_cfg"; then
         cp "$niri_cfg" "$niri_cfg.before-glide-uninstall-$stamp"
         sed -i '/include "glide-shell.kdl"/d; /^\/\/ Glide Shell: клавиши/d' "$niri_cfg"

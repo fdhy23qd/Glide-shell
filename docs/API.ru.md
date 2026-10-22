@@ -8,7 +8,7 @@
 |---|---|---|
 | **Плагин** — раздел в панели, команды в поиске, элемент бара | `~/.config/glide-shell/plugins/<id>/` | JSON + любые скрипты или QML |
 | **Виджет рабочего стола** | `~/.config/glide-shell/widgets/<id>/` | QML |
-| **Чужое приложение**, которое общается с оболочкой | D-Bus / команда `glide-shell` | любой язык (в следующих версиях) |
+| **Чужое приложение**, которое общается с оболочкой | D-Bus / команда `glide-shell` | любой язык |
 
 Версия API — **1**, в `plugin.json` пишется `"api": 1`. Новое только добавляется, поэтому код для версии 1
 продолжит работать.
@@ -220,3 +220,55 @@ Item {
 - Проверить, что QML собирается, без перезапуска оболочки: `qs -p <папка>` с `shell.qml`
   `ShellRoot { Component.onCompleted: console.warn(Qt.createComponent("Main.qml").errorString()) }`.
 - Виджеты перечитываются после правки файла, плагины — при каждом открытии панели.
+
+---
+
+## 7. Другие программы: D-Bus `org.glide.Shell` и команда `glide-shell`
+
+С оболочкой может говорить любая программа через сессионную шину: Python, C++, Rust, Go или скрипт с `gdbus`.
+Служба запускается сама при первом обращении (D-Bus activation), поэтому памяти не занимает, пока не нужна.
+
+Имя `org.glide.Shell`, объект `/org/glide/Shell`, интерфейс `org.glide.Shell1`:
+
+| Метод | |
+|---|---|
+| `Flash(s icon, s text)` | Короткое сообщение в острове |
+| `StartActivity(s id, a{sv} props)` | «Живая активность» (раздел 3): `title`, `subtitle`, `icon`, `progress` (d), `color`, `actionLabel`. Исчезает сама, когда твоя программа уходит с шины; `persist: true` — оставить. |
+| `UpdateActivity(s id, a{sv} props)` | Изменить часть полей (применяется не чаще 4 раз в секунду) |
+| `EndActivity(s id)` | Убрать |
+| `OpenPanel(s category)`, `ClosePanel()`, `Search(s text)` | Панель |
+| `SetDnd(b)`, `GetDnd() → b` | «Не беспокоить» (включённое вручную) |
+| `GetTheme() → a{sv}` | `accent`, `accentText`, `isLight`, `tone`, `background`, `surface`, `surfaceHigh`, `outline`, `text`, `textSecondary`, `radius`, `font`, `lang` |
+| `GetVersion() → s` | Версия оболочки |
+
+| Сигнал | |
+|---|---|
+| `ThemeChanged(a{sv} theme)` | Пользователь сменил акцент, тон или светлую/тёмную тему — перекрась программу |
+| `ActivityClicked(s id)`, `ActivityAction(s id)`, `ActivityClosed(s id)` | Щелчок по твоей активности, её кнопке или «×» |
+
+```sh
+gdbus call --session --dest org.glide.Shell --object-path /org/glide/Shell \
+  --method org.glide.Shell1.StartActivity build "{'title': <'Сборка'>, 'progress': <0.3>}"
+```
+
+```python
+from gi.repository import Gio, GLib
+bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+bus.call_sync("org.glide.Shell", "/org/glide/Shell", "org.glide.Shell1", "Flash",
+              GLib.Variant("(ss)", ("", "Экспорт готов")), None, 0, -1, None)
+```
+
+Для скриптов — команда `glide-shell` (`~/.local/bin/glide-shell`):
+
+```sh
+glide-shell flash "Копия готова"
+glide-shell activity start backup --title "Резервная копия" --progress 0.1
+glide-shell activity update backup --progress 0.8 --subtitle "8 из 10 ГБ"
+glide-shell activity end backup
+glide-shell open control | close | search "текст"
+glide-shell dnd on | off | (без аргумента — показать)
+glide-shell theme      # JSON
+glide-shell watch      # сигналы строками JSON
+```
+
+Активности, запущенные командой, живут, пока их не снимут: сама команда сразу завершается.
