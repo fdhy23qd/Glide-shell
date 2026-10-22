@@ -49,6 +49,12 @@ mkdir -p "$dst"
 cp -r "$src"/. "$dst"/
 rm -rf "$dst/.git"
 echo "установлено в $dst"
+# для других программ: команда glide-shell и служба D-Bus org.glide.Shell (запускается шиной по требованию)
+mkdir -p "$HOME/.local/bin" "$data/dbus-1/services"
+ln -sf "$dst/tools/glide-shell.py" "$HOME/.local/bin/glide-shell"
+printf '[D-BUS Service]\nName=org.glide.Shell\nExec=/usr/bin/python3 -I %s/tools/glide-shell.py --daemon\n' "$dst" > "$data/dbus-1/services/org.glide.Shell.service"
+# шина перечитывает описания служб не сама (dbus-broker) — попросить
+busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig >/dev/null 2>&1 || true
 # откуда поставлено — для проверки обновлений (tools/glide-update.py: git fetch в этой папке)
 mkdir -p "$state/glide-shell" && printf '%s\n' "$src" > "$state/glide-shell/source"
 # свои виджеты рабочего стола: при первой установке — папка с примером (дальше её не трогаем)

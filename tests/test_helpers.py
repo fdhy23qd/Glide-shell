@@ -566,3 +566,43 @@ class PluginScaffold(Sandbox):
         self.assertNotEqual(self.run_py(TOOLS / "glide-plugin.py", "new", "Плохой id").returncode, 0)
         self.assertEqual(self.run_py(TOOLS / "glide-plugin.py", "widget", "w1").returncode, 0)
         self.assertTrue((self.cfg / "glide-shell" / "widgets" / "w1" / "widget.qml").exists())
+
+
+class ShellBus(Sandbox):
+    """Служба org.glide.Shell на своей шине: команда → служба → оболочка (заглушка IPC пишет в файл);
+    тема — из файла; приложение ушло с шины — его активность снимается."""
+
+    def test_bus(self):
+        if not shutil.which("dbus-run-session"):
+            self.skipTest("нет dbus-run-session")
+        try:
+            import gi  # noqa: F401
+        except ImportError:
+            self.skipTest("нет python-gobject")
+        rt = self.tmp / "run"; rt.mkdir()
+        (rt / "glide-shell-theme.json").write_text('{"accent": "#7b61ff", "isLight": false}')
+        log = self.tmp / "ipc.log"
+        self.shim("fake-ipc", f"#!/bin/sh\necho \"$1\" >> {log}\n")
+        tool = TOOLS / "glide-shell.py"
+        app = ("import gi,time\ngi.require_version('Gio','2.0')\nfrom gi.repository import Gio,GLib\n"
+               "b=Gio.bus_get_sync(Gio.BusType.SESSION)\n"
+               "b.call_sync('org.glide.Shell','/org/glide/Shell','org.glide.Shell1','StartActivity',"
+               "GLib.Variant('(sa{sv})',('app1',{'title':GLib.Variant('s','Синхронизация')})),None,0,5000,None)\n")
+        script = (f"{sys.executable} -I {tool} --daemon & D=$!; sleep 1; "
+                  f"{sys.executable} -I {tool} flash 'Готово, всё'; "
+                  f"{sys.executable} -I {tool} activity start dl --title 'Загрузка' --progress 0.5; "
+                  f"{sys.executable} -I {tool} theme; "
+                  f"{sys.executable} -I -c \"{app}\"; sleep 1; kill $D")
+        r = subprocess.run(["dbus-run-session", "--", "sh", "-c", script], capture_output=True, text=True, timeout=60,
+                           stdin=subprocess.DEVNULL, env={**self.env, "XDG_RUNTIME_DIR": str(rt),
+                                                         "GLIDE_SHELL_IPC": str(self.bin / "fake-ipc")})
+        self.assertIn('"accent": "#7b61ff"', r.stdout, r.stderr)
+        import base64
+        msgs = [json.loads(base64.b64decode(l)) for l in log.read_text().split()]
+        ops = [(m["op"], m.get("id")) for m in msgs]
+        self.assertIn(("flash", None), ops)
+        self.assertEqual(next(m for m in msgs if m["op"] == "flash")["text"], "Готово, всё")   # запятая — цела
+        self.assertIn(("start", "cli/dl"), ops)
+        self.assertIn(("start", "app1"), ops)
+        self.assertIn(("end", "app1"), ops)            # приложение закрылось — активность снята
+        self.assertNotIn(("end", "cli/dl"), ops)       # из команды — живёт, пока не снимут

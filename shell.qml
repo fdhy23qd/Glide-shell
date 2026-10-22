@@ -775,6 +775,54 @@ ShellRoot {
         if (previewPath) { var r = results[selected]; showPreview(r && r.kind === "file" ? r.path : "") }   // просмотр едет за выбором
     }
 
+    // ---------- чужие приложения: служба D-Bus org.glide.Shell (tools/glide-shell.py, docs/API.md) ----------
+    function fromDbus(payload) {
+        var m
+        var raw = Qt.atob(payload)   // Qt 6 сам раскодирует UTF-8; на старых — байты, их перекодировать
+        try { m = JSON.parse(raw) } catch (e) {
+            try { m = JSON.parse(decodeURIComponent(escape(raw))) } catch (e2) { return "bad payload" }
+        }
+        var id = "ext:" + (m.id || "")
+        switch (m.op) {
+        case "flash": flash(m.icon || String.fromCodePoint(0xF02FC), m.text || "", Prefs.accent); break
+        case "start": Activities.start(id, Object.assign({ owner: "dbus" }, m.props || {})); break
+        case "update": Activities.update(id, Object.assign({ owner: "dbus" }, m.props || {})); break
+        case "end": Activities.end(id); break
+        case "open": if (m.category) openCategory(m.category); else open(); break
+        case "close": close(); break
+        case "search": if (shown) win.setSearch(m.text || ""); else { pendingSearch = m.text || ""; open() } break
+        case "dnd": Notifs.setDnd(!!m.on); break
+        default: return "unknown op"
+        }
+        return "ok"
+    }
+    function toDbus(id, event) {   // щелчок, кнопка, «×» по активности приложения — обратно в службу (она шлёт сигнал)
+        if (id.indexOf("ext:") !== 0) return
+        Quickshell.execDetached(["gdbus", "call", "--session", "--dest", "org.glide.Shell", "--object-path", "/org/glide/Shell",
+                                 "--method", "org.glide.Shell1.ActivityEvent", id.slice(4), event])
+    }
+    Connections {
+        target: Activities
+        function onClicked(id) { root.toDbus(id, "clicked") }
+        function onAction(id) { root.toDbus(id, "action") }
+        function onEnded(id) { root.toDbus(id, "closed") }
+    }
+    // тема для приложений — $XDG_RUNTIME_DIR/glide-shell-theme.json (GetTheme / ThemeChanged у службы)
+    readonly property string themeJson: JSON.stringify({
+        accent: String(Prefs.accent), accentText: String(Theme.accentText), isLight: Theme.isLight, tone: Prefs.themeTone,
+        background: String(Theme.background), surface: String(Theme.surface), surfaceHigh: String(Theme.surfaceHigh),
+        outline: String(Theme.outline), text: String(Theme.text), textSecondary: String(Theme.textSecondary),
+        radius: Prefs.themeRadius, font: Prefs.themeFont, lang: Tr.lang
+    })
+    onThemeJsonChanged: themeWrite.restart()
+    Timer { id: themeWrite; interval: 400; running: true; onTriggered: themeFile.setText(root.themeJson) }
+    FileView {
+        id: themeFile
+        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/glide-shell-theme.json"
+        printErrors: false
+        atomicWrites: true
+    }
+
     // ---------- быстрый просмотр файла в поиске (Shift+Пробел; tools/glide-preview.py) ----------
     property string previewPath: ""
     property var preview: null
@@ -944,7 +992,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.89 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.90 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -1002,6 +1050,8 @@ ShellRoot {
             if (what === "upgrade") { ArchUpdates.upgrade(); return "ok" }
             return JSON.stringify(ArchUpdates.st)
         }
+        // от службы D-Bus org.glide.Shell (tools/glide-shell.py): base64 от JSON — qs ipc режет аргументы по запятым
+        function dbus(payload: string): string { return root.fromDbus(payload) }
         function peek(on: string): string { root.islandHover = on === "on"; return String(root.islandPeek) }   // раскрыть остров, как наведением
         // «живая активность» из скрипта: title "" — убрать; progress 0…1, меньше 0 — без прогресса
         function activity(id: string, title: string, progress: real): string {

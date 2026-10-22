@@ -8,7 +8,7 @@ Glide Shell can be extended in three ways:
 |---|---|---|
 | **Plugin**: a section in the panel, commands in search, an item in the bar | `~/.config/glide-shell/plugins/<id>/` | JSON + any scripts, or QML |
 | **Desktop widget** | `~/.config/glide-shell/widgets/<id>/` | QML |
-| **Another app** talking to the shell | D-Bus / `glide-shell` command | any (coming in the next versions) |
+| **Another app** talking to the shell | D-Bus / `glide-shell` command | any |
 
 API version: **1**. Put `"api": 1` in `plugin.json`. New fields are only ever added, so code written for version 1
 keeps working.
@@ -219,3 +219,55 @@ The shell places the item in the left or right island. The user chooses which in
   `qs -p <dir>` with a `shell.qml` containing
   `ShellRoot { Component.onCompleted: console.warn(Qt.createComponent("Main.qml").errorString()) }`.
 - Desktop widgets reload when their file changes. Plugins are re-read every time the panel opens.
+
+---
+
+## 7. Other apps: D-Bus `org.glide.Shell` and the `glide-shell` command
+
+Any program can talk to the shell over the session bus: Python, C++, Rust, Go, or a shell script with `gdbus`.
+The service starts by itself on the first call (D-Bus activation), so it uses no memory until someone needs it.
+
+Name `org.glide.Shell`, object `/org/glide/Shell`, interface `org.glide.Shell1`:
+
+| Method | |
+|---|---|
+| `Flash(s icon, s text)` | A short message in the island |
+| `StartActivity(s id, a{sv} props)` | A live activity (section 3): `title`, `subtitle`, `icon`, `progress` (d), `color`, `actionLabel`. It disappears by itself when your app leaves the bus; `persist: true` keeps it. |
+| `UpdateActivity(s id, a{sv} props)` | Change some fields (applied at most 4 times a second) |
+| `EndActivity(s id)` | Remove it |
+| `OpenPanel(s category)`, `ClosePanel()`, `Search(s text)` | The panel |
+| `SetDnd(b)`, `GetDnd() → b` | "Do not disturb" (set by hand) |
+| `GetTheme() → a{sv}` | `accent`, `accentText`, `isLight`, `tone`, `background`, `surface`, `surfaceHigh`, `outline`, `text`, `textSecondary`, `radius`, `font`, `lang` |
+| `GetVersion() → s` | Shell version |
+
+| Signal | |
+|---|---|
+| `ThemeChanged(a{sv} theme)` | The user changed the accent, tone or light/dark mode. Restyle your app. |
+| `ActivityClicked(s id)`, `ActivityAction(s id)`, `ActivityClosed(s id)` | A click on your activity, its button, or ×. |
+
+```sh
+gdbus call --session --dest org.glide.Shell --object-path /org/glide/Shell \
+  --method org.glide.Shell1.StartActivity build "{'title': <'Building'>, 'progress': <0.3>}"
+```
+
+```python
+from gi.repository import Gio, GLib
+bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+bus.call_sync("org.glide.Shell", "/org/glide/Shell", "org.glide.Shell1", "Flash",
+              GLib.Variant("(ss)", ("", "Export finished")), None, 0, -1, None)
+```
+
+For scripts, there is the `glide-shell` command (`~/.local/bin/glide-shell`):
+
+```sh
+glide-shell flash "Backup done"
+glide-shell activity start backup --title "Backup" --progress 0.1
+glide-shell activity update backup --progress 0.8 --subtitle "8 of 10 GB"
+glide-shell activity end backup
+glide-shell open control | close | search "text"
+glide-shell dnd on | off | (no argument: print it)
+glide-shell theme      # JSON
+glide-shell watch      # signals as JSON lines
+```
+
+Activities started by the command live until you end them, since the command itself exits right away.
