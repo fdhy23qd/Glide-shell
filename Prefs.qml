@@ -168,12 +168,24 @@ Singleton {
     readonly property string mainScreen: typeof data.mainScreen === "string" ? data.mainScreen : ""   // "" — в фокусе
     readonly property bool dockAllScreens: data.dockAllScreens !== false      // док на каждом мониторе
     readonly property bool barWsIcons: data.barWsIcons !== false       // иконки приложений на воркспейсах
-    readonly property var barHide: Array.isArray(data.barHide) ? data.barHide : []   // скрытые элементы бара
-    function barShows(id) { return barHide.indexOf(id) < 0 }
-    function toggleBarItem(id) {
-        var h = barHide.slice(), i = h.indexOf(id)
-        if (i >= 0) h.splice(i, 1); else h.push(id)
-        set("barHide", h)
+    readonly property var barHide: Array.isArray(data.barHide) ? data.barHide : []   // прежний список скрытых (перенос)
+    // элементы боковых островов бара: [{id, place: left | right | off}] — порядок и место каждого (Bar.qml, PartSlot)
+    readonly property var barLeftDefault: ["power", "workspaces", "window"]
+    readonly property var barRightDefault: ["layout", "cpu", "mem", "clipboard", "notifications", "battery", "phone", "vpn", "awake", "control", "tray"]
+    readonly property var barExtra: ["volume", "mic", "bluetooth", "night", "weather", "powerprofile", "screenshot"]   // новые — выключены
+    readonly property var barItems: {
+        var known = barLeftDefault.concat(barRightDefault, barExtra)
+        var out = Array.isArray(data.barItems)
+            ? data.barItems.filter(x => x && known.indexOf(x.id) >= 0).map(x => ({ id: x.id, place: ["left", "right"].indexOf(x.place) >= 0 ? x.place : "off" }))
+            : barLeftDefault.map(id => ({ id: id, place: barHide.indexOf(id) >= 0 ? "off" : "left" }))
+                .concat(barRightDefault.map(id => ({ id: id, place: barHide.indexOf(id) >= 0 ? "off" : "right" })))
+        for (var id of known) if (!out.some(x => x.id === id)) out.push({ id: id, place: "off" })
+        return out
+    }
+    function barShows(id) { var x = barItems.find(i => i.id === id); return !!x && x.place !== "off" }
+    function toggleBarItem(id) {   // прежний вызов: скрыть / вернуть на место по умолчанию
+        set("barItems", barItems.map(x => x.id !== id ? x : ({ id: id, place: x.place !== "off" ? "off"
+                                                                : barLeftDefault.indexOf(id) >= 0 ? "left" : "right" })))
     }
 
     function num(v, def) { return typeof v === "number" && isFinite(v) ? v : def }

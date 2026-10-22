@@ -55,6 +55,8 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
   (format JSON, decode a JWT, open a URL, translate…).
 - **Top bar:** workspaces with app icons, the focused window, keyboard layout, CPU and RAM, clipboard,
   notifications, battery, phone battery, VPN, "stay awake", tray. Tooltips and the tray menu "drip" out of the capsule.
+- **Customisable bar:** choose which items sit in the left and right islands, in which order (volume, microphone,
+  Bluetooth, night light, weather, power profile, screenshot and more), and which icons appear next to the island clock.
 - **Dock:** pinned and running apps, with smart, autohide and always-visible modes.
 - **Notification server and polkit agent** (optional), with do-not-disturb on a schedule or while screen sharing,
   and history that survives restarts.

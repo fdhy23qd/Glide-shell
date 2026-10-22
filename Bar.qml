@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import Quickshell.Widgets
 import Quickshell.Services.UPower
 import Quickshell.Services.SystemTray
+import Quickshell.Bluetooth
 
 // Верхний бар из плавающих капсул: слева — питание, воркспейсы niri и активное окно,
 // справа — раскладка, CPU/RAM, буфер, уведомления (DMS), батарея, центр управления и трей.
@@ -199,6 +200,7 @@ PanelWindow {
 
     component Chip: Rectangle {
         id: chip
+        property bool want: true      // «хочу быть видимым» — для слота капсулы (не зависит от видимости родителя)
         property string glyph
         property string label
         property color tint: Theme.textVariant
@@ -257,21 +259,50 @@ PanelWindow {
     // ---------- левая капсула ----------
     Capsule {
         id: leftCap
-        visible: bar.showLeft || bar.extSide !== ""
+        visible: (bar.showLeft || bar.extSide !== "") && bar.leftIds.length > 0
         x: bar.extSide === "right" ? bar.width - width - 8 : 8
         mirror: bar.extSide === "right"
-        // подсказки и список окон вытекают отсюда тем же контуром, что и меню трея из правой капсулы
+        // подсказки, список окон и меню трея (если он здесь) вытекают тем же контуром — как у правой
         shaped: true
-        readonly property bool dropping: capDrop.cap === leftCap && capDrop.openT > 0
-        menuL: dropping ? capDrop.menuL : 0
-        menuR: dropping ? capDrop.menuL + capDrop.menuW : 0
-        menuH: dropping ? capDrop.dropH : 0
-        fillet: dropping ? capDrop.fillet * Math.min(1, capDrop.openT * 1.5) : 0
+        readonly property bool dropping: trayMenu.attached && trayMenu.cap === leftCap && trayMenu.openT > 0
+        readonly property bool tipping: !dropping && capDrop.cap === leftCap && capDrop.openT > 0
+        menuR: tipping ? capDrop.menuL + capDrop.menuW : dropping ? width - trayMenu.offR : 0
+        menuL: tipping ? capDrop.menuL : dropping ? menuR - trayMenu.menuW : 0
+        menuH: dropping ? trayMenu.dropH : tipping ? capDrop.dropH : 0
+        fillet: dropping ? trayMenu.fillet * Math.min(1, trayMenu.openT * 1.5)
+              : tipping ? capDrop.fillet * Math.min(1, capDrop.openT * 1.5) : 0
 
-        Chip { visible: Prefs.barShows("power") && bar.extSide === ""; glyph: bar.nf(0xF0425); tipKey: "power"; onHotChanged: bar.tipHover(this); onClicked: bar.p.openCategory("power") }
+        Repeater { model: bar.leftIds; delegate: PartSlot {} }
+    }
 
+    // ---------- правая капсула ----------
+    Capsule {
+        id: rightCap
+        visible: bar.showRight && bar.rightIds.length > 0
+        x: bar.width - width - 8
+        // меню трея вытекает отсюда: тот же контур, что рисует окно меню, только верхняя часть
+        shaped: true
+        readonly property bool dropping: trayMenu.attached && trayMenu.cap === rightCap && trayMenu.openT > 0
+        readonly property bool tipping: !dropping && capDrop.cap === rightCap && capDrop.openT > 0
+        menuR: tipping ? capDrop.menuL + capDrop.menuW : width - trayMenu.offR
+        menuL: tipping ? capDrop.menuL : menuR - trayMenu.menuW
+        menuH: dropping ? trayMenu.dropH : tipping ? capDrop.dropH : 0
+        fillet: dropping ? trayMenu.fillet * Math.min(1, trayMenu.openT * 1.5)
+              : tipping ? capDrop.fillet * Math.min(1, capDrop.openT * 1.5) : 0
+
+        Repeater { model: bar.rightIds; delegate: PartSlot {} }
+    }
+
+    // ---------- части капсул: каждая — отдельный компонент, капсулы собирают их по Prefs.barItems ----------
+    Component {
+        id: part_power
+        Chip { visible: want; want: Prefs.barShows("power") && bar.extSide === ""; glyph: bar.nf(0xF0425); tipKey: "power"; onHotChanged: bar.tipHover(this); onClicked: bar.p.openCategory("power") }
+    }
+    Component {
+        id: part_workspaces
         Item {   // воркспейсы; колесо листает. Акцентная пилюля — одна на всех и перетекает к текущему
-            visible: Prefs.barShows("workspaces")
+            visible: want
+            property bool want: Prefs.barShows("workspaces")
             anchors.verticalCenter: parent.verticalCenter
             width: wsRow.width; height: 24
             readonly property var curItem: {
@@ -359,9 +390,14 @@ PanelWindow {
                 Timer { id: wsCool; interval: 250 }
             }
         }
-
+    }
+    Component {
+        id: part_window
         Row {   // активное окно; клик — переключатель окон
-            visible: !!bar.focusedWindow && Prefs.barShows("window")
+            visible: want
+            Component.onCompleted: bar.winTitleItem = winTitle
+            Component.onDestruction: if (bar.winTitleItem === winTitle) bar.winTitleItem = null
+            property bool want: !!bar.focusedWindow && Prefs.barShows("window")
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
             leftPadding: 6; rightPadding: 10
@@ -385,50 +421,54 @@ PanelWindow {
             }
         }
     }
-
-    // ---------- правая капсула ----------
-    Capsule {
-        id: rightCap
-        visible: bar.showRight
-        x: bar.width - width - 8
-        // меню трея вытекает отсюда: тот же контур, что рисует окно меню, только верхняя часть
-        shaped: true
-        readonly property bool dropping: trayMenu.attached && trayMenu.openT > 0
-        readonly property bool tipping: !dropping && capDrop.cap === rightCap && capDrop.openT > 0
-        menuR: tipping ? capDrop.menuL + capDrop.menuW : width - trayMenu.offR
-        menuL: tipping ? capDrop.menuL : menuR - trayMenu.menuW
-        menuH: dropping ? trayMenu.dropH : tipping ? capDrop.dropH : 0
-        fillet: dropping ? trayMenu.fillet * Math.min(1, trayMenu.openT * 1.5)
-              : tipping ? capDrop.fillet * Math.min(1, capDrop.openT * 1.5) : 0
-
+    Component {
+        id: part_layout
         Chip {
-            visible: bar.layouts.length > 1 && Prefs.barShows("layout")
+            visible: want
+            want: bar.layouts.length > 1 && Prefs.barShows("layout")
             glyph: bar.p.capsLock ? bar.nf(0xF0632) : ""   // включён Caps Lock — стрелка рядом с раскладкой
             tint: bar.p.capsLock ? Theme.warning : Theme.textVariant
             tipKey: "layout"; onHotChanged: bar.tipHover(this)
             label: bar.layoutShort
             onClicked: bar.run(["niri", "msg", "action", "switch-layout", "next"])
         }
+    }
+    Component {
+        id: part_cpu
         Chip {
-            visible: Prefs.barShows("cpu")
+            visible: want
+            want: Prefs.barShows("cpu")
             glyph: bar.nf(0xF0EE0)
             tipKey: "cpu"; onHotChanged: bar.tipHover(this)
             label: Math.round(bar.cpu) + "%"
             tint: bar.cpu > 85 ? Theme.error : Theme.textVariant
             onClicked: bar.openPlugin("processes")
         }
+    }
+    Component {
+        id: part_mem
         Chip {
-            visible: Prefs.barShows("mem")
+            visible: want
+            want: Prefs.barShows("mem")
             glyph: bar.nf(0xF035B)
             tipKey: "mem"; onHotChanged: bar.tipHover(this)
             label: Math.round(bar.mem) + "%"
             tint: bar.mem > 85 ? Theme.error : Theme.textVariant
             onClicked: bar.openPlugin("processes")
         }
-        Chip { visible: Prefs.barShows("clipboard"); glyph: bar.nf(0xF014C); tipKey: "clipboard"; onHotChanged: bar.tipHover(this); onClicked: bar.p.openCategory("clipboard") }
+    }
+    Component {
+        id: part_clipboard
+        Chip { visible: want; want: Prefs.barShows("clipboard"); glyph: bar.nf(0xF014C); tipKey: "clipboard"; onHotChanged: bar.tipHover(this); onClicked: bar.p.openCategory("clipboard") }
+    }
+    Component {
+        id: part_notifications
         Chip {   // клик — история уведомлений, правый — «не беспокоить»; число — непрочитанные
+            visible: want
+            Component.onCompleted: bar.bellItem = bellChip
+            Component.onDestruction: if (bar.bellItem === bellChip) bar.bellItem = null
             id: bellChip
-            visible: Prefs.barShows("notifications")
+            want: Prefs.barShows("notifications")
             tipKey: "notifications"; onHotChanged: bar.tipHover(this)
             onWheel: (d) => bar.volumeBy(d)
             glyph: bar.dnd ? bar.nf(0xF009B) : Notifs.active && Notifs.unread > 0 ? bar.nf(0xF116B) : bar.nf(0xF009A)
@@ -441,8 +481,12 @@ PanelWindow {
                 else bar.p.openCategory("notify")
             }
         }
+    }
+    Component {
+        id: part_battery
         Chip {
-            visible: bar.hasBatt && Prefs.barShows("battery")
+            visible: want
+            want: bar.hasBatt && Prefs.barShows("battery")
             glyph: bar.chargingNow ? bar.chargeFrame : bar.battGlyph(bar.battPct, bar.charging)
             tipKey: "battery"; onHotChanged: bar.tipHover(this)
             label: Math.round(bar.battPct) + "%"
@@ -450,40 +494,61 @@ PanelWindow {
             tint: bar.charging ? Theme.success : bar.battPct <= 15 ? Theme.error : Theme.textVariant
             onClicked: bar.p.openCategory("control")
         }
+    }
+    Component {
+        id: part_phone
         Chip {   // телефон через KDE Connect: заряд, пока на связи; клик — категория «Телефон»
+            visible: want
             readonly property var ph: KdeConnect.phone
-            visible: KdeConnect.available && !!ph && ph.reachable && Prefs.barShows("phone")
+            want: KdeConnect.available && !!ph && ph.reachable && Prefs.barShows("phone")
             glyph: bar.nf(0xF011C)
             tipKey: "phone"; onHotChanged: bar.tipHover(this)
             label: ph && ph.battery !== undefined ? ph.battery + "%" : ""
             tint: ph && ph.charging ? Theme.success : ph && ph.battery !== undefined && ph.battery <= 15 ? Theme.error : Theme.textVariant
             onClicked: bar.p.openCategory("phone")
         }
+    }
+    Component {
+        id: part_vpn
         Chip {   // VPN: щит, пока поднят туннель (Vpn.qml); клик — подсказка со списком
-            visible: Vpn.on && Prefs.barShows("vpn")
+            visible: want
+            want: Vpn.on && Prefs.barShows("vpn")
             glyph: bar.nf(0xF0565)
             tipKey: "vpn"; onHotChanged: bar.tipHover(this)
             tint: Theme.success
             onClicked: bar.showTip(capDrop.key === "vpn" ? "" : "vpn")
         }
+    }
+    Component {
+        id: part_awake
         Chip {   // «не засыпать» включено — чашка; клик выключает
-            visible: bar.p.awake && Prefs.barShows("awake")
+            visible: want
+            want: bar.p.awake && Prefs.barShows("awake")
             tipKey: "awake"; onHotChanged: bar.tipHover(this)
             glyph: bar.nf(0xF0176)
             tint: Theme.warning
             onClicked: bar.p.setAwake(false)
         }
+    }
+    Component {
+        id: part_control
         Chip {
-            visible: Prefs.barShows("control")
+            visible: want
+            want: Prefs.barShows("control")
             glyph: bar.nf(0xF062E)
             tipKey: "control"; onHotChanged: bar.tipHover(this)
             lit: bar.p.shown && bar.p.category === "control"
             onWheel: (d) => bar.brightnessBy(d)
             onClicked: bar.p.openCategory("control")
         }
-
+    }
+    Component {
+        id: part_tray
         Row {   // трей: левый клик — открыть, правый — меню, средний — второе действие
-            visible: SystemTray.items.values.length > 0 && Prefs.barShows("tray")
+            visible: want
+            Component.onCompleted: bar.trayRepItem = trayRep
+            Component.onDestruction: if (bar.trayRepItem === trayRep) bar.trayRepItem = null
+            property bool want: SystemTray.items.values.length > 0 && Prefs.barShows("tray")
             anchors.verticalCenter: parent.verticalCenter
             leftPadding: 4; rightPadding: 6
             spacing: 2
@@ -524,7 +589,7 @@ PanelWindow {
                             else if ((m.button === Qt.RightButton || it.onlyMenu) && it.hasMenu) {
                                 capDrop.hide()
                                 var pt = tray.mapToItem(null, tray.width, tray.height + 8)
-                                trayMenu.openFor(it, bar, pt.x, pt.y, true, rightCap)
+                                trayMenu.openFor(it, bar, pt.x, pt.y, true, bar.capOf(tray))
                             } else it.activate()
                         }
                         onWheel: (w) => tray.modelData.scroll(w.angleDelta.y, false)
@@ -532,6 +597,94 @@ PanelWindow {
                 }
             }
         }
+    }
+    Component {
+        id: part_volume
+        Chip {   // громкость: значок и процент; колесо — громче/тише, щелчок — без звука, правый — микшер
+            visible: want
+            readonly property var a: bar.p.sink && bar.p.sink.audio
+            want: !!a
+            glyph: !a || a.muted ? bar.nf(0xF0581) : a.volume > 0.66 ? bar.nf(0xF057E) : a.volume > 0.33 ? bar.nf(0xF0580) : bar.nf(0xF057F)
+            label: a && !a.muted ? Math.round(a.volume * 100) + "%" : ""
+            tint: a && a.muted ? Theme.warning : Theme.textVariant
+            onWheel: (d) => bar.volumeBy(d)
+            onClicked: (b) => { if (b === Qt.RightButton) bar.openPlugin("mixer"); else if (a) a.muted = !a.muted }
+        }
+    }
+    Component {
+        id: part_mic
+        Chip {   // микрофон: виден, пока выключен (или всегда — щелчок включает/выключает)
+            visible: want
+            readonly property var a: bar.p.source && bar.p.source.audio
+            want: !!a
+            glyph: a && a.muted ? bar.nf(0xF036D) : bar.nf(0xF036C)
+            tint: a && a.muted ? Theme.error : Theme.textVariant
+            onClicked: if (a) a.muted = !a.muted
+        }
+    }
+    Component {
+        id: part_bluetooth
+        Chip {   // Bluetooth: пока подключено устройство — значок и заряд (если устройство его сообщает)
+            visible: want
+            readonly property var devs: { var ad = Bluetooth.defaultAdapter; return ad && ad.enabled ? ad.devices.values.filter(x => x.connected) : [] }
+            readonly property var dev: devs.length ? devs[0] : null
+            want: devs.length > 0
+            glyph: bar.nf(0xF00B1)
+            label: dev && dev.batteryAvailable ? Math.round(dev.battery * 100) + "%" : devs.length > 1 ? String(devs.length) : ""
+            onClicked: bar.p.openCategory("control")
+        }
+    }
+    Component {
+        id: part_night
+        Chip {   // ночной свет: луна, пока включён; щелчок — включить/выключить
+            visible: want
+            want: NightLight.available
+            glyph: NightLight.on ? bar.nf(0xF0594) : bar.nf(0xF0F67)
+            tint: NightLight.on ? Theme.warning : Theme.textVariant
+            onClicked: NightLight.toggle()
+        }
+    }
+    Component {
+        id: part_weather
+        Chip {   // погода: значок и температура; щелчок — «Сегодня»
+            visible: want
+            want: Weather.ok
+            glyph: Weather.ok ? Weather.icon(Weather.data.now.code, Weather.data.now.day) : ""
+            label: Weather.ok ? Weather.temp(Weather.data.now.temp) : ""
+            onClicked: bar.p.openCategory("today")
+        }
+    }
+    Component {
+        id: part_powerprofile
+        Chip {   // профиль питания: щелчок — следующий (экономия → баланс → производительность)
+            visible: want
+            readonly property var opts: PowerProfiles.hasPerformanceProfile
+                ? [PowerProfile.PowerSaver, PowerProfile.Balanced, PowerProfile.Performance] : [PowerProfile.PowerSaver, PowerProfile.Balanced]
+            want: PowerProfiles.profile !== undefined
+            glyph: PowerProfiles.profile === PowerProfile.PowerSaver ? bar.nf(0xF032A) : PowerProfiles.profile === PowerProfile.Performance ? bar.nf(0xF04C5) : bar.nf(0xF0A7A)
+            tint: PowerProfiles.profile === PowerProfile.PowerSaver ? Theme.success : PowerProfiles.profile === PowerProfile.Performance ? Theme.warning : Theme.textVariant
+            onClicked: PowerProfiles.profile = opts[(opts.indexOf(PowerProfiles.profile) + 1) % opts.length]
+        }
+    }
+    Component {
+        id: part_screenshot
+        Chip {   // скриншот области (редактор Glide Apps, если есть; иначе niri)
+            visible: want
+            glyph: bar.nf(0xF0100)
+            onClicked: bar.run(["sh", "-c", 'p="$HOME/.local/bin/glide-shot"; [ -x "$p" ] && exec "$p" --capture region || exec niri msg action screenshot'])
+        }
+    }
+    readonly property var parts: ({ power: part_power, workspaces: part_workspaces, window: part_window, layout: part_layout, cpu: part_cpu, mem: part_mem, clipboard: part_clipboard, notifications: part_notifications, battery: part_battery, phone: part_phone, vpn: part_vpn, awake: part_awake, control: part_control, tray: part_tray, volume: part_volume, mic: part_mic, bluetooth: part_bluetooth, night: part_night, weather: part_weather, powerprofile: part_powerprofile, screenshot: part_screenshot })
+    property var winTitleItem: null        // заголовок окна (список окон вытекает из-под него)
+    property var bellItem: null            // колокольчик (туда «влетают» уведомления)
+    property var trayRepItem: null         // значки трея (меню по IPC)
+    readonly property var leftIds: Prefs.barItems.filter(x => x.place === "left").map(x => x.id)
+    readonly property var rightIds: Prefs.barItems.filter(x => x.place === "right").map(x => x.id)
+    component PartSlot: Loader {
+        required property string modelData
+        sourceComponent: bar.parts[modelData] || null
+        visible: !!item && item.want   // не item.visible: внутри невидимого слота он всегда false
+        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     }
 
     // ---------- колесо над капсулами: батарея и центр управления — яркость, колокольчик — громкость ----------
@@ -591,6 +744,8 @@ PanelWindow {
         }
     }
     function flyToBell() {
+        var bellChip = bar.bellItem
+        if (!bellChip) return
         if (!bellChip.visible || !visible || Prefs.anim <= 0) { bellChip.pop(); return }
         var to = bellChip.mapToItem(contentItem, bellChip.width / 2, bellChip.height / 2)
         // с главного монитора — из-под острова; с соседнего — от края со стороны главного
@@ -616,7 +771,7 @@ PanelWindow {
                     NumberAnimation { target: flyer; property: "scale"; to: 0.6; duration: Prefs.ms(260); easing.type: Easing.InQuad }
                 }
             }
-            ScriptAction { script: bellChip.pop() }
+            ScriptAction { script: if (bar.bellItem) bar.bellItem.pop() }
             NumberAnimation { target: flyer; property: "opacity"; to: 0; duration: Prefs.ms(80) }
             ScriptAction { script: flyer.scale = 1 }
         }
@@ -678,7 +833,7 @@ PanelWindow {
     // IPC panel barTip КЛЮЧ: открыть каплю без наведения (проверка); windows — список окон; "" — закрыть
     function showTip(key) {
         if (key === "") { capDrop.hide(); return "closed" }
-        if (key === "windows") { toggleWindows(winTitle, false); return "ok" }
+        if (key === "windows") { if (!bar.winTitleItem) return Tr.t("нет капсулы ") + key; toggleWindows(bar.winTitleItem, false); return "ok" }
         function find(it) {
             if (it.tipKey === key && it.visible) return it
             for (var ch of it.children) { var r = find(ch); if (r) return r }
@@ -695,7 +850,8 @@ PanelWindow {
         if (capDrop.key === "windows") { capDrop.hide(); return }
         tipDelay.stop()
         // капсула узкая (мало места под список) — прежний раздел «Окна» в панели
-        if (!from.visible || !capDrop.show("windows", bar, leftCap, from.mapToItem(leftCap, from.width / 2, 0).x, 300, grab !== false))
+        var cap = capOf(from)
+        if (!from.visible || !cap || !capDrop.show("windows", bar, cap, from.mapToItem(cap, from.width / 2, 0).x, 300, grab !== false))
             openPlugin("windows")
     }
     // окна: сначала текущего рабочего стола, потом остальных (по номеру стола)
@@ -981,11 +1137,12 @@ PanelWindow {
     }
     // IPC panel trayMenu ID: меню значка трея (без ID или с чужим — вернуть список значков)
     function openTrayMenu(id) {
-        for (var i = 0; i < trayRep.count; i++) {
+        var trayRep = bar.trayRepItem
+        for (var i = 0; trayRep && i < trayRep.count; i++) {
             var t = trayRep.itemAt(i)
             if (t && t.modelData.id === id && t.modelData.hasMenu) {
                 var pt = t.mapToItem(null, t.width, t.height + 8)
-                trayMenu.openFor(t.modelData, bar, pt.x, pt.y, false, rightCap)
+                trayMenu.openFor(t.modelData, bar, pt.x, pt.y, false, capOf(t))
                 return "ok"
             }
         }
