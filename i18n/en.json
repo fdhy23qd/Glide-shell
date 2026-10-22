@@ -875,5 +875,17 @@
  "пока включён": "while on",
  "EN / RU, если раскладок несколько": "EN / RU, if there are several layouts",
  "← слева": "← left",
- "справа →": "right →"
+ "справа →": "right →",
+ "БОКОВЫЕ ОСТРОВА": "SIDE ISLANDS",
+ "Что показывать в левом и правом островах бара и в каком порядке. Место — щелчок по «левый / правый / скрыт», порядок — ↑↓ (в своём острове)": "What the left and right bar islands show and in which order. Place — click «left / right / hidden», order — ↑↓ (within its island)",
+ "колесо — громче/тише, щелчок — без звука": "wheel — louder/quieter, click — mute",
+ "щелчок — выключить/включить": "click — toggle",
+ "пока подключено устройство, с его зарядом": "while a device is connected, with its battery",
+ "температура; щелчок — «Сегодня»": "temperature; click — Today",
+ "щелчок — экономия → баланс → производительность": "click — saver → balanced → performance",
+ "снять область": "capture an area",
+ "левый": "left",
+ "правый": "right",
+ "скрыт": "hidden",
+ "щелчок — включить/выключить": "click — toggle"
 }

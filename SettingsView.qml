@@ -82,6 +82,86 @@ ColumnLayout {
         music: { glyph: 0xF075A, label: Tr.t("Музыка"), hint: Tr.t("Обложка и эквалайзер; наведение — управление"), pref: "islandMusic" },
         timer: { glyph: 0xF13AB, label: Tr.t("Таймер"), hint: Tr.t("Кольцо и остаток; наведение — отмена"), pref: "islandTimer" }
     })
+    // элементы боковых островов бара
+    readonly property var barMeta: ({
+        power: { glyph: 0xF0425, label: Tr.t("Кнопка питания") }, workspaces: { glyph: 0xF056E, label: Tr.t("Воркспейсы") },
+        window: { glyph: 0xF003B, label: Tr.t("Активное окно") }, layout: { glyph: 0xF030C, label: Tr.t("Раскладка клавиатуры") },
+        cpu: { glyph: 0xF0EE0, label: Tr.t("Процессор") }, mem: { glyph: 0xF035B, label: Tr.t("Память") },
+        clipboard: { glyph: 0xF014C, label: Tr.t("Буфер обмена") }, notifications: { glyph: 0xF009A, label: Tr.t("Уведомления") },
+        battery: { glyph: 0xF0079, label: Tr.t("Батарея") }, phone: { glyph: 0xF011C, label: Tr.t("Телефон (KDE Connect)") },
+        vpn: { glyph: 0xF0565, label: Tr.t("VPN (когда включён)") }, awake: { glyph: 0xF0176, label: Tr.t("Значок «не засыпать»") },
+        control: { glyph: 0xF062E, label: Tr.t("Центр управления") }, tray: { glyph: 0xF01D8, label: Tr.t("Трей") },
+        volume: { glyph: 0xF057E, label: Tr.t("Громкость"), hint: Tr.t("колесо — громче/тише, щелчок — без звука") },
+        mic: { glyph: 0xF036C, label: Tr.t("Микрофон"), hint: Tr.t("щелчок — выключить/включить") },
+        bluetooth: { glyph: 0xF00B1, label: "Bluetooth", hint: Tr.t("пока подключено устройство, с его зарядом") },
+        night: { glyph: 0xF0594, label: Tr.t("Ночной свет"), hint: Tr.t("щелчок — включить/выключить") },
+        weather: { glyph: 0xF0590, label: Tr.t("Погода"), hint: Tr.t("температура; щелчок — «Сегодня»") },
+        powerprofile: { glyph: 0xF0A7A, label: Tr.t("Профиль питания"), hint: Tr.t("щелчок — экономия → баланс → производительность") },
+        screenshot: { glyph: 0xF0100, label: Tr.t("Скриншот"), hint: Tr.t("снять область") }
+    })
+    function setBarPlace(id, place) { Prefs.set("barItems", Prefs.barItems.map(x => x.id === id ? ({ id: id, place: place }) : x)) }
+    function moveBarItem(i, d) {   // соседний элемент того же острова
+        var o = Prefs.barItems.slice(), pl = o[i].place, j = i + d
+        while (j >= 0 && j < o.length && o[j].place !== pl) j += d
+        if (j < 0 || j >= o.length) return
+        var t = o[i]; o[i] = o[j]; o[j] = t
+        Prefs.set("barItems", o)
+    }
+    component BarItemRow: Rectangle {
+        id: bi
+        property var it
+        property int pos
+        readonly property var meta: sv.barMeta[it.id] || ({})
+        readonly property bool on: it.place !== "off"
+        implicitHeight: 48
+        radius: Theme.r(14)
+        color: Theme.surface
+        border.color: Theme.outline
+        opacity: on ? 1 : 0.72
+        Behavior on opacity { NumberAnimation { duration: Prefs.ms(160) } }
+        Column {
+            x: 6; anchors.verticalCenter: parent.verticalCenter
+            ArrowBtn { glyph: 0xF0143; enabled: bi.on && Prefs.barItems.slice(0, bi.pos).some(x => x.place === bi.it.place); onClicked: sv.moveBarItem(bi.pos, -1) }
+            ArrowBtn { glyph: 0xF0140; enabled: bi.on && Prefs.barItems.slice(bi.pos + 1).some(x => x.place === bi.it.place); onClicked: sv.moveBarItem(bi.pos, 1) }
+        }
+        Text {
+            x: 38; anchors.verticalCenter: parent.verticalCenter
+            text: String.fromCodePoint(bi.meta.glyph || 0xF0337)
+            color: bi.on ? Prefs.accent : Theme.textMuted
+            font.family: Prefs.iconFont; font.pixelSize: Theme.fs(18)
+            Behavior on color { ColorAnimation { duration: Prefs.ms(160) } }
+        }
+        Column {
+            x: 68; anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - 68 - placeBox.width - 20
+            spacing: 1
+            Text { width: parent.width; text: bi.meta.label || bi.it.id; color: Theme.text; font.pixelSize: Theme.fs(13); elide: Text.ElideRight }
+            Text { width: parent.width; visible: !!bi.meta.hint; text: bi.meta.hint || ""; color: Theme.textMuted; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+        }
+        Row {   // место: левый остров / правый / скрыт
+            id: placeBox
+            anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+            Repeater {
+                model: [{ v: "left", l: Tr.t("левый") }, { v: "right", l: Tr.t("правый") }, { v: "off", l: Tr.t("скрыт") }]
+                delegate: Rectangle {
+                    id: pb
+                    required property var modelData
+                    readonly property bool sel: bi.it.place === modelData.v
+                    width: pbT.implicitWidth + 16; height: 26; radius: 13
+                    color: sel ? (pbMa.containsMouse ? Theme.accentLight : Prefs.accent)
+                               : pbMa.pressed ? Theme.surfacePressed : pbMa.containsMouse ? Theme.surfaceHigher : Theme.surfaceHigh
+                    scale: pbMa.pressed ? 0.94 : 1
+                    Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+                    Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+                    Text { id: pbT; anchors.centerIn: parent; text: pb.modelData.l; font.pixelSize: Theme.fs(11)
+                           color: pb.sel ? Theme.accentText : Theme.textSecondary }
+                    MouseArea { id: pbMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onClicked: sv.setBarPlace(bi.it.id, pb.modelData.v) }
+                }
+            }
+        }
+    }
     // значки у часов
     readonly property var iconMeta: ({
         weather: { glyph: 0xF0590, label: Tr.t("Погода"), hint: Tr.t("значок и температура") },
@@ -1523,35 +1603,21 @@ ColumnLayout {
             checked: Prefs.barWsIcons
             onToggled: Prefs.set("barWsIcons", !Prefs.barWsIcons)
         }
+        Header { visible: Prefs.bar; text: Tr.t("БОКОВЫЕ ОСТРОВА") }
         Text {
             visible: Prefs.bar
-            text: Tr.t("Элементы бара")
-            color: Theme.text
-            Layout.topMargin: 2
+            Layout.fillWidth: true
+            text: Tr.t("Что показывать в левом и правом островах бара и в каком порядке. Место — щелчок по «левый / правый / скрыт», порядок — ↑↓ (в своём острове)")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11)
+            wrapMode: Text.WordWrap
         }
         Repeater {
-            model: Prefs.bar ? [
-                { id: "power", label: Tr.t("Кнопка питания"), icon: 0xF0425 },
-                { id: "workspaces", label: Tr.t("Воркспейсы"), icon: 0xF056E },
-                { id: "window", label: Tr.t("Активное окно"), icon: 0xF003B },
-                { id: "layout", label: Tr.t("Раскладка клавиатуры"), icon: 0xF030C },
-                { id: "cpu", label: Tr.t("Процессор"), icon: 0xF0EE0 },
-                { id: "mem", label: Tr.t("Память"), icon: 0xF035B },
-                { id: "clipboard", label: Tr.t("Буфер обмена"), icon: 0xF014C },
-                { id: "notifications", label: Tr.t("Уведомления"), icon: 0xF009A },
-                { id: "battery", label: Tr.t("Батарея"), icon: 0xF0079 },
-                { id: "phone", label: Tr.t("Телефон (KDE Connect)"), icon: 0xF011C },
-                { id: "vpn", label: Tr.t("VPN (когда включён)"), icon: 0xF0565 },
-                { id: "awake", label: Tr.t("Значок «не засыпать»"), icon: 0xF0176 },
-                { id: "control", label: Tr.t("Центр управления"), icon: 0xF062E },
-                { id: "tray", label: Tr.t("Трей"), icon: 0xF01D8 }
-            ] : []
-            delegate: ToggleRow {
+            model: Prefs.bar ? Prefs.barItems : []
+            delegate: BarItemRow {
                 required property var modelData
-                icon: String.fromCodePoint(modelData.icon)
-                label: modelData.label
-                checked: Prefs.barShows(modelData.id)
-                onToggled: Prefs.toggleBarItem(modelData.id)
+                required property int index
+                Layout.fillWidth: true
+                it: modelData; pos: index
             }
         }
 
