@@ -272,3 +272,19 @@ glide-shell watch      # сигналы строками JSON
 ```
 
 Активности, запущенные командой, живут, пока их не снимут: сама команда сразу завершается.
+
+---
+
+## 8. Значки и прогресс в доке (Unity LauncherEntry)
+
+Док понимает общий стандарт, которым пользуются Telegram, Chromium и Firefox (загрузки), Steam, Thunderbird и
+другие: сигнал сессионной шины `com.canonical.Unity.LauncherEntry.Update(s "application://<id>.desktop", a{sv} props)`.
+`count` (x) и `count-visible` (b) дают красное число на значке, `progress` (d) и `progress-visible` (b) — полоску
+под ним, `urgent` (b) — красную точку. Когда программа уходит с шины, значки снимаются. Своей программе достаточно
+отправить сигнал:
+
+```python
+bus.emit_signal(None, "/com/example/app", "com.canonical.Unity.LauncherEntry", "Update",
+                GLib.Variant("(sa{sv})", ("application://my-app.desktop",
+                                          {"count": GLib.Variant("x", 3), "count-visible": GLib.Variant("b", True)})))
+```

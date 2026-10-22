@@ -271,3 +271,19 @@ glide-shell watch      # signals as JSON lines
 ```
 
 Activities started by the command live until you end them, since the command itself exits right away.
+
+---
+
+## 8. Dock badges and progress (Unity LauncherEntry)
+
+The dock understands the common standard used by Telegram, Chromium and Firefox (downloads), Steam, Thunderbird and
+others: a session bus signal `com.canonical.Unity.LauncherEntry.Update(s "application://<id>.desktop", a{sv} props)`
+with `count` (x) and `count-visible` (b) for a red number on the icon, `progress` (d) and `progress-visible` (b) for a
+bar under it, and `urgent` (b) for a red indicator. The badges go away when the app leaves the bus. Your own app only
+needs to send the signal:
+
+```python
+bus.emit_signal(None, "/com/example/app", "com.canonical.Unity.LauncherEntry", "Update",
+                GLib.Variant("(sa{sv})", ("application://my-app.desktop",
+                                          {"count": GLib.Variant("x", 3), "count-visible": GLib.Variant("b", True)})))
+```

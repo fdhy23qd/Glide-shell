@@ -236,6 +236,10 @@ PanelWindow {
                     required property bool pinned
                     required property int count
                     required property bool focused
+                    // значок и прогресс от самой программы (LauncherEntries: Telegram, браузеры, Steam…)
+                    readonly property var le: LauncherEntries.entries[cell.key] || null
+                    readonly property int badge: le ? le.count : -1
+                    readonly property real progress: le ? le.progress : -1
                     // перед первым незакреплённым — разделитель
                     readonly property bool firstRunning: !pinned && index > 0 && items.get(index - 1).pinned
                     width: dock.s + 12 + (firstRunning ? 9 : 0)
@@ -271,22 +275,44 @@ PanelWindow {
                                 NumberAnimation { to: 6; duration: 300; easing.type: Easing.OutBounce }
                             }
                         }
-                        Rectangle {   // окон больше одного — число
-                            visible: cell.count > 1
+                        Rectangle {   // окон больше одного — число (если у программы нет своего значка)
+                            visible: cell.count > 1 && cell.badge <= 0
                             x: icon.x + icon.width - width / 2 - 2; y: 3
                             width: Math.max(16, cnt.implicitWidth + 8); height: 16; radius: Theme.r(8)
                             color: Prefs.accent
                             Text { id: cnt; anchors.centerIn: parent; text: cell.count; color: Theme.accentText
                                    font.pixelSize: Theme.fs(10); font.bold: true }
                         }
-                        Rectangle {   // индикатор: открыто — точка, в фокусе — вытянутая
+                        Rectangle {   // своё число программы (непрочитанные и т.п.) — красный кружок
+                            visible: cell.badge > 0
+                            x: icon.x + icon.width - width / 2 - 2; y: 3
+                            width: Math.max(16, badgeText.implicitWidth + 8); height: 16; radius: Theme.r(8)
+                            color: Theme.error
+                            scale: visible ? 1 : 0.5
+                            Behavior on scale { enabled: Prefs.anim > 0; Spring { bounce: 0.4; speed: 1.6 } }
+                            Text { id: badgeText; anchors.centerIn: parent; text: cell.badge > 99 ? "99+" : cell.badge
+                                   color: "#ffffff"; font.pixelSize: Theme.fs(10); font.bold: true }
+                        }
+                        Rectangle {   // прогресс программы (загрузка, установка) — полоска под значком
+                            visible: cell.progress >= 0
+                            anchors.horizontalCenter: icon.horizontalCenter
+                            y: icon.y + icon.height + 1
+                            width: icon.width * 0.84; height: 3; radius: 2
+                            color: Qt.rgba(Prefs.accent.r, Prefs.accent.g, Prefs.accent.b, 0.25)
+                            Rectangle {
+                                width: parent.width * Math.max(0, cell.progress); height: parent.height; radius: 2
+                                color: Prefs.accent
+                                Behavior on width { NumberAnimation { duration: Prefs.ms(250); easing.type: Easing.OutCubic } }
+                            }
+                        }
+                        Rectangle {   // индикатор: открыто — точка, в фокусе — вытянутая; «срочно» от программы — красная
                             Behavior on color { ColorAnimation { duration: Prefs.ms(140) } }
                             anchors.horizontalCenter: parent.horizontalCenter
                             y: parent.height - 8
                             height: 4; radius: Theme.r(2)
-                            width: cell.focused ? 16 : (cell.count > 0 ? 5 : 0)
-                            color: cell.focused ? Prefs.accent : Theme.textSecondary
-                            opacity: cell.count > 0 ? 1 : 0
+                            width: cell.focused ? 16 : (cell.count > 0 || (cell.le && cell.le.urgent) ? 5 : 0)
+                            color: cell.le && cell.le.urgent ? Theme.error : cell.focused ? Prefs.accent : Theme.textSecondary
+                            opacity: cell.count > 0 || (cell.le && cell.le.urgent) ? 1 : 0
                             Behavior on width { enabled: Prefs.anim > 0; Spring { bounce: 0.3; speed: 1.5 } }
                             Behavior on opacity { NumberAnimation { duration: Prefs.ms(150) } }
                         }
