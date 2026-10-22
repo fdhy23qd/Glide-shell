@@ -139,6 +139,21 @@ Settings → Plugins. Bindings update by themselves. `api.setSetting(key, value)
 | `api.notifs` | Notification history and "do not disturb" |
 | `api.awake`, `api.powerTimer`, `api.recorder`, `api.kdeconnect`, `api.appCounts` | See the names |
 
+### Live activities
+
+A row in the island under the clock, for downloads, builds, countdowns and the like. The newest one is shown; hovering
+opens the subtitle, a button and ×.
+
+```qml
+api.activity.start("sync", { title: "Syncing photos", progress: 0, icon: "󰓦" })
+api.activity.update("sync", { progress: 0.4, subtitle: "120 of 300" })
+api.activity.end("sync")
+```
+
+Props: `title`, `subtitle`, `icon` (one glyph), `progress` (0…1; below 0 — an indeterminate bar), `color`,
+`actionLabel` with `onAction` (a button), `onClick` (a click on the row). Users can turn activities off in
+Settings → Island. From a script: `qs -c glide-shell ipc call panel activity ID "Title" 0.5` (an empty title ends it).
+
 ### Events
 
 ```qml

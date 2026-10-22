@@ -64,7 +64,8 @@ Singleton {
         return out
     }
     // порядок строк острова (и что главнее в компактном виде): чего нет в списке — дописывается в конец
-    readonly property var islandKinds: ["osd", "flash", "rec", "notif", "music", "timer"]
+    readonly property bool islandLive: data.islandLive !== false   // «живые активности» в острове
+    readonly property var islandKinds: ["osd", "flash", "rec", "live", "notif", "music", "timer"]   // live — Activities.qml
     readonly property var islandOrder: {
         var o = Array.isArray(data.islandOrder) ? data.islandOrder.filter(k => islandKinds.indexOf(k) >= 0) : []
         for (var k of islandKinds) if (o.indexOf(k) < 0) o.push(k)

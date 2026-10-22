@@ -95,7 +95,7 @@ ShellRoot {
     // что сейчас показывает остров: первое по порядку из настроек (Prefs.islandOrder), что есть
     function activityOn(k) {
         return k === "osd" ? !!osd : k === "flash" ? !!flashMsg : k === "rec" ? recOn : k === "notif" ? !!notif
-             : k === "music" ? musicOn : k === "timer" ? timerOn : false
+             : k === "music" ? musicOn : k === "timer" ? timerOn : k === "live" ? liveOn : false
     }
     readonly property string activity: {
         if (!islandShown) return ""
@@ -128,6 +128,7 @@ ShellRoot {
         case "music": return 232
         case "timer": return 150
         case "rec": return 160
+        case "live": return 230
         }
         return 0
     }
@@ -139,16 +140,18 @@ ShellRoot {
     readonly property int rowTimerH: stacked && timerOn ? (islandPeek ? 64 : 32) : 0
     readonly property bool recOn: Recorder.recording           // запись экрана
     readonly property int rowRecH: stacked && recOn ? 32 : 0
+    readonly property bool liveOn: Prefs.islandLive && Activities.list.length > 0   // «живые активности» плагинов и приложений
+    readonly property int rowLiveH: stacked && liveOn ? (islandPeek ? 64 : 32) : 0
     function rowH(k) {
         return k === "osd" ? rowOsdH : k === "flash" ? rowFlashH : k === "notif" ? rowNotifH : k === "music" ? rowMusicH
-             : k === "timer" ? rowTimerH : k === "rec" ? rowRecH : 0
+             : k === "timer" ? rowTimerH : k === "rec" ? rowRecH : k === "live" ? rowLiveH : 0
     }
     function rowY(k) {   // строки стопки — в порядке из настроек
         var y = 32
         for (var x of Prefs.islandOrder) { if (x === k) return y; y += rowH(x) }
         return y
     }
-    readonly property int rowsH: rowOsdH + rowFlashH + rowNotifH + rowMusicH + rowTimerH + rowRecH
+    readonly property int rowsH: rowOsdH + rowFlashH + rowNotifH + rowMusicH + rowTimerH + rowRecH + rowLiveH
     readonly property int osdW: osd && osd.value < 0 ? 300 : 260
     readonly property int compactRadius: barOn && rowsH ? 18 : islandRadius   // у стопки строк углы скромнее
     readonly property int compactW: {
@@ -159,7 +162,8 @@ ShellRoot {
                                    rowNotifH ? (islandPeek ? 400 : 320) : 0,
                                    rowMusicH ? (islandPeek ? 360 : 232) : 0,
                                    rowTimerH ? (islandPeek ? 300 : 168) : 0,
-                                   rowRecH ? 200 : 0)
+                                   rowRecH ? 200 : 0,
+                                   rowLiveH ? (islandPeek ? 340 : 250) : 0)
         switch (activity) {
         case "osd": return osdW
         case "flash": return flashW
@@ -167,6 +171,7 @@ ShellRoot {
         case "music": return islandPeek ? 360 : 232
         case "timer": return islandPeek ? 300 : 168
         case "rec": return 200
+        case "live": return islandPeek ? 340 : 250
         }
         if (islandPeek && islandCats > 0) return islandCats * 32 + 18
         return islandPeek ? 156 : (Prefs.edgePill ? 112 : 140)
@@ -181,6 +186,7 @@ ShellRoot {
         case "music": return islandPeek ? 88 : 32
         case "timer": return islandPeek ? 64 : 32
         case "rec": return 34
+        case "live": return islandPeek ? 64 : 34
         }
         return islandPeek ? 36 : (Prefs.edgePill ? 28 : 8)
     }
@@ -216,6 +222,7 @@ ShellRoot {
         }
         if (kind === "notif") { if (!Notifs.activate(notif)) openCategory("notify"); return }
         if (kind === "rec") { Recorder.stop(); return }   // клик по строке записи — остановить
+        if (kind === "live") { if (Activities.top) Activities.click(Activities.top.id); return }
         var p = kind === "music" ? pluginById("music") : kind === "timer" ? pluginById("timer") : null
         if (p) openCategory(p.categories[0]); else open()
     }
@@ -937,7 +944,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.88 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.89 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -994,6 +1001,13 @@ ShellRoot {
             if (what === "check") { ArchUpdates.check(); return "ok" }
             if (what === "upgrade") { ArchUpdates.upgrade(); return "ok" }
             return JSON.stringify(ArchUpdates.st)
+        }
+        function peek(on: string): string { root.islandHover = on === "on"; return String(root.islandPeek) }   // раскрыть остров, как наведением
+        // «живая активность» из скрипта: title "" — убрать; progress 0…1, меньше 0 — без прогресса
+        function activity(id: string, title: string, progress: real): string {
+            if (title === "") { Activities.end(id); return "ended" }
+            Activities.update(id, { title: title, progress: progress, owner: "ipc" })
+            return "ok"
         }
         function update(what: string): string {   // check — проверить (git fetch), shell | apps — обновить
             if (what === "check") { Updates.check(true); return "ok" }

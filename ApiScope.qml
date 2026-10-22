@@ -70,6 +70,14 @@ QtObject {
                                  String(title || ""), String(body || "")])
     }
 
+    // ---------- «живые активности» в острове (Activities.qml): id — свой, внутри плагина ----------
+    // props: {title, subtitle, icon, progress (0…1, меньше 0 — без процента), color, actionLabel, onClick, onAction}
+    readonly property QtObject activity: QtObject {
+        function start(id, props) { return Activities.start(api.owner + "/" + id, Object.assign({ owner: api.owner }, props || {})) }
+        function update(id, props) { return Activities.update(api.owner + "/" + id, Object.assign({ owner: api.owner }, props || {})) }
+        function end(id) { Activities.end(api.owner + "/" + id) }
+    }
+
     // ---------- хранилище: свой JSON в ~/.local/state/glide-shell/plugin-<id>.json ----------
     property var stored: ({})
     readonly property string storeFile: owner ? (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
