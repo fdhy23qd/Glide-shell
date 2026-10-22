@@ -75,7 +75,8 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
 - **Quick look:** Shift+Space on a file in search previews it right in the list: image, first PDF page, video frame, text.
 - **Arch Linux updates:** the number of available packages (repositories and AUR) in the bar; click to update in a terminal.
 - **API for other apps:** a D-Bus service `org.glide.Shell` and a `glide-shell` command. Apps can show progress in the
-  island, read the theme and follow its changes, open the panel ([docs/API.md](docs/API.md)).
+  island, read the theme and follow its changes, open the panel ([docs/API.md](docs/API.md)). The dock shows unread
+  counts and download progress from apps that use the Unity LauncherEntry standard (Telegram, browsers, Steam).
 - **Updates:** checks the git folder it was installed from every 6 hours and shows what's new; one click runs
   `git pull` and `install.sh` (the Glide apps too, if they were installed from git).
 - **Reliability:** runs as a systemd user service and restarts itself after a crash. If it keeps crashing, it falls
