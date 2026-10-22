@@ -49,6 +49,8 @@ mkdir -p "$dst"
 cp -r "$src"/. "$dst"/
 rm -rf "$dst/.git"
 echo "установлено в $dst"
+# откуда поставлено — для проверки обновлений (tools/glide-update.py: git fetch в этой папке)
+mkdir -p "$state/glide-shell" && printf '%s\n' "$src" > "$state/glide-shell/source"
 # свои виджеты рабочего стола: при первой установке — папка с примером (дальше её не трогаем)
 widgets="$cfg/glide-shell/widgets"
 if [ ! -d "$widgets" ]; then

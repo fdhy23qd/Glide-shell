@@ -372,6 +372,7 @@ ShellRoot {
     }
 
     readonly property bool nightOn: NightLight.on   // синглтон ленивый — без обращения ночной свет не запустится
+    readonly property bool updatesAvailable: Updates.available   // и проверка обновлений — тоже
 
     // ---------- «не засыпать» ----------
     // Wayland idle-inhibit на окне острова — экран не гаснет (учитывают niri и демоны простоя),
@@ -909,7 +910,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.85 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.86 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -960,6 +961,11 @@ ShellRoot {
         function welcome(mode: string): void {   // мастер первого запуска: "" — открыть, close — закрыть
             if (mode === "close") { root.welcomeOpen = false; return }
             root.close(); root.welcomeOpen = true
+        }
+        function update(what: string): string {   // check — проверить (git fetch), shell | apps — обновить
+            if (what === "check") { Updates.check(true); return "ok" }
+            if (what === "shell" || what === "apps") { Updates.apply(what); return "ok" }
+            return JSON.stringify(Updates.st)
         }
         function night(mode: string): string {   // ночной свет: on | off | auto | toggle | "" — вернуть режим
             if (mode === "toggle") NightLight.toggle()
