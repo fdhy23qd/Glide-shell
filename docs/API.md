@@ -272,6 +272,43 @@ Connections {
 }
 ```
 
+### Reference: exact behaviour
+
+Types: `str` = string, `num` = number, `bool`, `obj` = plain JavaScript object, `fn` = function. "Live" means a binding
+that reads the property updates by itself; you never need to poll it.
+
+| Member | Type / returns | Live | Errors and notes |
+|---|---|---|---|
+| `version` | `num`, always `1` here | — | |
+| `owner` | `str` | — | The plugin `id`, or `widget-<id>` |
+| `shown` | `bool` | yes, at once | |
+| `contextText` | `str` | when the panel opens | Empty if nothing was selected or copied |
+| `date` / `today` | `Date` / `str` `"yyyy-MM-dd"` | at every minute boundary and after sleep | |
+| `now` | plugins: `num` ms since 1970, about every 20 s; widgets: `Date`, every minute | yes | Prefer `date` in new code |
+| `settings` | `obj` key → value | yes, at once | Missing keys get `default`; `number` values are clamped to `min`…`max` |
+| `setSetting(key, value)` | returns nothing | — | Saved to `config.json`; an unknown key is stored anyway |
+| `storage.get(key, def)` | stored value or `def` | yes, at once, across all parts of the plugin | |
+| `storage.set(key, value)` | returns nothing | — | `value`: anything `JSON.stringify` accepts (string, number, bool, null, array, object). Written about 0.3 s after the last change. `undefined` and functions are dropped. |
+| `storage.remove(key)` | returns nothing | — | |
+| `storage.all` | `obj` | yes | A copy for reading; changing it does nothing |
+| `run(argv, text)` | returns nothing | — | Fire and forget. `argv` is an array of strings; the first is the program, found in `PATH`. The panel's `PATH` may not include `~/.local/bin`, so use a full path for your own scripts. |
+| `exec(argv, opts, cb)` | a job: `cancel()`, `running` (`bool`) | — | `cb(code: num, stdout: str, stderr: str)` runs once. `code` is -1 when the program was not found, was cancelled or timed out. An exception thrown in `cb` is written to the log and goes no further. |
+| `copy(text)` | returns nothing | — | Needs `wl-copy` |
+| `flash(icon, text, color)` | returns nothing | — | Nothing is shown when the island is turned off |
+| `notify(title, body, icon)` | returns nothing | — | Through `notify-send`; respects "do not disturb" like any app |
+| `openCategory(id)` | returns nothing | — | Opens the panel on that category if it is closed. If the panel is already open on it, it closes, like the hotkey. An unknown `id` does nothing. |
+| `openUrl(url)`, `launchApp(entry)`, `close()`, `setAwake(on)` | return nothing | — | |
+| `setPref(key, value)` | returns nothing | — | Changes `config.json` → `panel.<key>`. `pluginLock` cannot be changed this way. |
+| `activity.start(id, props)` / `update` / `end` | `start`/`update` return the full id (`<plugin>/<id>`) | — | `update` on an unknown id starts it. Activities are not removed when the plugin is turned off. End them yourself, or users dismiss them with ×. |
+| `theme`, `accent`, `accentText`, `iconFont` | | yes, at once | |
+| `niri` | `obj` | yes, on niri events | `windows` is a map id → window |
+| `player`, `players` | MPRIS player / list | yes | `player` can be `null` |
+| `volume`, `muted` | `num` 0…1.5 / `bool` | yes, at once | `null` sink → `0` / `false` |
+| `battery` | `{present, percent, charging}` | yes | `present` is false on a desktop |
+| `dnd` | `bool` | yes | True when quiet for any reason: by hand, by schedule, while sharing the screen |
+| `weather` | object | after each update (every 30 min) | `weather.ok` is false until the first answer |
+| Signals `opened`, `closed`, `themeUpdated`, `notification(entry)` | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
+
 ---
 
 ## 4. Plugin section (qml)
@@ -460,3 +497,100 @@ animation duration that follows the user's "Animations" setting.
 Interactive elements look right when they have three states. On hover, use a lighter colour and a hand cursor. On
 press, use a darker colour and a slightly smaller scale (0.95). When unavailable, use `Theme.disabledOpacity` and the
 arrow cursor.
+
+---
+
+## 10. Security, data and compatibility
+
+### There is no sandbox
+
+A plugin or widget runs **as you**, with your permissions, and QML parts run **inside the shell process**:
+
+- It can read and write any of your files, including other plugins' storage in `~/.local/state/glide-shell/` and
+  the shell's own settings. It can run any program and use the network.
+- It sees what the panel sees: the selected text, the clipboard and notifications.
+- A QML loop that never ends freezes the whole shell. A crash restarts it (systemd); after several crashes in a row
+  the emergency fallback starts.
+- The shell does not check where a plugin came from. Read the code before installing. A `plugin.json` with
+  `daemon` or `items` runs commands as well.
+
+### Turning a broken plugin off
+
+- **Settings → Plugins**, the switch next to it. When "Turning plugins on and off requires the password" is on,
+  this asks for your login password.
+- **The lock screen**: "Unlock without third-party plugins". After the correct password, every plugin from
+  `~/.config/glide-shell/plugins` is turned off and built-in ones stay. This helps when a plugin has broken the panel
+  or the bar.
+- **By hand**: add the id to `"disabled"` in `~/.config/glide-shell/config.json`, or move the plugin folder away,
+  then `systemctl --user restart glide-shell`.
+
+### What happens on errors
+
+| What fails | What you see |
+|---|---|
+| Section QML does not load | The error text in place of the section |
+| Bar item does not load | The item is hidden, with a warning in the log |
+| Service does not load | A warning in the log |
+| `api` field newer than the shell, or not a number | The plugin is not loaded; the reason is shown under it in Settings → Plugins |
+| Exception in your callback (`exec`, `onAction`…) | Written to the log; the shell keeps going |
+| Storage file is damaged | Storage starts empty; the old file is kept as `plugin-<id>.json.broken` |
+
+### Data
+
+| Data | Where | On removal |
+|---|---|---|
+| `api.storage` | `~/.local/state/glide-shell/plugin-<id>.json` | Stays. Delete the file by hand. |
+| `api.settings` | `config.json` → `panel.pluginSettings.<id>` | Stays. A reinstalled plugin gets them back. |
+| Processes from `api.exec` and `daemon` | — | Stopped when the plugin is turned off or the shell exits |
+
+Data is tied to the plugin **`id`**. Renaming the `id` starts with empty storage. A plugin whose `id` matches a
+built-in one replaces it and also gets the built-in's storage and settings.
+
+### Compatibility
+
+- The API version is the `api` field. Within version 1, things are only added: new fields of `api`, new manifest
+  fields, new optional arguments, new D-Bus methods and signals.
+- **Breaking changes** need version 2: removing or renaming anything listed in this document, changing a type or a
+  return value, changing when something is created or destroyed, or changing the meaning of a manifest field. The
+  D-Bus interface then becomes `org.glide.Shell2`, and `org.glide.Shell1` keeps working next to it.
+- An outdated feature is first marked "deprecated" here and keeps working until the next API version.
+- Every release is checked by an automatic test against the version 1 contract (`tests/test_api_contract.py`).
+- Requirements: Quickshell 0.3+, Qt 6.8+, niri. Tested on Quickshell 0.3.2, Qt 6.12, niri 26.04.
+- Only what is described here is stable. Other parts reachable through `import qs` are internal.
+
+---
+
+## 11. Recipes: which mechanism for which task
+
+| Task | Use | Example |
+|---|---|---|
+| A button that runs a command, no code | `items` with `command` and `output` | `{"type": "button", "label": "IP", "command": ["curl", "-s", "ifconfig.me"], "output": "copy+notify"}` |
+| Act on the selected text | `contextActions` with `when` | `{"label": "Words", "when": "text", "command": ["sh", "-c", "printf %s \"$QP_TEXT\" \| wc -w"], "output": "notify"}` |
+| An interface in the panel | `qml` + `api.storage` + `api.settings` | Section 0 |
+| A number in the bar that opens your section | `bar` with `want` + `api.openCategory` | Section 5 |
+| Something that runs while the panel is closed (a timer, watching) | `service` + `api.storage` | Section 4a; the section only writes the settings |
+| A long task with progress and Cancel | `service` + `api.exec` + `api.activity` with `actionLabel` / `onAction: job.cancel` | below |
+| Reacting to a new day or a theme change | bind to `api.today` / `onThemeUpdated` | Section 3 |
+| A widget with user settings | `widget.json` `settings` + `cfg` | Section 2 |
+| Your own app shows progress or reads the theme | D-Bus `org.glide.Shell` or `glide-shell` | Section 7 |
+| Unread count on your app's dock icon | Unity LauncherEntry signal | Section 8 |
+
+A long task with progress and Cancel, in a service:
+
+```qml
+import QtQuick
+Item {
+    id: svc
+    property var api
+    property var job: null
+    function backup() {
+        api.activity.start("backup", { title: "Backup", progress: -1, actionLabel: "Cancel",
+                                       onAction: function () { if (svc.job) svc.job.cancel() } })
+        job = api.exec(["rsync", "-a", "/home/me/Documents/", "/mnt/backup/"], { timeout: 0 }, (code, out, err) => {
+            api.activity.end("backup")
+            api.flash("", code === 0 ? "Backup done" : "Backup failed: " + (err.trim() || code))
+            svc.job = null
+        })
+    }
+}
+```

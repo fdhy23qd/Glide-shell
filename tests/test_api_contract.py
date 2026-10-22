@@ -118,6 +118,15 @@ class Contract(unittest.TestCase):
             problems = {p["id"]: p.get("problem", "") for p in out["allPlugins"]}
             self.assertIn("API 2", problems["v2"])
             self.assertTrue(problems["bad"])
+            users = {p["id"]: p.get("user") for p in out["allPlugins"]}
+            self.assertTrue(users["v1"])                                   # из ~/.config — сторонний
+            self.assertFalse(any(v for k, v in users.items() if k not in ("noapi", "v1", "v2", "bad")))   # встроенные — нет
+            # безопасный режим: выключить список разом, повторно — без дублей
+            (cfg / "glide-shell" / "config.json").write_text('{"disabled": ["v1"]}')
+            for _ in range(2):
+                subprocess.run([sys.executable, "-I", str(ROOT / "tools/qp-config.py"), "disable-many", '["v1", "noapi"]'],
+                               check=True, stdin=subprocess.DEVNULL, env={**os.environ, "XDG_CONFIG_HOME": str(cfg)})
+            self.assertEqual(json.loads((cfg / "glide-shell" / "config.json").read_text())["disabled"], ["v1", "noapi"])
 
 
 if __name__ == "__main__":

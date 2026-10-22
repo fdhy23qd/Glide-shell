@@ -1034,5 +1034,14 @@
  "Активности приложений": "App activities",
  "Загрузки, сборки, отсчёты — от плагинов и программ": "Downloads, builds, countdowns — from plugins and apps",
  "ещё ": "more: ",
- "Не загружен: ": "Not loaded: "
+ "Не загружен: ": "Not loaded: ",
+ "Войти без сторонних плагинов (": "Unlock without third-party plugins (",
+ "В настоящей блокировке сторонние плагины выключились бы": "In a real lock, third-party plugins would be turned off",
+ "Сторонние плагины выключены: ": "Third-party plugins turned off: ",
+ " — вернуть в «Плагинах»": " — turn them back on in Plugins",
+ "Включать и выключать плагины — по паролю": "Turning plugins on and off requires the password",
+ "Защита от случайного или чужого изменения. Снять защиту — тоже по паролю. Плагин сам её не снимет.": "Protects against accidental changes or changes by someone else. Removing the protection also needs the password. A plugin can't remove it.",
+ "Пароль, чтобы снять защиту плагинов": "Password to remove the plugin protection",
+ "Пароль, чтобы включить «": "Password to turn on “",
+ "Пароль, чтобы выключить «": "Password to turn off “"
 }

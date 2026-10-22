@@ -57,6 +57,11 @@ Scope {
         sessionLock.locked = true            // заслонка (entering) живёт, пока замок не подтверждён
     }
 
+    // «Войти без сторонних плагинов» (LockView): выполняется только после успешной проверки пароля (authed),
+    // не после истёкшего тестового таймера; в предпросмотре — только сообщение
+    property bool safeAfterUnlock: false
+    property bool authed: false
+
     // единственные пути к разблокировке: успешный PAM (finish → finishUnlock) и истёкший тестовый таймер
     function release() {
         pam.abort()
@@ -69,6 +74,8 @@ Scope {
         mode = ""
         sessionLock.locked = false
         stateFile.setText("")
+        safeAfterUnlock = false
+        authed = false
     }
 
     // ---- переходы ----
@@ -108,11 +115,14 @@ Scope {
     property bool finishing: false       // замок снимается после ухода — LockView не должен «возвращать» экран
     function finishUnlock() {
         var wasPreview = mode === "preview"
+        var safe = safeAfterUnlock && authed
         finishing = true
         release()
         finishing = false
         if (Prefs.anim > 0) { revealing = true; veilOut.restart() }
         if (wasPreview) panel.flash("✓", Tr.t("Пароль принят — блокировка снимется так же"), Theme.success)
+        if (safe && !wasPreview) panel.safeMode()
+        else if (safe) panel.flash("✓", Tr.t("В настоящей блокировке сторонние плагины выключились бы"), Theme.success)
     }
     Timer {
         id: unlockTimer
@@ -181,7 +191,7 @@ Scope {
         pamTimeout.stop()
         buffer = ""
         if (!mode || unlocking) return
-        if (ok) { beginUnlock(); return }
+        if (ok) { authed = true; beginUnlock(); return }
         error = translate(pamInfo) || msg
         pamInfo = ""
         failed()

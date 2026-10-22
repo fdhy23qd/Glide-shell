@@ -87,7 +87,8 @@ for root in roots:
         elif api > API_VERSION:
             problem = f"нужна более новая Glide Shell (API {api}, эта знает {API_VERSION})"
         every[pid] = {"id": pid, "name": m["name"], "icon": m.get("icon", ""),
-                      "disabled": pid in disabled or m.get("enabled") is False, "problem": problem}
+                      "disabled": pid in disabled or m.get("enabled") is False, "problem": problem,
+                      "user": root == cfg_home / "plugins"}   # сторонний (из ~/.config), а не встроенный
         if problem:
             print(f"qp-discover: {pid}: {problem}", file=sys.stderr)
             found.pop(pid, None)

@@ -78,7 +78,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.95`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.96`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -339,7 +339,8 @@ qs -c glide-shell ipc call lock status    # lock | test | preview | unlocked
 
 ## Написать плагин
 
-Полный справочник — **[docs/API.ru.md](docs/API.ru.md)** (хранилище, настройки, события, элементы бара, виджеты).
+Полный справочник — **[docs/API.ru.md](docs/API.ru.md)** (хранилище, настройки, события, элементы бара, виджеты;
+безопасность и совместимость — раздел 10). Сломал плагин панель — на экране блокировки «Войти без сторонних плагинов».
 Рабочая заготовка: `python3 ~/.config/quickshell/glide-shell/tools/glide-plugin.py new my-plugin`.
 
 Папка `~/.config/glide-shell/plugins/<имя>/` с `plugin.json` (тот же `id` заменяет встроенный;
