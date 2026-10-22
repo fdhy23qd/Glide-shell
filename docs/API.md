@@ -23,8 +23,9 @@ Plugins and widgets run with your permissions, like any program. Install only wh
 
 ## 0. A complete example
 
-A water counter: a panel section, a bar item and two settings. The same files are in
-[`examples/plugins/water`](../examples/plugins/water). Copy the folder to `~/.config/glide-shell/plugins/water/`.
+A water counter: a panel section, a bar item and two settings. This is a shortened version; the full one, with both
+buttons and a message when the goal is reached, is in [`examples/plugins/water`](../examples/plugins/water). Copy the folder to
+`~/.config/glide-shell/plugins/water/`.
 
 `plugin.json`:
 ```json
@@ -64,6 +65,9 @@ ColumnLayout {
     Rectangle {   // a button with hover and press states
         implicitWidth: 120; implicitHeight: 32; radius: Theme.r(16)
         color: ma.pressed ? Theme.accentPressed : ma.containsMouse ? Theme.accentLight : Theme.accent
+        scale: ma.pressed ? 0.95 : 1
+        Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+        Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
         Text { anchors.centerIn: parent; text: "+1 glass"; color: Theme.accentText; font.pixelSize: Theme.fs(13) }
         MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                     onClicked: root.add(1) }
@@ -113,16 +117,21 @@ Item {
 
 | Field | Meaning |
 |---|---|
-| `id`, `name`, `icon` | Required: `id` and `name`. A plugin with the same `id` as a built-in one replaces it. `icon` is one character, usually a Nerd Font glyph. |
+| `id`, `name`, `icon` | Required: `id` and `name`. A plugin with the same `id` as a built-in one replaces it. `icon`: the character itself (`"󰖌"`, a Nerd Font glyph) or its hex code (`"F058C"`); both work here and in `widget.json`. |
 | `category` | Panel category: `power`, `control`, `media`, `clipboard`, `apps`, `quick`, `today`, `phone`, `ai`, `dev`, `text`, `system`, `net`, `notify` or your own id. A new id makes a new category (`categoryName`, `categoryIcon`). |
 | `priority` | Order inside the category: higher comes first. |
 | `items` | Buttons, inputs and lists that run commands. No code needed (see the README). |
 | `qml` | Your own interface for the panel section. Its root item receives `api` (section 3). |
 | `bar` | A QML item for the bar (section 5). It shows up in Settings → Bar and is on by default. |
 | `settings` | Settings shown in Settings → Plugins under the plugin (types below). Read them as `api.settings.<key>`. |
-| `contextActions` | Buttons over the selected text or clipboard. |
-| `daemon` | A background process started with the shell. |
-| `wide`, `keywords`, `output`, `confirm`, `close`, `handoff` | See the README. |
+| `contextActions` | Buttons over the selected text or clipboard: `[{"label", "when", "command", "output"}]`. `when`: `text` (default), `multiline`, `json`, `xml`, `url`, `host`, `jwt`, `number`, `timestamp`, `path`, `base64`, `urlenc`, or a list of these. The command gets the text in `{text}` and `$QP_TEXT`. |
+| `daemon` | A background process (argv) started with the shell and stopped with it. |
+| `keywords` | Extra words for search. |
+| `wide` | `true`: the category with this plugin opens in a wide card. |
+| `handoff` | On an item instead of `command`: `"handoff": "<plugin id>"` (with an optional `"prompt"`) passes the text to another plugin and opens its category. A QML plugin takes it with `api.takeHandoff(id)`, which returns `{text, prompt}` once, or `null`. |
+| `output` | On an item: `"copy"`, `"notify"` or `"copy+notify"`. The command's stdout goes to the clipboard and/or a notification. A non-zero exit code is reported as a notification too. |
+| `confirm` | On a button: it only runs on the second press (within 3 seconds). |
+| `close` | On an item: `false` keeps the panel open after the action. |
 
 Settings types (each has `key`, `label`, `default`, and optionally `hint`, a grey line under the label):
 
@@ -170,7 +179,7 @@ Every plugin and widget gets its own object. Storage, settings and notifications
 |---|---|
 | `api.version` | `1` |
 | `api.owner` | Plugin id (`widget-<id>` for widgets) |
-| `api.theme` | All design tokens: `theme.surface`, `theme.text`, `theme.accent`, `theme.r(16)` (radius), `theme.fs(13)` (font size), `theme.isLight`… With `import qs` you can also use `Theme` directly. |
+| `api.theme` | The same object as `Theme` from `import qs` (both spellings mean one thing). All design tokens: `theme.surface`, `theme.text`, `theme.accent`, `theme.r(16)` (radius), `theme.fs(13)` (font size), `theme.isLight`… With `import qs` you can also use `Theme` directly. |
 | `api.accent`, `api.accentText`, `api.iconFont` | The accent colour; text colour on an accent fill (white, or dark on light accents); the icon font (Nerd Font) |
 | `api.date`, `api.today` | Current date (updated at every minute and after sleep) and `"yyyy-MM-dd"`. Bind to `api.today` to react to a new day. |
 | `api.shown` | The panel is open |
@@ -234,7 +243,18 @@ api.activity.end("sync")
 ```
 
 Props: `title`, `subtitle`, `icon` (one glyph), `progress` (0…1; below 0 — an indeterminate bar), `color`,
-`actionLabel` with `onAction` (a button), `onClick` (a click on the row). Users can turn activities off in
+`actionLabel` with `onAction` (a button), `onClick` (a click on the row). `onAction` and `onClick` are ordinary
+JavaScript functions in the same object:
+
+```qml
+api.activity.start("tea", {
+    title: "Tea is brewing", progress: 0, actionLabel: "Stop",
+    onAction: function () { api.activity.end("tea") },        // the button
+    onClick: function () { api.openCategory("quick") }        // a click on the row
+})
+```
+
+`update` keeps the functions you passed to `start` unless you pass new ones. Users can turn activities off in
 Settings → Island. From a script: `qs -c glide-shell ipc call panel activity ID "Title" 0.5` (an empty title ends it).
 
 ### Events
@@ -306,7 +326,8 @@ The shell places the item in the left or right island. The user chooses which in
 - Check that a QML file compiles without restarting the shell:
   `qs -p <dir>` with a `shell.qml` containing
   `ShellRoot { Component.onCompleted: console.warn(Qt.createComponent("Main.qml").errorString()) }`.
-- Desktop widgets reload when their file changes. Plugins are re-read every time the panel opens.
+- Desktop widgets reload when their file changes. Plugins (`plugin.json`, the section and the bar item) are re-read
+  every time the panel opens, so an edit shows up after closing and opening the panel; no restart is needed.
 
 ---
 
