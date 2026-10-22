@@ -137,7 +137,7 @@ ColumnLayout {
                     Text { anchors.centerIn: parent; text: nv.nf(0xF0156); color: Theme.textSecondary
                            font.family: nv.iconFont; font.pixelSize: Theme.fs(12) }
                     MouseArea { id: clrMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onClicked: { for (var e of grp.g.entries.slice()) nv.ns.remove(e) } }
+                                onClicked: nv.ns.removeMany(grp.g.entries) }
                 }
             }
 
@@ -164,6 +164,7 @@ ColumnLayout {
                     id: topCard
                     width: parent.width
                     e: grp.g.entries[0]
+                    group: grp.g.entries   // крестик свёрнутой стопки убирает её целиком
                     hub: nv
                     stacked: true
                     onStackClicked: nv.toggleGroup(grp.g.key)
@@ -189,6 +190,7 @@ ColumnLayout {
         property var e
         property var hub
         property bool stacked: false          // верх свёрнутой стопки: щелчок раскрывает, а не открывает
+        property var group: null              // все уведомления свёрнутой стопки — крестик закрывает их вместе
         signal stackClicked()
         implicitHeight: body.implicitHeight + 24
         radius: Theme.r(16)
@@ -300,7 +302,7 @@ ColumnLayout {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: card.hub.ns.remove(card.e)
+                onClicked: card.group && card.group.length > 1 ? card.hub.ns.removeMany(card.group) : card.hub.ns.remove(card.e)
             }
         }
     }
