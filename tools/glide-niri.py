@@ -632,13 +632,12 @@ def save_outputs(items):
         for o in items:
             lines = []
             if o.get("off"):
-                lines.append("    off")
-            else:
-                if o.get("mode"): lines.append(f"    mode {q(o['mode'])}")
-                if o.get("scale"): lines.append(f"    scale {float(o['scale']):g}")
-                if o.get("transform") and o["transform"] != "normal": lines.append(f"    transform {q(o['transform'])}")
-                if "x" in o and "y" in o: lines.append(f"    position x={int(o['x'])} y={int(o['y'])}")
-                if o.get("vrr"): lines.append("    variable-refresh-rate")
+                lines.append("    off")          # прежние режим и место — тоже: включится там же
+            if o.get("mode"): lines.append(f"    mode {q(o['mode'])}")
+            if o.get("scale"): lines.append(f"    scale {float(o['scale']):g}")
+            if o.get("transform") and o["transform"] != "normal": lines.append(f"    transform {q(o['transform'])}")
+            if "x" in o and "y" in o: lines.append(f"    position x={int(o['x'])} y={int(o['y'])}")
+            if o.get("vrr"): lines.append("    variable-refresh-rate")
             blocks.append(f"output {q(o['name'])} {{\n" + "\n".join(lines) + "\n}")
         OUTPUTS.write_text(HEAD + "// Мониторы: этот файл подключён ПЕРВЫМ — у niri для монитора побеждает первое определение.\n\n"
                            + "\n\n".join(blocks) + "\n")

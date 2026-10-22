@@ -1751,7 +1751,15 @@ ColumnLayout {
         Process {
             id: od
             command: ["niri", "msg", "-j", "outputs"]
-            stdout: StdioCollector { onStreamFinished: { try { var o = JSON.parse(text); niriPage.outs = Object.keys(o).sort().map(k => o[k]) } catch (e) {} } }
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    try {
+                        var o = JSON.parse(text), inner = n => /^(eDP|LVDS|DSI)/.test(n) ? 0 : 1   // встроенный экран — первым
+                        niriPage.outs = Object.keys(o).sort((a, b) => inner(a) - inner(b) || a.localeCompare(b)).map(k => o[k])
+                        niriPage.outs.forEach(x => { if (x.logical) niriPage.lastOn[x.name] = niriPage.outItem(x) })
+                    } catch (e) {}
+                }
+            }
         }
         // ввод: правка → glide-niri.py set-input (проверка niri validate, при ошибке — откат)
         Process {
@@ -1775,30 +1783,39 @@ ColumnLayout {
             wr.patch = JSON.stringify(patch); wr.running = false; wr.running = true
         }
         // мониторы: сразу через niri msg output, затем 15 с «оставить?»; не подтвердили — вернуть
-        function outRun(name, args) { Quickshell.execDetached(["niri", "msg", "output", name].concat(args)) }
+        // команды niri msg output — строго по очереди; список мониторов перечитать, когда очередь опустела
+        // (иначе перечитывали раньше, чем niri применил, и «Оставить» сохраняло прежнее состояние)
+        property var outQueue: []
+        function outRun(name, args) { outQueue = outQueue.concat([["niri", "msg", "output", name].concat(args)]); if (!ow.running) outNext() }
+        function outNext() {
+            if (outQueue.length) { ow.command = outQueue[0]; outQueue = outQueue.slice(1); ow.running = true }
+            else { od.running = false; od.running = true }
+        }
+        Process { id: ow; onExited: niriPage.outNext() }
         function outChange(o, args, back) {
             if (pending && pending.name !== o.name) outKeep()
             if (!pending) pending = { name: o.name, back: [] }
             pending.back.push(back)
             outRun(o.name, args)
             secsLeft = 15; countdown.restart()
-            Qt.callLater(() => { od.running = false; od.running = true })
         }
         function outRevert() {
             if (!pending) return
             for (var i = pending.back.length - 1; i >= 0; i--) outRun(pending.name, pending.back[i])
             pending = null; countdown.stop()
-            revertRead.restart()
         }
-        Timer { id: revertRead; interval: 400; onTriggered: { od.running = false; od.running = true } }
+        Timer { id: keepLater; interval: 150; onTriggered: niriPage.outKeep() }
+        property var lastOn: ({})   // последние настройки включённых мониторов — выключенный сохраняется с ними
+        function outItem(o) {
+            var m = o.modes[o.current_mode] || o.modes[0]
+            return { name: o.name, mode: m ? m.width + "x" + m.height + "@" + (m.refresh_rate / 1000).toFixed(3) : "",
+                     scale: o.logical ? o.logical.scale : 1, transform: o.logical ? (niriPage.tfNames[o.logical.transform] || "normal") : "normal",
+                     x: o.logical ? o.logical.x : 0, y: o.logical ? o.logical.y : 0, vrr: !!o.vrr_enabled }
+        }
         function outKeep() {
             countdown.stop(); pending = null
-            var items = outs.map(o => {
-                var m = o.modes[o.current_mode] || o.modes[0]
-                return { name: o.name, mode: m ? m.width + "x" + m.height + "@" + (m.refresh_rate / 1000).toFixed(3) : "",
-                         scale: o.logical ? o.logical.scale : 1, transform: o.logical ? (niriPage.tfNames[o.logical.transform] || "normal") : "normal",
-                         x: o.logical ? o.logical.x : 0, y: o.logical ? o.logical.y : 0, off: !o.logical, vrr: !!o.vrr_enabled }
-            })
+            if (ow.running || outQueue.length || od.running) { keepLater.restart(); return }   // сначала — свежий список
+            var items = outs.map(o => o.logical ? outItem(o) : Object.assign({}, lastOn[o.name] || { name: o.name }, { off: true }))
             Quickshell.execDetached(["python3", "-I", tool, "save-outputs", JSON.stringify(items)])
         }
         Timer { id: countdown; interval: 1000; repeat: true

@@ -337,11 +337,11 @@ class NiriSettings(Sandbox):
         self.assertEqual((lk["ring"]["on"], lk["hotcorner"]), (False, True))
         # мониторы: положение, VRR, выключенный — в glide-outputs.kdl, подключённый первым
         self.assertTrue(run("save-outputs", json.dumps([{"name": "eDP-1", "mode": "1366x768@60.000", "scale": 1, "x": 0, "y": 0, "vrr": True},
-                                                        {"name": "HDMI-A-1", "off": True}]))["ok"])
+                                                        {"name": "HDMI-A-1", "off": True, "mode": "1920x1080@60.000", "x": -1920, "y": 0}]))["ok"])
         out = (d / "glide-outputs.kdl").read_text()
         self.assertIn("variable-refresh-rate", out)
         self.assertIn("position x=0 y=0", out)
-        self.assertRegex(out, r'output "HDMI-A-1" \{\s*off\s*\}')
+        self.assertRegex(out, r'output "HDMI-A-1" \{\s*off\s*mode "1920x1080@60.000"\s*position x=-1920 y=0\s*\}')   # выключен — но помнит место
         self.assertTrue((d / "config.kdl").read_text().startswith("// Glide Shell: мониторы"))
         # ошибка niri → откат обоих файлов
         before = (d / "glide-settings.kdl").read_text()
