@@ -21,6 +21,78 @@ Plugins and widgets run with your permissions, like any program. Install only wh
 
 ---
 
+## 0. A complete example
+
+A water counter: a panel section, a bar item and two settings. The same files are in
+[`examples/plugins/water`](../examples/plugins/water). Copy the folder to `~/.config/glide-shell/plugins/water/`.
+
+`plugin.json`:
+```json
+{
+  "id": "water", "api": 1, "name": "Water", "icon": "󰖌", "category": "quick",
+  "qml": "Main.qml", "bar": "Bar.qml",
+  "settings": [
+    { "key": "goal",    "type": "number", "label": "Glasses a day", "default": 8, "min": 4, "max": 14, "step": 1 },
+    { "key": "showBar", "type": "toggle", "label": "Show in the bar", "default": true }
+  ]
+}
+```
+
+`Main.qml`, the panel section:
+```qml
+import QtQuick
+import QtQuick.Layouts
+import qs
+
+ColumnLayout {
+    id: root
+    property var api                     // set right after creation: null until then
+    spacing: 12
+    readonly property int goal: api ? api.settings.goal : 8
+    // api.today changes at midnight, so yesterday's count stops counting by itself
+    readonly property int count: api && api.storage.get("day", "") === api.today ? api.storage.get("count", 0) : 0
+    function add(n) {
+        api.storage.set("day", api.today)
+        api.storage.set("count", Math.max(0, count + n))
+    }
+    Text { text: root.count + " / " + root.goal; color: Theme.text; font.pixelSize: Theme.fs(18) }
+    Rectangle {
+        Layout.fillWidth: true; implicitHeight: 8; radius: Theme.r(4); color: Theme.surface
+        Rectangle { width: parent.width * Math.min(1, root.count / root.goal); height: parent.height
+                    radius: parent.radius; color: Theme.accent }
+    }
+    Rectangle {   // a button with hover and press states
+        implicitWidth: 120; implicitHeight: 32; radius: Theme.r(16)
+        color: ma.pressed ? Theme.accentPressed : ma.containsMouse ? Theme.accentLight : Theme.accent
+        Text { anchors.centerIn: parent; text: "+1 glass"; color: Theme.accentText; font.pixelSize: Theme.fs(13) }
+        MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                    onClicked: root.add(1) }
+    }
+}
+```
+
+`Bar.qml`, the bar item:
+```qml
+import QtQuick
+import qs
+
+Item {
+    id: chip
+    property var api
+    readonly property bool want: !!api && api.settings.showBar
+    readonly property int count: api && api.storage.get("day", "") === api.today ? api.storage.get("count", 0) : 0
+    implicitWidth: row.implicitWidth
+    implicitHeight: 24
+    Row { id: row; anchors.verticalCenter: parent.verticalCenter; spacing: 4
+          Text { text: "󰖌"; color: Theme.accent; font.family: chip.api ? chip.api.iconFont : "" }
+          Text { text: chip.count + "/" + (chip.api ? chip.api.settings.goal : 8); color: Theme.textVariant
+                 font.pixelSize: Theme.fs(12) } }
+    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: chip.api.openCategory("quick") }
+}
+```
+
+---
+
 ## 1. plugin.json
 
 ```json
@@ -47,10 +119,19 @@ Plugins and widgets run with your permissions, like any program. Install only wh
 | `items` | Buttons, inputs and lists that run commands. No code needed (see the README). |
 | `qml` | Your own interface for the panel section. Its root item receives `api` (section 3). |
 | `bar` | A QML item for the bar (section 5). It shows up in Settings → Bar and is on by default. |
-| `settings` | Settings shown in Settings → Plugins under the plugin. Types: `text`, `number`, `toggle`, `choice`. Read them as `api.settings.<key>`. |
+| `settings` | Settings shown in Settings → Plugins under the plugin (types below). Read them as `api.settings.<key>`. |
 | `contextActions` | Buttons over the selected text or clipboard. |
 | `daemon` | A background process started with the shell. |
 | `wide`, `keywords`, `output`, `confirm`, `close`, `handoff` | See the README. |
+
+Settings types (each has `key`, `label`, `default`, and optionally `hint`, a grey line under the label):
+
+| `type` | Shown as | Extra fields |
+|---|---|---|
+| `text` | Text field, Enter applies | — |
+| `number` | Buttons for every value when `min`…`max` has at most 12 steps, otherwise a field | `min`, `max`, `step` (1 by default). `api.settings` always returns a number within the range. |
+| `toggle` | Switch | — |
+| `choice` | A row of options | `options: [{label, value}]` |
 
 Commands get `$QP_TEXT`, `$QP_DIR` (plugin folder), `$QP_FOCUSED` (focused window as JSON), `$QP_SELECTION`,
 `$QP_CLIPBOARD` and `$QP_STYLE`, and the `{text}` and `{dir}` substitutions in argv.
@@ -90,7 +171,8 @@ Every plugin and widget gets its own object. Storage, settings and notifications
 | `api.version` | `1` |
 | `api.owner` | Plugin id (`widget-<id>` for widgets) |
 | `api.theme` | All design tokens: `theme.surface`, `theme.text`, `theme.accent`, `theme.r(16)` (radius), `theme.fs(13)` (font size), `theme.isLight`… With `import qs` you can also use `Theme` directly. |
-| `api.accent`, `api.accentText`, `api.iconFont` | Shortcuts |
+| `api.accent`, `api.accentText`, `api.iconFont` | The accent colour; text colour on an accent fill (white, or dark on light accents); the icon font (Nerd Font) |
+| `api.date`, `api.today` | Current date (updated at every minute and after sleep) and `"yyyy-MM-dd"`. Bind to `api.today` to react to a new day. |
 | `api.shown` | The panel is open |
 | `api.contextText` | Selected text or clipboard at the moment the panel was opened |
 
@@ -100,7 +182,7 @@ Every plugin and widget gets its own object. Storage, settings and notifications
 |---|---|
 | `api.run(argv, text)` | Run a program (no shell). `text` goes to `$QP_TEXT`. |
 | `api.copy(text)` | Copy to the clipboard |
-| `api.flash(icon, text, color)` | A short message in the island |
+| `api.flash(icon, text, color)` | A short message in the island. An empty `icon` shows ✓, an empty `color` means `Theme.success`. |
 | `api.notify(title, body, icon)` | A notification under the plugin's name |
 | `api.close()` | Close the panel |
 | `api.openCategory(id)` | Switch the panel to a category |
@@ -119,7 +201,8 @@ onClicked: api.storage.set("clicks", clicks + 1)
 ```
 
 `api.storage.get(key, default)`, `api.storage.set(key, value)` (any JSON value), `api.storage.remove(key)`,
-`api.storage.all`.
+`api.storage.all`. Any binding that calls `api.storage.get` updates when the value changes, even inside a condition
+(`a ? api.storage.get(…) : 0`). The panel section and the bar item of the same plugin share the storage.
 
 ### Settings
 
@@ -182,6 +265,11 @@ ColumnLayout {
     Text { text: api ? api.settings.greeting : ""; color: Theme.text; font.pixelSize: Theme.fs(14) }
 }
 ```
+
+`api` is assigned right after the item is created, so it is `null` during the first moment. Write bindings as
+`api ? … : default` and handlers as `root.api.…` (they only run later). The section's width is set by the panel, and
+its height comes from `implicitHeight`. A `ColumnLayout` or `Column` root needs no explicit size; do not set a fixed
+height.
 
 Use `Theme` for every colour, radius and font size (`Theme.r(16)`, `Theme.fs(13)`). That way the plugin follows the
 user's tone, accent, light mode, corner radius and text size. For durations, use `Prefs.ms(200)`: it follows the
@@ -287,3 +375,31 @@ bus.emit_signal(None, "/com/example/app", "com.canonical.Unity.LauncherEntry", "
                 GLib.Variant("(sa{sv})", ("application://my-app.desktop",
                                           {"count": GLib.Variant("x", 3), "count-visible": GLib.Variant("b", True)})))
 ```
+
+---
+
+## 9. Theme tokens
+
+`import qs` gives `Theme`. The same object is `api.theme`. These names are stable within API version 1:
+
+| Token | Use |
+|---|---|
+| `background` | Panel and island background |
+| `surface`, `surfaceLow`, `surfaceHigh`, `surfaceHigher`, `surfacePressed` | Cards and buttons; hover → `surfaceHigher`, press → `surfacePressed` |
+| `outline`, `outlineHover`, `divider` | Borders and separators |
+| `text`, `textVariant`, `textSecondary`, `textMuted`, `textFaint` | Text, from most to least prominent |
+| `accent`, `accentSoft`, `accentHover`, `accentLight`, `accentPressed` | The user's accent colour; button hover → `accentLight`, press → `accentPressed`, soft fill → `accentSoft` |
+| `accentText` | Text on an accent-coloured fill: white, or dark on a light accent |
+| `error`, `errorContainer`, `errorHover`, `errorText`, `success`, `warning` | Status colours |
+| `isLight` | The light theme is on |
+| `r(n)`, `radiusSm/Md/Lg/Xl` | Corner radius scaled by the user's setting |
+| `fs(n)` | Font size scaled by the user's setting |
+| `disabledOpacity` | Opacity of an unavailable control |
+
+Everything else reachable with `import qs` (`Prefs`, `Niri`, `Notifs`…) is internal and can change between versions.
+Use it through `api` when an `api` field exists. The exception is `Prefs.ms(n)`, which is stable: it gives an
+animation duration that follows the user's "Animations" setting.
+
+Interactive elements look right when they have three states. On hover, use a lighter colour and a hand cursor. On
+press, use a darker colour and a slightly smaller scale (0.95). When unavailable, use `Theme.disabledOpacity` and the
+arrow cursor.

@@ -1,0 +1,10 @@
+{
+  "id": "water", "api": 1, "name": "Вода", "icon": "󰖌",
+  "category": "quick", "keywords": ["вода", "water", "стакан"],
+  "qml": "Main.qml",
+  "bar": "Bar.qml",
+  "settings": [
+    { "key": "goal",    "type": "number", "label": "Норма, стаканов в день", "default": 8, "min": 4, "max": 14, "step": 1 },
+    { "key": "showBar", "type": "toggle", "label": "Показывать в баре", "default": true }
+  ]
+}
