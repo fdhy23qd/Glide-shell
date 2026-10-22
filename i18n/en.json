@@ -1029,5 +1029,6 @@
  "Раз в 3 часа — свежие базы в свою папку (система не меняется), AUR — через yay/paru. Сейчас: ": "Every 3 hours — fresh databases into a separate folder (the system isn't changed), AUR via yay/paru. Now: ",
  "Обновления: ": "Updates: ",
  "…и ещё ": "…and ",
- "Щелчок — обновить в терминале": "Click — update in a terminal"
+ "Щелчок — обновить в терминале": "Click — update in a terminal",
+ "из плагина": "from a plugin"
 }

@@ -120,22 +120,19 @@ Item {
         return Object.assign(o, cfg.opts || {})
     }
     property string errText: ""
-    // что получает свой виджет (см. examples/widgets и README)
-    QtObject {
+    // что получает свой виджет — общий API плагинов и виджетов (docs/API.md) плюс размер и цвета виджета
+    ApiScope {
         id: wapi
-        readonly property date now: wgt.hub ? wgt.hub.now : new Date()
-        readonly property real k: wgt.k
-        readonly property color tint: wgt.tint
-        readonly property color sub: wgt.sub
-        readonly property color accent: Theme.accent
-        readonly property var theme: Theme
-        readonly property string iconFont: Prefs.iconFont
-        readonly property var weather: Weather
-        readonly property var player: wgt.hub ? wgt.hub.player : null
-        readonly property real cpu: wgt.hub ? wgt.hub.cpu : 0
-        readonly property real mem: wgt.hub ? wgt.hub.mem : 0
-        function run(argv) { Quickshell.execDetached(argv) }
-        function openUrl(url) { Qt.openUrlExternally(url) }
+        shell: wgt.hub.panel
+        owner: "widget-" + (wgt.cfg.custom || wgt.type)
+        ownerName: wgt.meta ? wgt.meta.name : owner
+        manifest: wgt.meta || ({})
+        now: wgt.hub ? wgt.hub.now : new Date()
+        k: wgt.k
+        tint: wgt.tint
+        sub: wgt.sub
+        cpu: wgt.hub ? wgt.hub.cpu : 0
+        mem: wgt.hub ? wgt.hub.mem : 0
     }
     function loadCustom() {
         if (type !== "custom") return

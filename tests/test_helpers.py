@@ -550,3 +550,19 @@ class ArchUpdates(Sandbox):
         self.assertTrue((self.state / "glide-shell" / "archupdates.json").exists())
         r = json.loads(self.run_py(TOOLS / "glide-archupdates.py", "check", env={"PATH": str(self.bin) + ":/usr/bin"}).stdout)
         self.assertTrue(r["supported"])
+
+
+class PluginScaffold(Sandbox):
+    """Заготовка плагина и виджета: файлы на месте, манифест — валидный JSON с api 1, bar и settings."""
+
+    def test_new(self):
+        out = self.run_py(TOOLS / "glide-plugin.py", "new", "demo", "Демо")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        d = self.cfg / "glide-shell" / "plugins" / "demo"
+        m = json.loads((d / "plugin.json").read_text())
+        self.assertEqual((m["id"], m["api"], m["bar"], m["qml"]), ("demo", 1, "Bar.qml", "Main.qml"))
+        self.assertTrue((d / "Main.qml").exists() and (d / "Bar.qml").exists())
+        self.assertNotEqual(self.run_py(TOOLS / "glide-plugin.py", "new", "demo").returncode, 0)   # уже есть
+        self.assertNotEqual(self.run_py(TOOLS / "glide-plugin.py", "new", "Плохой id").returncode, 0)
+        self.assertEqual(self.run_py(TOOLS / "glide-plugin.py", "widget", "w1").returncode, 0)
+        self.assertTrue((self.cfg / "glide-shell" / "widgets" / "w1" / "widget.qml").exists())

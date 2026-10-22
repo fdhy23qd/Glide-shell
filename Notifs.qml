@@ -83,6 +83,7 @@ Singleton {
     function snapshot(n) {
         return n.actions.filter(a => a.identifier !== "default" && a.identifier !== "inline-reply").map(a => ({ id: a.identifier, text: a.text }))
     }
+    signal received(var entry)   // новое уведомление — для плагинов (api.notification)
     function add(n) {
         n.tracked = true
         var e = {
@@ -119,6 +120,7 @@ Singleton {
         }
         list = l
         if (!n.transient) { e.unread = true; unread++ }
+        received({ appName: e.appName, summary: e.summary, body: e.body, urgency: e.urgency, time: e.time })
         show(e)
     }
     function touch() { list = list.slice() }   // перерисовать историю после изменения записей

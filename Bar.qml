@@ -645,6 +645,27 @@ PanelWindow {
         }
     }
     Component {
+        id: pluginPart
+        Item {   // элемент бара из плагина (plugin.json «bar»): его QML получает api и решает, виден ли (want)
+            id: pp
+            readonly property string pid: parent && parent.modelData ? parent.modelData.slice(7) : ""
+            readonly property var plugin: bar.p.pluginById(pid)
+            readonly property bool want: !!ld.item && ld.item.want !== false
+            // ширина — не больше 240 и с обрезкой: ошибка в чужом элементе не должна разваливать капсулу
+            implicitWidth: ld.item ? Math.min(240, Math.max(0, ld.item.implicitWidth || 0)) : 0
+            implicitHeight: 24
+            clip: true
+            ApiScope { id: ps; shell: bar.p; owner: pp.pid; ownerName: pp.plugin ? pp.plugin.name : pp.pid; manifest: pp.plugin || ({}) }
+            Loader {
+                id: ld
+                anchors.verticalCenter: parent.verticalCenter
+                source: pp.plugin && pp.plugin.bar ? "file://" + pp.plugin.dir + "/" + pp.plugin.bar : ""
+                onLoaded: { item.api = ps; if ("pluginDir" in item) item.pluginDir = pp.plugin.dir }
+                onStatusChanged: if (status === Loader.Error) console.warn("glide-shell: элемент бара плагина " + pp.pid + " не загрузился")
+            }
+        }
+    }
+    Component {
         id: part_updates
         Chip {   // обновления Arch: число пакетов; наведение — список, щелчок — терминал с обновлением
             visible: want
@@ -694,7 +715,7 @@ PanelWindow {
     readonly property var rightIds: Prefs.barItems.filter(x => x.place === "right").map(x => x.id)
     component PartSlot: Loader {
         required property string modelData
-        sourceComponent: bar.parts[modelData] || null
+        sourceComponent: bar.parts[modelData] || (modelData.indexOf("plugin:") === 0 ? pluginPart : null)
         visible: !!item && item.want   // не item.visible: внутри невидимого слота он всегда false
         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     }

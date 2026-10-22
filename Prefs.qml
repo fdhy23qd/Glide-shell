@@ -43,6 +43,12 @@ Singleton {
     readonly property bool welcome: data.welcome === true
     readonly property bool welcomeDone: data.welcomeDone === true
     readonly property bool fileSearch: data.fileSearch !== false
+    readonly property var pluginSettings: data.pluginSettings || ({})        // настройки плагинов из plugin.json: {id: {key: value}}
+    function setPluginSetting(id, key, value) {
+        var all = JSON.parse(JSON.stringify(pluginSettings))
+        all[id] = Object.assign({}, all[id] || {}); all[id][key] = value
+        set("pluginSettings", all)
+    }
     readonly property bool archUpdates: data.archUpdates !== false          // обновления Arch в баре (ArchUpdates.qml)
     readonly property bool updateCheck: data.updateCheck !== false        // искать обновления раз в 6 ч (Updates.qml)
     readonly property string updateNotified: data.updateNotified || ""     // о какой версии уже сказали
@@ -187,7 +193,8 @@ Singleton {
     readonly property var barLeftDefault: ["power", "workspaces", "window"]
     readonly property var barRightDefault: ["layout", "cpu", "mem", "clipboard", "notifications", "battery", "phone", "vpn", "awake", "control", "tray"]
     readonly property var barExtra: ["volume", "mic", "bluetooth", "night", "weather", "powerprofile", "screenshot"]   // новые — выключены
-    readonly property var barNewOn: ["updates"]   // новые, но включённые сразу (видны, только когда есть что показать)
+    readonly property var barNewOn: ["updates"].concat(pluginBars)   // новые, но включённые сразу (видны, когда есть что показать)
+    property var pluginBars: []   // элементы бара из плагинов («plugin:<id>», plugin.json «bar») — задаёт shell.qml
     readonly property var barItems: {
         var known = barLeftDefault.concat(barRightDefault, barExtra, barNewOn)
         var out = Array.isArray(data.barItems)

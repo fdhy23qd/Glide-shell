@@ -109,11 +109,15 @@ ColumnLayout {
         var t = o[i]; o[i] = o[j]; o[j] = t
         Prefs.set("barItems", o)
     }
+    function pluginBarMeta(id) {   // элемент бара из плагина: его значок и имя
+        var pl = id.indexOf("plugin:") === 0 && sv.panel ? sv.panel.pluginById(id.slice(7)) : null
+        return pl ? { glyph: (pl.icon || "•").codePointAt(0), label: pl.name, hint: Tr.t("из плагина") } : ({})
+    }
     component BarItemRow: Rectangle {
         id: bi
         property var it
         property int pos
-        readonly property var meta: sv.barMeta[it.id] || ({})
+        readonly property var meta: sv.barMeta[it.id] || sv.pluginBarMeta(it.id)
         readonly property bool on: it.place !== "off"
         implicitHeight: 48
         radius: Theme.r(14)
@@ -2622,12 +2626,52 @@ ColumnLayout {
         Header { text: Tr.t("ПЛАГИНЫ") }
         Repeater {
             model: sv.panel ? sv.panel.allPlugins : []
-            delegate: ToggleRow {
+            delegate: ColumnLayout {
+                id: plRow
                 required property var modelData
-                icon: modelData.icon || ""
-                label: modelData.name
-                checked: !modelData.disabled
-                onToggled: sv.panel.togglePlugin(modelData.id)
+                // полный манифест — только у включённых: из него схема настроек («settings», как у своих виджетов)
+                readonly property var full: !modelData.disabled && sv.panel ? sv.panel.pluginById(modelData.id) : null
+                readonly property var schema: full && full.settings ? full.settings : []
+                readonly property var vals: Prefs.pluginSettings[modelData.id] || ({})
+                function val(o) { return vals[o.key] !== undefined ? vals[o.key] : o["default"] }
+                Layout.fillWidth: true
+                spacing: 8
+                ToggleRow {
+                    icon: plRow.modelData.icon || ""
+                    label: plRow.modelData.name
+                    checked: !plRow.modelData.disabled
+                    onToggled: sv.panel.togglePlugin(plRow.modelData.id)
+                }
+                Repeater {
+                    model: plRow.schema
+                    delegate: ColumnLayout {
+                        id: pso
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 30
+                        ToggleRow {
+                            visible: pso.modelData.type === "toggle"
+                            label: pso.modelData.label || pso.modelData.key
+                            hint: pso.modelData.hint || ""
+                            checked: !!plRow.val(pso.modelData)
+                            onToggled: Prefs.setPluginSetting(plRow.modelData.id, pso.modelData.key, !plRow.val(pso.modelData))
+                        }
+                        ChoiceRow {
+                            visible: pso.modelData.type === "choice"
+                            label: pso.modelData.label || pso.modelData.key
+                            options: pso.modelData.options || []
+                            current: plRow.val(pso.modelData)
+                            onPicked: (v) => Prefs.setPluginSetting(plRow.modelData.id, pso.modelData.key, v)
+                        }
+                        TextRow {
+                            visible: pso.modelData.type !== "toggle" && pso.modelData.type !== "choice"
+                            label: (pso.modelData.label || pso.modelData.key) + Tr.t(" (Enter — применить)")
+                            value: String(plRow.val(pso.modelData) ?? "")
+                            onSubmitted: (v) => Prefs.setPluginSetting(plRow.modelData.id, pso.modelData.key,
+                                                                      pso.modelData.type === "number" ? Number(v) : v)
+                        }
+                    }
+                }
             }
         }
 
