@@ -98,6 +98,7 @@ ColumnLayout {
         night: { glyph: 0xF0594, label: Tr.t("Ночной свет"), hint: Tr.t("щелчок — включить/выключить") },
         weather: { glyph: 0xF0590, label: Tr.t("Погода"), hint: Tr.t("температура; щелчок — «Сегодня»") },
         powerprofile: { glyph: 0xF0A7A, label: Tr.t("Профиль питания"), hint: Tr.t("щелчок — экономия → баланс → производительность") },
+        updates: { glyph: 0xF03D4, label: Tr.t("Обновления Arch"), hint: Tr.t("число пакетов, когда есть обновления; щелчок — обновить в терминале") },
         screenshot: { glyph: 0xF0100, label: Tr.t("Скриншот"), hint: Tr.t("снять область") }
     })
     function setBarPlace(id, place) { Prefs.set("barItems", Prefs.barItems.map(x => x.id === id ? ({ id: id, place: place }) : x)) }
@@ -627,6 +628,15 @@ ColumnLayout {
             hint: Tr.t("Раз в 6 часов — git fetch в папке, откуда поставлена оболочка; о новой версии — одно уведомление")
             checked: Prefs.updateCheck
             onToggled: Prefs.set("updateCheck", !Prefs.updateCheck)
+        }
+        ToggleRow {
+            visible: ArchUpdates.supported
+            icon: String.fromCodePoint(0xF03D6)
+            label: Tr.t("Обновления Arch Linux в баре")
+            hint: ArchUpdates.st.error ? Tr.t("Не удалось проверить: ") + ArchUpdates.st.error
+                : Tr.t("Раз в 3 часа — свежие базы в свою папку (система не меняется), AUR — через yay/paru. Сейчас: ") + (ArchUpdates.st.count || 0)
+            checked: Prefs.archUpdates
+            onToggled: { Prefs.set("archUpdates", !Prefs.archUpdates); if (!Prefs.archUpdates) ArchUpdates.check() }
         }
         Repeater {
             model: [{ id: "shell", name: "Glide Shell" }, { id: "apps", name: Tr.t("Приложения Glide") }]

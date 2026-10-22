@@ -1013,5 +1013,21 @@
  "Настройки → Поведение → Обновления": "Settings → Behavior → Updates",
  " обновлена": " updated",
  ": обновить не получилось": ": update failed",
- "Папка без удалённого репозитория — проверять негде": "The folder has no remote repository — nothing to check against"
+ "Папка без удалённого репозитория — проверять негде": "The folder has no remote repository — nothing to check against",
+ "Загрузка…": "Loading…",
+ "Внутри: ": "Inside: ",
+ "изменён ": "modified ",
+ "Enter — открыть": "Enter — open",
+ "Не открывается: ": "Can't open: ",
+ "Б": "B",
+ "КБ": "KB",
+ "МБ": "MB",
+ "ГБ": "GB",
+ "Обновления Arch": "Arch updates",
+ "число пакетов, когда есть обновления; щелчок — обновить в терминале": "number of packages when updates are available; click — update in a terminal",
+ "Обновления Arch Linux в баре": "Arch Linux updates in the bar",
+ "Раз в 3 часа — свежие базы в свою папку (система не меняется), AUR — через yay/paru. Сейчас: ": "Every 3 hours — fresh databases into a separate folder (the system isn't changed), AUR via yay/paru. Now: ",
+ "Обновления: ": "Updates: ",
+ "…и ещё ": "…and ",
+ "Щелчок — обновить в терминале": "Click — update in a terminal"
 }

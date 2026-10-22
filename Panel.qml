@@ -41,7 +41,7 @@ PanelWindow {
         Keys.onPressed: (e) => {
             var mods = e.modifiers
             if (e.key === Qt.Key_Escape) {
-                if (root.query !== "") root.clearSearch(); else root.close()
+                if (root.previewPath) root.showPreview(""); else if (root.query !== "") root.clearSearch(); else root.close()
                 e.accepted = true
             } else if ((mods & Qt.ControlModifier) && e.key === Qt.Key_K) {
                 searchInput.forceActiveFocus(); e.accepted = true
@@ -357,6 +357,11 @@ PanelWindow {
                             Keys.onDownPressed: root.moveSelection(1)
                             Keys.onUpPressed: root.moveSelection(-1)
                             Keys.onTabPressed: root.moveSelection(1)
+                            // Shift+Пробел — быстрый просмотр выбранного файла (обычный пробел — печать)
+                            Keys.onSpacePressed: (e) => {
+                                if ((e.modifiers & Qt.ShiftModifier) && root.results.length) { root.togglePreview(); e.accepted = true }
+                                else e.accepted = false
+                            }
                         }
                     }
 
@@ -425,7 +430,10 @@ PanelWindow {
                             required property var modelData
                             required property int index
                             width: col.width
-                            height: 36
+                            readonly property bool previewing: modelData.kind === "file" && root.previewPath === modelData.path
+                            height: 36 + (previewing ? pv.height + 8 : 0)
+                            Behavior on height { NumberAnimation { duration: Prefs.ms(180); easing.type: Easing.OutCubic } }
+                            clip: true
                             radius: Theme.radiusSm
                             color: index === root.selected ? Theme.surfaceHigher : (resMa.containsMouse ? Theme.surfaceHigher : Theme.surfaceHigh)
                             border.color: index === root.selected ? Prefs.accent : "transparent"
@@ -435,13 +443,13 @@ PanelWindow {
                             Behavior on scale { NumberAnimation { duration: Prefs.ms(100) } }
                             IconImage {
                                 visible: res.modelData.kind === "app"
-                                x: 10; anchors.verticalCenter: parent.verticalCenter
+                                x: 10; y: 8
                                 implicitSize: 20
                                 source: visible ? Quickshell.iconPath(res.modelData.icon || "application-x-executable", "application-x-executable") : ""
                             }
                             Text {   // файл, папка, поиск в интернете — значком по типу
                                 visible: res.modelData.kind === "file" || res.modelData.kind === "web"
-                                x: 10; width: 20; anchors.verticalCenter: parent.verticalCenter
+                                x: 10; width: 20; y: 0; height: 36; verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 text: String.fromCodePoint(res.glyph)
                                 color: res.modelData.kind === "web" ? Prefs.accent : Theme.textVariant
@@ -461,8 +469,8 @@ PanelWindow {
                             }
                             Text {
                                 x: res.modelData.kind === "app" || res.modelData.kind === "file" || res.modelData.kind === "web" ? 38 : 10
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - x - subText.width - 24
+                                y: 0; height: 36; verticalAlignment: Text.AlignVCenter
+                                width: parent.width - x - subText.width - 24 - (eye.visible ? 28 : 0)
                                 elide: Text.ElideRight
                                 text: modelData.label
                                 color: Theme.text
@@ -470,8 +478,8 @@ PanelWindow {
                             Text {
                                 id: subText
                                 anchors.right: parent.right
-                                anchors.rightMargin: 10
-                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.rightMargin: 10 + (eye.visible ? 28 : 0)
+                                y: 0; height: 36; verticalAlignment: Text.AlignVCenter
                                 width: Math.min(implicitWidth, res.width * 0.42)
                                 elide: Text.ElideLeft   // у путей важен конец
                                 text: modelData.sub
@@ -485,6 +493,33 @@ PanelWindow {
                                 hoverEnabled: true
                                 onEntered: root.selected = index
                                 onClicked: root.activate(modelData)
+                            }
+                            Rectangle {   // «глаз» — быстрый просмотр (как Shift+Пробел)
+                                id: eye
+                                visible: res.modelData.kind === "file" && (resMa.containsMouse || eyeMa.containsMouse || res.previewing)
+                                anchors.right: parent.right; anchors.rightMargin: 6
+                                y: 5; width: 26; height: 26; radius: 13
+                                color: eyeMa.pressed ? Theme.surfacePressed : eyeMa.containsMouse || res.previewing ? Theme.accentSoft : "transparent"
+                                scale: eyeMa.pressed ? 0.9 : 1
+                                Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+                                Behavior on scale { NumberAnimation { duration: Prefs.ms(120); easing.type: Easing.OutBack } }
+                                Text { anchors.centerIn: parent; text: String.fromCodePoint(0xF0208)
+                                       color: res.previewing ? Prefs.accent : Theme.textSecondary
+                                       font.family: Prefs.iconFont; font.pixelSize: Theme.fs(14) }
+                                MouseArea {
+                                    id: eyeMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: { root.selected = res.index; root.showPreview(res.previewing ? "" : res.modelData.path) }
+                                }
+                            }
+                            FilePreview {
+                                id: pv
+                                x: 8; y: 40
+                                width: parent.width - 16
+                                info: res.previewing ? root.preview : null
+                                visible: res.previewing
                             }
                         }
                     }
