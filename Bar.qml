@@ -645,6 +645,18 @@ PanelWindow {
         }
     }
     Component {
+        id: part_updates
+        Chip {   // обновления Arch: число пакетов; наведение — список, щелчок — терминал с обновлением
+            visible: want
+            want: ArchUpdates.count > 0
+            glyph: bar.nf(0xF03D4)
+            label: String(ArchUpdates.count)
+            tint: Prefs.accent
+            tipKey: "updates"; onHotChanged: bar.tipHover(this)
+            onClicked: { capDrop.hide(); ArchUpdates.upgrade() }
+        }
+    }
+    Component {
         id: part_weather
         Chip {   // погода: значок и температура; щелчок — «Сегодня»
             visible: want
@@ -674,7 +686,7 @@ PanelWindow {
             onClicked: bar.run(["sh", "-c", 'p="$HOME/.local/bin/glide-shot"; [ -x "$p" ] && exec "$p" --capture region || exec niri msg action screenshot'])
         }
     }
-    readonly property var parts: ({ power: part_power, workspaces: part_workspaces, window: part_window, layout: part_layout, cpu: part_cpu, mem: part_mem, clipboard: part_clipboard, notifications: part_notifications, battery: part_battery, phone: part_phone, vpn: part_vpn, awake: part_awake, control: part_control, tray: part_tray, volume: part_volume, mic: part_mic, bluetooth: part_bluetooth, night: part_night, weather: part_weather, powerprofile: part_powerprofile, screenshot: part_screenshot })
+    readonly property var parts: ({ power: part_power, workspaces: part_workspaces, window: part_window, layout: part_layout, cpu: part_cpu, mem: part_mem, clipboard: part_clipboard, notifications: part_notifications, battery: part_battery, phone: part_phone, vpn: part_vpn, awake: part_awake, control: part_control, tray: part_tray, volume: part_volume, mic: part_mic, bluetooth: part_bluetooth, night: part_night, weather: part_weather, powerprofile: part_powerprofile, screenshot: part_screenshot, updates: part_updates })
     property var winTitleItem: null        // заголовок окна (список окон вытекает из-под него)
     property var bellItem: null            // колокольчик (туда «влетают» уведомления)
     property var trayRepItem: null         // значки трея (меню по IPC)
@@ -903,7 +915,7 @@ PanelWindow {
             id: tipLoader
             width: parent.width
             sourceComponent: ({ windows: winTip, cpu: procTip, mem: procTip, battery: battTip, layout: layoutTip,
-                                clipboard: clipTip, notifications: notifTip, phone: phoneTip, tray: trayTip, vpn: vpnTip })[capDrop.key] || simpleTip
+                                clipboard: clipTip, notifications: notifTip, phone: phoneTip, tray: trayTip, vpn: vpnTip, updates: updatesTip })[capDrop.key] || simpleTip
         }
     }
 
@@ -1048,6 +1060,25 @@ PanelWindow {
                 value: parent.ph && parent.ph.battery !== undefined ? parent.ph.battery + "%" + (parent.ph.charging ? Tr.t(" · заряжается") : "") : "—"
             }
             TipHint { text: Tr.t("Щелчок — файлы, буфер, звонок телефону") }
+        }
+    }
+    Component {
+        id: updatesTip
+        Column {
+            spacing: 3
+            readonly property var all: ArchUpdates.repo.concat(ArchUpdates.aur.map(x => Object.assign({ aur: true }, x)))
+            TipTitle { text: Tr.t("Обновления: ") + ArchUpdates.count }
+            Repeater {
+                model: parent.all.slice(0, 8)
+                delegate: TipRow {
+                    required property var modelData
+                    name: modelData.name + (modelData.aur ? "  AUR" : "")
+                    value: modelData.to
+                    tint: Theme.textVariant
+                }
+            }
+            TipLine { visible: parent.all.length > 8; text: Tr.t("…и ещё ") + (parent.all.length - 8) }
+            TipHint { text: Tr.t("Щелчок — обновить в терминале") }
         }
     }
     Component {

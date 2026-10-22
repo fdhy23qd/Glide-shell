@@ -72,6 +72,8 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
   Written to separate files included from your niri config; every change is checked with `niri validate`.
 - **Theme:** accent colour, tone, corner radius, text size, opacity, and animation speed (or no animations at all).
 - **Multi-monitor modes:** unite, extend, mirror and standard. These are untested on real hardware.
+- **Quick look:** Shift+Space on a file in search previews it right in the list: image, first PDF page, video frame, text.
+- **Arch Linux updates:** the number of available packages (repositories and AUR) in the bar; click to update in a terminal.
 - **Updates:** checks the git folder it was installed from every 6 hours and shows what's new; one click runs
   `git pull` and `install.sh` (the Glide apps too, if they were installed from git).
 - **Reliability:** runs as a systemd user service and restarts itself after a crash. If it keeps crashing, it falls

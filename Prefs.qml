@@ -43,6 +43,7 @@ Singleton {
     readonly property bool welcome: data.welcome === true
     readonly property bool welcomeDone: data.welcomeDone === true
     readonly property bool fileSearch: data.fileSearch !== false
+    readonly property bool archUpdates: data.archUpdates !== false          // обновления Arch в баре (ArchUpdates.qml)
     readonly property bool updateCheck: data.updateCheck !== false        // искать обновления раз в 6 ч (Updates.qml)
     readonly property string updateNotified: data.updateNotified || ""     // о какой версии уже сказали
     readonly property string webSearch: ["duckduckgo", "google", "yandex", "bing", "off"].indexOf(data.webSearch) >= 0 ? data.webSearch : "duckduckgo"
@@ -186,13 +187,19 @@ Singleton {
     readonly property var barLeftDefault: ["power", "workspaces", "window"]
     readonly property var barRightDefault: ["layout", "cpu", "mem", "clipboard", "notifications", "battery", "phone", "vpn", "awake", "control", "tray"]
     readonly property var barExtra: ["volume", "mic", "bluetooth", "night", "weather", "powerprofile", "screenshot"]   // новые — выключены
+    readonly property var barNewOn: ["updates"]   // новые, но включённые сразу (видны, только когда есть что показать)
     readonly property var barItems: {
-        var known = barLeftDefault.concat(barRightDefault, barExtra)
+        var known = barLeftDefault.concat(barRightDefault, barExtra, barNewOn)
         var out = Array.isArray(data.barItems)
             ? data.barItems.filter(x => x && known.indexOf(x.id) >= 0).map(x => ({ id: x.id, place: ["left", "right"].indexOf(x.place) >= 0 ? x.place : "off" }))
             : barLeftDefault.map(id => ({ id: id, place: barHide.indexOf(id) >= 0 ? "off" : "left" }))
                 .concat(barRightDefault.map(id => ({ id: id, place: barHide.indexOf(id) >= 0 ? "off" : "right" })))
-        for (var id of known) if (!out.some(x => x.id === id)) out.push({ id: id, place: "off" })
+        for (var id of known) {
+            if (out.some(x => x.id === id)) continue
+            if (barNewOn.indexOf(id) < 0) { out.push({ id: id, place: "off" }); continue }
+            var at = out.findIndex(x => x.id === "control")   // включённое новое — перед «Управлением»
+            out.splice(at >= 0 ? at : out.length, 0, { id: id, place: "right" })
+        }
         return out
     }
     function barShows(id) { var x = barItems.find(i => i.id === id); return !!x && x.place !== "off" }

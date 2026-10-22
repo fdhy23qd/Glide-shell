@@ -507,3 +507,46 @@ class Update(Sandbox):
         self.assertFalse(res["shown"])
         self.run_py(TOOLS / "glide-update.py", "ack", env=env)
         self.assertTrue(json.loads((self.state / "glide-shell" / "update.json").read_text())["shown"])
+
+
+class Preview(Sandbox):
+    """Быстрый просмотр: текст — начало, папка — содержимое, PDF и видео — картинка в кэше."""
+
+    def look(self, path):
+        return json.loads(self.run_py(TOOLS / "glide-preview.py", str(path), timeout=60).stdout)
+
+    def test_kinds(self):
+        (self.tmp / "заметка.md").write_text("# Заголовок\nстрока\n")
+        r = self.look(self.tmp / "заметка.md")
+        self.assertEqual(r["kind"], "text")
+        self.assertIn("Заголовок", r["text"])
+        d = self.tmp / "папка"; d.mkdir(); (d / "a.txt").write_text("1"); (d / "sub").mkdir(); (d / ".скрытый").write_text("")
+        r = self.look(d)
+        self.assertEqual((r["kind"], r["count"]), ("dir", 2))
+        self.assertIn("sub/", r["items"])
+        self.assertEqual(self.look(self.tmp / "нет-такого")["kind"], "error")
+        if shutil.which("ffmpeg"):
+            v = self.tmp / "клип.mp4"
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x240:duration=4", str(v)],
+                           check=True, stdin=subprocess.DEVNULL)
+            r = self.look(v)
+            self.assertEqual(r["kind"], "video")
+            self.assertTrue(Path(r["image"]).exists())
+            self.assertTrue(str(self.cache) in r["image"])
+
+
+class ArchUpdates(Sandbox):
+    """Обновления Arch: разбор «имя старая -> новая», без pacman — «не поддерживается», итог — в state."""
+
+    def test_check(self):
+        self.shim("pacman", "#!/bin/sh\nexit 0\n")
+        self.shim("checkupdates", "#!/bin/sh\necho 'linux 6.1-1 -> 6.2-1'\necho 'мусор'\necho 'mesa 1:24-1 -> 1:25-1'\n")
+        self.shim("yay", "#!/bin/sh\necho 'blockbench 5.2.0-1 -> 5.2.1-1'\n")
+        self.shim("paru", "#!/bin/sh\nexit 1\n")   # paru «есть», но первым берётся он — отвечает пусто
+        r = json.loads(self.run_py(TOOLS / "glide-archupdates.py", "check").stdout)
+        self.assertEqual([x["name"] for x in r["repo"]], ["linux", "mesa"])
+        self.assertEqual(r["repo"][1]["to"], "1:25-1")
+        self.assertEqual(r["count"], 2 + len(r["aur"]))
+        self.assertTrue((self.state / "glide-shell" / "archupdates.json").exists())
+        r = json.loads(self.run_py(TOOLS / "glide-archupdates.py", "check", env={"PATH": str(self.bin) + ":/usr/bin"}).stdout)
+        self.assertTrue(r["supported"])

@@ -373,6 +373,7 @@ ShellRoot {
 
     readonly property bool nightOn: NightLight.on   // синглтон ленивый — без обращения ночной свет не запустится
     readonly property bool updatesAvailable: Updates.available   // и проверка обновлений — тоже
+    readonly property int archUpdates: ArchUpdates.count
 
     // ---------- «не засыпать» ----------
     // Wayland idle-inhibit на окне острова — экран не гаснет (учитывают niri и демоны простоя),
@@ -743,6 +744,7 @@ ShellRoot {
         onTriggered: if (filesProc.running && root.query.trim().length >= 2) filesProc.write(root.query + "\n")
     }
     onQueryChanged: {
+        if (previewPath) showPreview("")
         selected = 0
         if (!Prefs.fileSearch || query.trim().length < 2) return
         if (!filesWanted) filesWanted = true
@@ -762,7 +764,31 @@ ShellRoot {
     function activateSelected() { if (results.length) activate(results[Math.min(selected, results.length - 1)]) }
     function moveSelection(d) {
         if (results.length) selected = (selected + d + results.length) % results.length
+        if (previewPath) { var r = results[selected]; showPreview(r && r.kind === "file" ? r.path : "") }   // просмотр едет за выбором
     }
+
+    // ---------- быстрый просмотр файла в поиске (Shift+Пробел; tools/glide-preview.py) ----------
+    property string previewPath: ""
+    property var preview: null
+    function togglePreview() {
+        var r = results[Math.min(selected, results.length - 1)]
+        showPreview(previewPath || !r || r.kind !== "file" ? "" : r.path)
+    }
+    function showPreview(path) {
+        previewPath = path
+        preview = null
+        if (!path) return
+        previewProc.running = false
+        previewProc.command = ["python3", "-I", Quickshell.shellDir + "/tools/glide-preview.py", path]
+        previewProc.running = true
+    }
+    Process {
+        id: previewProc
+        stdout: StdioCollector {
+            onStreamFinished: { try { var d = JSON.parse(text); if (root.previewPath) root.preview = d } catch (e) {} }
+        }
+    }
+
     function clearSearch() { query = ""; win.clearSearchUi() }
 
     // ---------- панель ----------
@@ -910,7 +936,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.86 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.87 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -961,6 +987,12 @@ ShellRoot {
         function welcome(mode: string): void {   // мастер первого запуска: "" — открыть, close — закрыть
             if (mode === "close") { root.welcomeOpen = false; return }
             root.close(); root.welcomeOpen = true
+        }
+        function preview(): string { root.togglePreview(); return root.previewPath }   // быстрый просмотр выбранного файла
+        function archUpdates(what: string): string {   // check — проверить, upgrade — терминал с обновлением, "" — итог
+            if (what === "check") { ArchUpdates.check(); return "ok" }
+            if (what === "upgrade") { ArchUpdates.upgrade(); return "ok" }
+            return JSON.stringify(ArchUpdates.st)
         }
         function update(what: string): string {   // check — проверить (git fetch), shell | apps — обновить
             if (what === "check") { Updates.check(true); return "ok" }
