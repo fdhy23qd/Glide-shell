@@ -81,6 +81,11 @@ for root in roots:
             found.pop(pid, None)
             continue
         m["dir"] = str(d)
+        # время последней правки файлов плагина: ?v= в адресе QML — иначе движок берёт старую версию из кэша
+        try:
+            m["mtime"] = int(max(f.stat().st_mtime for f in d.iterdir() if f.is_file()))
+        except ValueError:
+            m["mtime"] = 0
         m["categories"] = norm(placement.get(pid, m.get("category")))
         m["category"] = m["categories"][0]
         found[pid] = m

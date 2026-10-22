@@ -659,7 +659,7 @@ PanelWindow {
             Loader {
                 id: ld
                 anchors.verticalCenter: parent.verticalCenter
-                source: pp.plugin && pp.plugin.bar ? "file://" + pp.plugin.dir + "/" + pp.plugin.bar : ""
+                source: pp.plugin && pp.plugin.bar ? "file://" + pp.plugin.dir + "/" + pp.plugin.bar + "?v=" + (pp.plugin.mtime || 0) : ""
                 onLoaded: { item.api = ps; if ("pluginDir" in item) item.pluginDir = pp.plugin.dir }
                 onStatusChanged: if (status === Loader.Error) console.warn("glide-shell: элемент бара плагина " + pp.pid + " не загрузился")
             }

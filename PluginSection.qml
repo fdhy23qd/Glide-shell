@@ -54,7 +54,7 @@ ColumnLayout {
     Loader {
         Layout.fillWidth: true
         visible: !!plugin.qml
-        source: plugin.qml ? "file://" + plugin.dir + "/" + plugin.qml : ""
+        source: plugin.qml ? "file://" + plugin.dir + "/" + plugin.qml + "?v=" + (plugin.mtime || 0) : ""
         onStatusChanged: if (status === Loader.Error)
             qmlError.text = Tr.t("Плагин не загрузился: ") + Qt.createComponent(source).errorString().trim()
         onLoaded: {

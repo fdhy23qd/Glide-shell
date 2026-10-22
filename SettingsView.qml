@@ -1291,7 +1291,9 @@ ColumnLayout {
     readonly property var customs: sv.panel && sv.panel.desk ? sv.panel.desk.customs : []
     function wMeta(w) { return w.type === "custom" ? customs.find(x => x.id === w.custom) || null : null }
     function wName(w) { var m = wMeta(w); return w.type === "custom" ? (m ? m.name : w.custom + Tr.t(" (не найден)")) : wType(w.type).name }
-    function wGlyph(w) { var m = wMeta(w); return w.type === "custom" ? (m && m.icon ? parseInt(m.icon, 16) : 0xF0B6F) : wType(w.type).glyph }
+    // значок виджета: сам символ («󰖌») или его код («F051F») — оба вида допустимы
+    function iconCode(s) { return /^[0-9a-fA-F]{4,6}$/.test(s) ? parseInt(s, 16) : String(s).codePointAt(0) }
+    function wGlyph(w) { var m = wMeta(w); return w.type === "custom" ? (m && m.icon ? sv.iconCode(m.icon) : 0xF0B6F) : wType(w.type).glyph }
     function wAddCustom(id) {
         var w = { id: "w" + Date.now(), type: "custom", custom: id, screen: "", anchor: "c", dx: 0, dy: 0, size: 1, color: "text", opacity: 1, opts: {} }
         Prefs.set("widgets", Prefs.widgets.concat([w]))
@@ -1356,7 +1358,7 @@ ColumnLayout {
                 model: sv.customs
                 delegate: ActionBtn {
                     required property var modelData
-                    glyph: String.fromCodePoint(modelData.icon ? parseInt(modelData.icon, 16) : 0xF0B6F)
+                    glyph: String.fromCodePoint(modelData.icon ? sv.iconCode(modelData.icon) : 0xF0B6F)
                     text: "+ " + modelData.name
                     onClicked: sv.wAddCustom(modelData.id)
                 }

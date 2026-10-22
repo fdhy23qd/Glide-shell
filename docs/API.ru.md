@@ -23,8 +23,9 @@
 
 ## 0. Полный пример
 
-Счётчик воды: раздел в панели, элемент бара и две настройки. Те же файлы лежат в
-[`examples/plugins/water`](../examples/plugins/water): скопируй папку в `~/.config/glide-shell/plugins/water/`.
+Счётчик воды: раздел в панели, элемент бара и две настройки. Здесь — сокращённая версия; полная, с обеими кнопками
+и сообщением о выполненной норме, лежит в [`examples/plugins/water`](../examples/plugins/water): скопируй папку в
+`~/.config/glide-shell/plugins/water/`.
 
 `plugin.json`:
 ```json
@@ -64,6 +65,9 @@ ColumnLayout {
     Rectangle {   // кнопка с наведением и нажатием
         implicitWidth: 120; implicitHeight: 32; radius: Theme.r(16)
         color: ma.pressed ? Theme.accentPressed : ma.containsMouse ? Theme.accentLight : Theme.accent
+        scale: ma.pressed ? 0.95 : 1
+        Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+        Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
         Text { anchors.centerIn: parent; text: "+1 стакан"; color: Theme.accentText; font.pixelSize: Theme.fs(13) }
         MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                     onClicked: root.add(1) }
@@ -113,16 +117,21 @@ Item {
 
 | Поле | Что это |
 |---|---|
-| `id`, `name`, `icon` | Обязательны `id` и `name`. Плагин с `id` встроенного заменяет его. `icon` — один символ, обычно значок Nerd Font. |
+| `id`, `name`, `icon` | Обязательны `id` и `name`. Плагин с `id` встроенного заменяет его. `icon` — сам символ (`"󰖌"`, значок Nerd Font) или его код (`"F058C"`); оба вида работают и здесь, и в `widget.json`. |
 | `category` | Категория панели: `power`, `control`, `media`, `clipboard`, `apps`, `quick`, `today`, `phone`, `ai`, `dev`, `text`, `system`, `net`, `notify` или своя. Новый id создаёт новую категорию (`categoryName`, `categoryIcon`). |
 | `priority` | Порядок внутри категории: больше — выше. |
 | `items` | Кнопки, поля и списки, запускающие команды. Код не нужен (см. README). |
 | `qml` | Свой интерфейс раздела в панели. Корневой элемент получает `api` (раздел 3). |
 | `bar` | QML-элемент для бара (раздел 5). Появляется в «Настройки» → «Бар» и сразу включён. |
 | `settings` | Настройки в «Настройки» → «Плагины», под плагином (типы ниже). Читаются как `api.settings.<key>`. |
-| `contextActions` | Кнопки над выделенным текстом или буфером. |
-| `daemon` | Фоновый процесс, стартует вместе с оболочкой. |
-| `wide`, `keywords`, `output`, `confirm`, `close`, `handoff` | См. README. |
+| `contextActions` | Кнопки над выделенным текстом или буфером: `[{"label", "when", "command", "output"}]`. `when`: `text` (по умолчанию), `multiline`, `json`, `xml`, `url`, `host`, `jwt`, `number`, `timestamp`, `path`, `base64`, `urlenc` или список из них. Команда получает текст в `{text}` и `$QP_TEXT`. |
+| `daemon` | Фоновый процесс (argv): стартует вместе с оболочкой и останавливается с ней. |
+| `keywords` | Дополнительные слова для поиска. |
+| `wide` | `true` — категория с этим плагином открывается широкой карточкой. |
+| `handoff` | У элемента вместо `command`: `"handoff": "<id плагина>"` (с необязательным `"prompt"`) передаёт текст другому плагину и открывает его категорию. QML-плагин забирает его через `api.takeHandoff(id)`: один раз вернёт `{text, prompt}`, иначе `null`. |
+| `output` | У элемента: `"copy"`, `"notify"` или `"copy+notify"`. Вывод команды уходит в буфер и/или уведомление; ненулевой код возврата тоже придёт уведомлением. |
+| `confirm` | У кнопки: срабатывает только со второго нажатия (в течение 3 секунд). |
+| `close` | У элемента: `false` — не закрывать панель после действия. |
 
 Типы настроек (у каждой — `key`, `label`, `default`, по желанию `hint` — серая строка под названием):
 
@@ -169,7 +178,7 @@ Item {
 |---|---|
 | `api.version` | `1` |
 | `api.owner` | id плагина (у виджета — `widget-<id>`) |
-| `api.theme` | Все токены дизайна: `theme.surface`, `theme.text`, `theme.accent`, `theme.r(16)` (скругление), `theme.fs(13)` (размер шрифта), `theme.isLight`… С `import qs` доступен и сам `Theme`. |
+| `api.theme` | Тот же объект, что `Theme` из `import qs` (оба написания — одно и то же). Все токены дизайна: `theme.surface`, `theme.text`, `theme.accent`, `theme.r(16)` (скругление), `theme.fs(13)` (размер шрифта), `theme.isLight`… С `import qs` доступен и сам `Theme`. |
 | `api.accent`, `api.accentText`, `api.iconFont` | Акцентный цвет; цвет текста на заливке акцентом (белый, а на светлых акцентах тёмный); шрифт значков (Nerd Font) |
 | `api.date`, `api.today` | Текущая дата (обновляется на каждой минуте и после сна) и `"ГГГГ-ММ-ДД"`. Привяжись к `api.today`, чтобы заметить новый день. |
 | `api.shown` | Панель открыта |
@@ -234,7 +243,18 @@ api.activity.end("sync")
 ```
 
 Поля: `title`, `subtitle`, `icon` (один значок), `progress` (0…1; меньше 0 — бегущая полоска без процента), `color`,
-`actionLabel` с `onAction` (кнопка), `onClick` (щелчок по строке). Пользователь может выключить активности в
+`actionLabel` с `onAction` (кнопка), `onClick` (щелчок по строке). `onAction` и `onClick` — обычные функции
+JavaScript в том же объекте:
+
+```qml
+api.activity.start("tea", {
+    title: "Чай заваривается", progress: 0, actionLabel: "Стоп",
+    onAction: function () { api.activity.end("tea") },        // кнопка
+    onClick: function () { api.openCategory("quick") }        // щелчок по строке
+})
+```
+
+`update` сохраняет функции, переданные в `start`, если не передать новые. Пользователь может выключить активности в
 «Настройки» → «Остров». Из скрипта: `qs -c glide-shell ipc call panel activity ID "Название" 0.5` (пустое название
 убирает строку).
 
@@ -306,7 +326,8 @@ Item {
 - Журнал: `journalctl --user -u glide-shell -f` (предупреждения QML и `console.log`).
 - Проверить, что QML собирается, без перезапуска оболочки: `qs -p <папка>` с `shell.qml`
   `ShellRoot { Component.onCompleted: console.warn(Qt.createComponent("Main.qml").errorString()) }`.
-- Виджеты перечитываются после правки файла, плагины — при каждом открытии панели.
+- Виджеты перечитываются после правки файла. Плагины (`plugin.json`, раздел и элемент бара) — при каждом открытии
+  панели: правка видна после того, как закроешь и откроешь панель, перезапуск не нужен.
 
 ---
 
