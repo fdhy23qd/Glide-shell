@@ -45,6 +45,15 @@ Singleton {
     readonly property bool fileSearch: data.fileSearch !== false
     readonly property string webSearch: ["duckduckgo", "google", "yandex", "bing", "off"].indexOf(data.webSearch) >= 0 ? data.webSearch : "duckduckgo"
     readonly property bool islandTimer: data.islandTimer !== false     // таймер в острове
+    // значки у часов острова: [{id, side: left|right, on}] — порядок, сторона, включён; видны, только когда есть что показать
+    readonly property var islandIconIds: ["weather", "battery", "notif", "dnd", "vpn", "mic", "volume", "bt", "awake", "night", "layout"]
+    readonly property var islandIcons: {
+        var out = Array.isArray(data.islandIcons)
+            ? data.islandIcons.filter(x => x && islandIconIds.indexOf(x.id) >= 0).map(x => ({ id: x.id, side: x.side === "left" ? "left" : "right", on: x.on === true }))
+            : [{ id: "weather", side: "right", on: data.islandWeather !== false }]   // прежняя настройка «температура у часов»
+        for (var id of islandIconIds) if (!out.some(x => x.id === id)) out.push({ id: id, side: "right", on: false })
+        return out
+    }
     // порядок строк острова (и что главнее в компактном виде): чего нет в списке — дописывается в конец
     readonly property var islandKinds: ["osd", "flash", "rec", "notif", "music", "timer"]
     readonly property var islandOrder: {
