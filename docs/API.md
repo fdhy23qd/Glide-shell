@@ -122,6 +122,7 @@ Item {
 | `priority` | Order inside the category: higher comes first. |
 | `items` | Buttons, inputs and lists that run commands. No code needed (see the README). |
 | `qml` | Your own interface for the panel section. Its root item receives `api` (section 3). |
+| `service` | A QML object without an interface that lives as long as the shell: background work (section 4a). |
 | `bar` | A QML item for the bar (section 5). It shows up in Settings → Bar and is on by default. |
 | `settings` | Settings shown in Settings → Plugins under the plugin (types below). Read them as `api.settings.<key>`. |
 | `contextActions` | Buttons over the selected text or clipboard: `[{"label", "when", "command", "output"}]`. `when`: `text` (default), `multiline`, `json`, `xml`, `url`, `host`, `jwt`, `number`, `timestamp`, `path`, `base64`, `urlenc`, or a list of these. The command gets the text in `{text}` and `$QP_TEXT`. |
@@ -192,7 +193,7 @@ Every plugin and widget gets its own object. Storage, settings and notifications
 | `api.run(argv, text)` | Run a program (no shell). `text` goes to `$QP_TEXT`. |
 | `api.copy(text)` | Copy to the clipboard |
 | `api.flash(icon, text, color)` | A short message in the island. An empty `icon` shows ✓, an empty `color` means `Theme.success`. |
-| `api.notify(title, body, icon)` | A notification under the plugin's name |
+| `api.notify(title, body, icon)` | A notification under the plugin's name. An empty `icon` means the standard information icon. |
 | `api.close()` | Close the panel |
 | `api.openCategory(id)` | Switch the panel to a category |
 | `api.openUrl(url)` | Open a link or file |
@@ -294,6 +295,40 @@ height.
 Use `Theme` for every colour, radius and font size (`Theme.r(16)`, `Theme.fs(13)`). That way the plugin follows the
 user's tone, accent, light mode, corner radius and text size. For durations, use `Prefs.ms(200)`: it follows the
 "Animations" setting, including turning them off. If the QML fails to load, the error is shown in the plugin's section.
+
+## 4a. Where plugin code runs and how long it lives
+
+| Part | Created | Destroyed | Use it for |
+|---|---|---|---|
+| `qml`: section | When its category is shown | When the user switches category, starts typing in search or opens settings. Closing the panel does **not** destroy it. | The interface |
+| `bar`: bar item | When the shell starts, if the item is on (Settings → Bar) | When the user hides it | A compact indicator |
+| `service`: `"service": "Service.qml"` | 6 s after the shell starts | When the plugin is disabled or the shell exits | **Background work**: timers, watching files, activities |
+| `daemon`: any program | With the shell | With the shell | Work outside QML |
+
+A service is a QML object without an interface (`QtObject` or `Item`) and gets the same `api`. Keep timers and
+`api.activity` there. In the section, only write to `api.storage`: the service and the bar item see the change at
+once. If a bar item does the work, it stops when the user hides it from the bar.
+
+```qml
+// Service.qml
+import QtQuick
+Item {
+    id: svc
+    property var api
+    Timer { interval: 1000; repeat: true; running: !!svc.api; onTriggered: { /* … */ } }
+}
+```
+
+All parts of a plugin, its section, bar item and service, are reloaded after an edit the next time the panel opens.
+
+**Names you cannot use for your own properties.** `left`, `right`, `top`, `bottom`, `x`, `y`, `z`, `width`, `height`,
+`data`, `children`, `parent`, `state`, `states`, `visible`, `enabled`, `opacity`, `scale`, `clip` and other `Item`
+properties are taken. A property named `left` stops the whole file from loading with "Cannot override FINAL property".
+Names that start with `on` and a capital letter are signal handlers, not properties. Use `remaining`, `endAt` and
+similar names instead.
+
+QML: Qt 6.8 or newer is required, so inline components (`component Btn: Rectangle {…}`) are fine.
+`api.activity.update` from QML has no rate limit; once a second is cheap.
 
 ---
 

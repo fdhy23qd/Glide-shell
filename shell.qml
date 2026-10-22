@@ -775,6 +775,22 @@ ShellRoot {
         if (previewPath) { var r = results[selected]; showPreview(r && r.kind === "file" ? r.path : "") }   // просмотр едет за выбором
     }
 
+    // ---------- фон плагинов: plugin.json «service» — QML без интерфейса, живёт с оболочкой (таймеры, слежение) ----------
+    // модель — по подписи: список плагинов пересобирается при каждом открытии панели, а службы не должны перезапускаться
+    readonly property string serviceSig: JSON.stringify(plugins.filter(p => p.service)
+        .map(p => ({ id: p.id, name: p.name, dir: p.dir, service: p.service, mtime: p.mtime || 0, settings: p.settings || [] })))
+    Instantiator {
+        model: Prefs.warm ? JSON.parse(root.serviceSig) : []
+        delegate: Loader {
+            id: svc
+            required property var modelData
+            property ApiScope scope: ApiScope { shell: root; owner: svc.modelData.id; ownerName: svc.modelData.name; manifest: svc.modelData }
+            source: "file://" + modelData.dir + "/" + modelData.service + "?v=" + modelData.mtime
+            onLoaded: { item.api = scope; if ("pluginDir" in item) item.pluginDir = modelData.dir }
+            onStatusChanged: if (status === Loader.Error) console.warn("glide-shell: служба плагина " + modelData.id + " не загрузилась")
+        }
+    }
+
     // ---------- чужие приложения: служба D-Bus org.glide.Shell (tools/glide-shell.py, docs/API.md) ----------
     function fromDbus(payload) {
         var m
@@ -992,7 +1008,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.93 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.94 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -1052,6 +1068,10 @@ ShellRoot {
         }
         // от службы D-Bus org.glide.Shell (tools/glide-shell.py): base64 от JSON — qs ipc режет аргументы по запятым
         function dbus(payload: string): string { return root.fromDbus(payload) }
+        function activityAct(id: string, what: string): string {   // как щелчок: what = click | action | close
+            if (what === "action") Activities.act(id); else if (what === "close") Activities.end(id); else Activities.click(id)
+            return JSON.stringify(Activities.list.map(a => a.id))
+        }
         function peek(on: string): string { root.islandHover = on === "on"; return String(root.islandPeek) }   // раскрыть остров, как наведением
         // «живая активность» из скрипта: title "" — убрать; progress 0…1, меньше 0 — без прогресса
         function activity(id: string, title: string, progress: real): string {
