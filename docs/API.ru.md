@@ -139,6 +139,22 @@ onClicked: api.storage.set("clicks", clicks + 1)
 | `api.notifs` | История уведомлений и «не беспокоить» |
 | `api.awake`, `api.powerTimer`, `api.recorder`, `api.kdeconnect`, `api.appCounts` | Понятно по названию |
 
+### «Живые активности»
+
+Строка в острове под часами — загрузка, сборка, отсчёт и т. п. Показывается самая свежая; при наведении — подпись,
+кнопка и «×».
+
+```qml
+api.activity.start("sync", { title: "Синхронизация фото", progress: 0, icon: "󰓦" })
+api.activity.update("sync", { progress: 0.4, subtitle: "120 из 300" })
+api.activity.end("sync")
+```
+
+Поля: `title`, `subtitle`, `icon` (один значок), `progress` (0…1; меньше 0 — бегущая полоска без процента), `color`,
+`actionLabel` с `onAction` (кнопка), `onClick` (щелчок по строке). Пользователь может выключить активности в
+«Настройки» → «Остров». Из скрипта: `qs -c glide-shell ipc call panel activity ID "Название" 0.5` (пустое название
+убирает строку).
+
 ### События
 
 ```qml

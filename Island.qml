@@ -24,7 +24,7 @@ PanelWindow {
     function shows(k) {
         if (!p.barOn || !p.stacked) return kind === k
         return k === "music" ? p.musicOn : k === "timer" ? p.timerOn : k === "flash" ? !!p.flashMsg
-             : k === "osd" ? !!p.osd : k === "notif" ? !!p.notif : k === "rec" ? p.recOn : false
+             : k === "osd" ? !!p.osd : k === "notif" ? !!p.notif : k === "rec" ? p.recOn : k === "live" ? p.liveOn : false
     }
     function kindAt(x, y) {   // что под курсором (с баром): в компактном виде — часы или активность справа
         if (!p.barOn) return p.activity
@@ -603,6 +603,90 @@ PanelWindow {
                 glyph: iw.nf(0xF0156); tint: Theme.error
                 base: Theme.errorContainer; hot: Theme.errorHover
                 onClicked: iw.p.cancelTimer()
+            }
+        }
+        }
+
+        Slot {
+            row: iw.p.stacked; inlineX: iw.p.inlineAct ? iw.p.inlineX : 0
+            rowY: iw.p.rowY("live")
+            rowH: iw.p.rowLiveH
+        // «живая активность» (Activities.qml): значок, название, прогресс; наведение — подпись, кнопка, «×»
+        Layer {
+            id: liveL
+            readonly property var a: Activities.top
+            readonly property real prog: a ? a.progress : -1
+            readonly property color tone: a && a.color ? a.color : Prefs.accent
+            on: iw.shows("live") && iw.live
+            Text {
+                x: 12; y: iw.peek ? 10 : 0; height: iw.peek ? 22 : parent.height
+                verticalAlignment: Text.AlignVCenter
+                text: liveL.a && liveL.a.icon ? liveL.a.icon : iw.nf(0xF0996)
+                color: liveL.tone; font.family: Prefs.iconFont; font.pixelSize: Theme.fs(iw.peek ? 18 : 15)
+            }
+            Text {
+                x: iw.peek ? 38 : 34; y: iw.peek ? 10 : 0; height: iw.peek ? 22 : parent.height
+                width: parent.width - x - liveRight.width - 12
+                verticalAlignment: Text.AlignVCenter
+                text: liveL.a ? liveL.a.title : ""
+                color: Theme.text; font.pixelSize: Theme.fs(12); font.weight: iw.peek ? Font.DemiBold : Font.Normal
+                elide: Text.ElideRight; textFormat: Text.PlainText
+            }
+            Text {   // при наведении — подпись и «ещё N»
+                visible: iw.peek
+                x: 38; y: 32
+                width: parent.width - x - liveRight.width - 12
+                text: (liveL.a ? liveL.a.subtitle : "") + (Activities.list.length > 1 ? (liveL.a && liveL.a.subtitle ? "  ·  " : "") + Tr.t("ещё ") + (Activities.list.length - 1) : "")
+                color: Theme.textSecondary; font.pixelSize: Theme.fs(11)
+                elide: Text.ElideRight; textFormat: Text.PlainText
+            }
+            Row {
+                id: liveRight
+                anchors.right: parent.right; anchors.rightMargin: 6
+                y: iw.peek ? 6 : (parent.height - height) / 2
+                spacing: 4
+                Text {
+                    visible: liveL.prog >= 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Math.round(liveL.prog * 100) + "%"
+                    color: liveL.tone; font.pixelSize: Theme.fs(12); font.bold: true; font.features: ({ "tnum": 1 })
+                }
+                Rectangle {   // кнопка активности (props.actionLabel)
+                    visible: iw.peek && !!liveL.a && !!liveL.a.actionLabel
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: actText.implicitWidth + 18; height: 24; radius: 12
+                    color: actMa.pressed ? Theme.accentPressed : actMa.containsMouse ? Theme.accentLight : Prefs.accent
+                    Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+                    Text { id: actText; anchors.centerIn: parent; text: liveL.a ? liveL.a.actionLabel : ""
+                           color: Theme.accentText; font.pixelSize: Theme.fs(11) }
+                    MouseArea { id: actMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onClicked: Activities.act(liveL.a.id) }
+                }
+                IBtn {
+                    visible: iw.peek
+                    width: 24; height: 24; glyphSize: 12
+                    glyph: iw.nf(0xF0156); tint: Theme.textSecondary
+                    onClicked: Activities.end(liveL.a.id)
+                }
+            }
+            Rectangle {   // полоска прогресса снизу; без прогресса — бегущая
+                x: 12; width: parent.width - 24
+                anchors.bottom: parent.bottom; anchors.bottomMargin: iw.peek ? 8 : 3
+                height: 3; radius: 2
+                color: Qt.rgba(liveL.tone.r, liveL.tone.g, liveL.tone.b, 0.22)
+                clip: true
+                Rectangle {
+                    visible: liveL.prog >= 0
+                    width: parent.width * Math.max(0, Math.min(1, liveL.prog)); height: parent.height; radius: 2
+                    color: liveL.tone
+                    Behavior on width { NumberAnimation { duration: Prefs.ms(300); easing.type: Easing.OutCubic } }
+                }
+                Rectangle {   // ожидание без процента: бесконечный индикатор (не через Prefs.ms — см. CLAUDE.md)
+                    visible: liveL.prog < 0 && liveL.on
+                    width: parent.width * 0.3; height: parent.height; radius: 2
+                    color: liveL.tone
+                    NumberAnimation on x { from: -width; to: parent.width; duration: 1300; loops: Animation.Infinite; running: liveL.prog < 0 && liveL.on }
+                }
             }
         }
         }

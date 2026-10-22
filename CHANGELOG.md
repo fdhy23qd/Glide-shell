@@ -2,6 +2,10 @@
 
 Новое — сверху. English: see [README.md](README.md); история ведётся по-русски.
 
+- **v0.89** — «живые активности» в острове (`Activities.qml`): строка с значком, названием и прогрессом (или бегущей
+  полоской), при наведении — подпись, кнопка и «×», «ещё N». Для плагинов — `api.activity.start/update/end`, для
+  скриптов — IPC `panel activity ID "Название" 0.5`; выключаются в «Остров» → «Активности приложений».
+  IPC `panel peek on|off` — раскрыть остров без мыши.
 - **v0.88** — API плагинов и виджетов, версия 1 (`ApiScope.qml`, docs/API.md и API.ru.md): у каждого плагина и виджета
   свой объект — хранилище (`api.storage`), настройки из `plugin.json` («settings» — поля во вкладке «Плагины»),
   `api.notify`, события (`opened`, `closed`, `themeUpdated`, `notification`), `api.niri`, `api.player`, громкость,

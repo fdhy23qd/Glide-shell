@@ -79,6 +79,7 @@ ColumnLayout {
         osd:   { glyph: 0xF057E, label: Tr.t("Громкость и яркость"), hint: Tr.t("А также микрофон, профиль питания и выход звука"), pref: "islandOsd" },
         flash: { glyph: 0xF012C, label: Tr.t("Подтверждения действий"), hint: Tr.t("«✓ название» после действия"), pref: "islandFlash" },
         rec:   { glyph: 0xF044A, label: Tr.t("Запись экрана"), hint: Tr.t("Всегда — чтобы идущая запись не забылась"), pref: "" },
+        live:  { glyph: 0xF0996, label: Tr.t("Активности приложений"), hint: Tr.t("Загрузки, сборки, отсчёты — от плагинов и программ"), pref: "islandLive" },
         notif: { glyph: 0xF009A, label: Tr.t("Уведомления"), hint: Tr.t("История и колокольчик в баре — всегда"), pref: "islandNotif" },
         music: { glyph: 0xF075A, label: Tr.t("Музыка"), hint: Tr.t("Обложка и эквалайзер; наведение — управление"), pref: "islandMusic" },
         timer: { glyph: 0xF13AB, label: Tr.t("Таймер"), hint: Tr.t("Кольцо и остаток; наведение — отмена"), pref: "islandTimer" }
