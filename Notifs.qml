@@ -84,7 +84,19 @@ Singleton {
         return n.actions.filter(a => a.identifier !== "default" && a.identifier !== "inline-reply").map(a => ({ id: a.identifier, text: a.text }))
     }
     signal received(var entry)   // новое уведомление — для плагинов (api.notification)
+    // закрытое пользователем не возвращается час: KDE Connect присылает уведомление с телефона заново,
+    // пока оно висит на телефоне, — закрыл, а оно тут же снова в списке
+    property var closedKeys: ({})
+    function keyOf(appName, summary, body) { return appName + "\u0001" + summary + "\u0001" + body }
+    function forget(entries) {
+        var now = Date.now(), k = {}
+        for (var x in closedKeys) if (now - closedKeys[x] < 3600000) k[x] = closedKeys[x]
+        for (var e of entries) k[keyOf(e.appName, e.summary, e.body)] = now
+        closedKeys = k
+    }
     function add(n) {
+        var seenAt = closedKeys[keyOf(n.appName || "", n.summary || "", safeBody(n.body))]
+        if (seenAt && Date.now() - seenAt < 3600000 && n.urgency !== NotificationUrgency.Critical) return
         n.tracked = true
         var e = {
             key: ++seq, n: n, time: Date.now(),
@@ -144,14 +156,14 @@ Singleton {
     // ---- действия ----
     function invoke(e, id) {
         if (e && e.n) for (var a of e.n.actions) if (a.identifier === id) { a.invoke(); break }
-        if (popup === e) hidePopup()
+        if (popup && popup.key === e.key) hidePopup()
     }
     // ответ из острова: приложение получит текст (NotificationReplied), уведомление закрывается
     function sendReply(e, text) {
         if (!e || !e.n || !e.reply || !text.trim()) return false
         e.n.sendInlineReply(text)
         if (e.unread) { e.unread = false; unread = Math.max(0, unread - 1) }
-        if (popup === e) hidePopup()
+        if (popup && popup.key === e.key) hidePopup()
         return true
     }
     // клик по уведомлению: действие по умолчанию, иначе — окно приложения; false — нечего делать
@@ -163,31 +175,38 @@ Singleton {
             var w = Niri.windows[id], app = (w.app_id || "").toLowerCase()
             if (app && ids.some(x => app === x || app.endsWith("." + x) || x.endsWith("." + app))) {
                 Niri.focusWindow(w.id)
-                if (popup === e) hidePopup()
+                if (popup && popup.key === e.key) hidePopup()
                 return true
             }
         }
         return false
     }
+    // по key, а не по ссылке: интерфейс (Repeater) получает копии записей — `x !== e` их не находил,
+    // и крестик в панели «удалял» уведомление, оставляя его в списке
     function drop(e) {
-        if (popup === e) hidePopup()
-        if (e.unread) { e.unread = false; unread = Math.max(0, unread - 1) }   // отозванное или закрытое — уже не непрочитано
-        list = list.filter(x => x !== e)
+        if (popup && popup.key === e.key) hidePopup()
+        var real = list.find(x => x.key === e.key)
+        if (real && real.unread) { real.unread = false; unread = Math.max(0, unread - 1) }   // закрытое — уже не непрочитано
+        list = list.filter(x => x.key !== e.key)
     }
-    function remove(e) {   // пользователь закрыл крестиком
-        if (e.n) e.n.dismiss()
-        drop(e)
+    function remove(e) {   // пользователь закрыл крестиком (e может быть копией — берём настоящую запись)
+        var real = list.find(x => x.key === e.key) || e
+        forget([real])
+        if (real.n) real.n.dismiss()
+        drop(real)
     }
     // несколько разом (стопка приложения): список меняется один раз — иначе после первого удаления
     // интерфейс перестраивается посреди цикла, и вызывающий его элемент уже уничтожен
     function removeMany(entries) {
-        var gone = entries.slice()
+        var keys = entries.map(e => e.key)
+        var gone = list.filter(x => keys.indexOf(x.key) >= 0)   // настоящие записи, а не копии из интерфейса
+        forget(gone)
         for (var e of gone) {
             if (e.n) e.n.dismiss()
-            if (popup === e) hidePopup()
+            if (popup && popup.key === e.key) hidePopup()
             if (e.unread) { e.unread = false; unread = Math.max(0, unread - 1) }
         }
-        list = list.filter(x => gone.indexOf(x) < 0)
+        list = list.filter(x => keys.indexOf(x.key) < 0)
     }
     // ---- история на диске: переживает перезапуск оболочки (Prefs.notifKeep) ----
     // ~/.local/state/glide-shell/notifications.json, права 0600 (в уведомлениях бывают личные сообщения).
@@ -238,6 +257,7 @@ Singleton {
     Connections { target: Prefs; function onNotifKeepChanged() { ns.saveHistory() } }
 
     function clear() {
+        forget(list)
         for (var e of list) if (e.n) e.n.dismiss()
         list = []
         hidePopup()

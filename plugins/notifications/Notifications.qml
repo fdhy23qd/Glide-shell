@@ -282,8 +282,7 @@ ColumnLayout {
             }
         }
 
-        Rectangle {   // убрать
-            visible: !card.stacked
+        Rectangle {   // убрать (у свёрнутой стопки — всю стопку)
             Behavior on color { ColorAnimation { duration: Prefs.ms(140) } }
             anchors.right: parent.right; anchors.rightMargin: 8
             y: 8
