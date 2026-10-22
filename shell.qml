@@ -109,8 +109,9 @@ ShellRoot {
     Binding { target: Notifs; property: "replyLock"; value: root.replying }
     // С баром остров — стопка строк: сверху всегда часы, под ними как продолжение острова
     // строки активностей (подтверждение, музыка, таймер); наведение раскрывает строки.
+    property real clockIconsW: 0          // значки у часов (Island.qml сообщает ширину видимых)
     readonly property int clockW: Math.ceil(clockTimeMetrics.advanceWidth + (clockDate ? clockDateMetrics.advanceWidth + 8 : 0)
-                                            + (clockWeather ? clockWxMetrics.advanceWidth + 32 : 0)) + 32   // 32: отступы, значок 14
+                                            + clockIconsW) + 32   // 32: отступы
     // погода у часов: значок и температура
     readonly property string clockWeather: Prefs.islandWeather && Weather.ok ? Weather.temp(Weather.data.now.temp) : ""
     readonly property int flashW: Math.min(380, Math.max(140, Math.ceil(flashMetrics.advanceWidth) + 64))
@@ -892,7 +893,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.79 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.80 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

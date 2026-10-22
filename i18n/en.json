@@ -858,5 +858,22 @@
  "Поиск по клавишам и действиям": "Search keys and actions",
  "например, screenshot или Mod+T": "e.g. screenshot or Mod+T",
  "Изменить клавиши — в ~/.config/niri/config.kdl (раздел binds)": "To change keys, edit ~/.config/niri/config.kdl (binds section)",
- "niri не принял настройку — вернул как было": "niri rejected the setting — reverted"
+ "niri не принял настройку — вернул как было": "niri rejected the setting — reverted",
+ "ЗНАЧКИ У ЧАСОВ": "ICONS BY THE CLOCK",
+ "Видны, только когда есть что показать (VPN — пока он включён, микрофон — пока выключен и т. п.). ←→ — сторона от часов, ↑↓ — порядок": "Shown only when there is something to show (VPN while it is on, the microphone while it is muted, etc.). ←→ — side of the clock, ↑↓ — order",
+ "значок и температура": "icon and temperature",
+ "процент; красная — мало, зелёная — заряжается": "percentage; red when low, green when charging",
+ "Непрочитанные": "Unread",
+ "число, пока есть непрочитанные уведомления": "count while there are unread notifications",
+ "пока включено": "while on",
+ "пока поднят туннель": "while a tunnel is up",
+ "Микрофон выключен": "Microphone muted",
+ "пока микрофон заглушён": "while the microphone is muted",
+ "Звук выключен": "Sound muted",
+ "пока звук заглушён": "while the sound is muted",
+ "пока подключено устройство": "while a device is connected",
+ "пока включён": "while on",
+ "EN / RU, если раскладок несколько": "EN / RU, if there are several layouts",
+ "← слева": "← left",
+ "справа →": "right →"
 }

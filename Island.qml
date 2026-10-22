@@ -2,6 +2,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Widgets
+import Quickshell.Bluetooth
+import Quickshell.Services.UPower
 
 // Остров сверху по центру. В покое — чёрная таблетка; при активности показывает музыку,
 // таймер или подтверждение действия; при наведении раскрывается в «живую активность».
@@ -158,6 +160,38 @@ PanelWindow {
             fillMode: Image.PreserveAspectCrop
         }
     }
+    // ---- значки у часов (Prefs.islandIcons): видны, только когда есть что показать ----
+    readonly property var btConnected: {
+        var a = Bluetooth.defaultAdapter
+        return a && a.enabled ? a.devices.values.filter(d => d.connected) : []
+    }
+    function iconInfo(id) {   // {show, glyph, text, color}
+        var p = iw.p
+        switch (id) {
+        case "weather": return { show: Weather.ok, glyph: Weather.ok ? Weather.icon(Weather.data.now.code, Weather.data.now.day) : "",
+                                 text: Weather.ok ? Weather.temp(Weather.data.now.temp) : "", color: Theme.textVariant }
+        case "battery": {
+            var b = p.battery, has = !!b && b.isLaptopBattery
+            var pct = has ? Math.round(b.percentage * 100) : 0, chg = has && !UPower.onBattery
+            var g = chg ? 0xF0084 : pct >= 95 ? 0xF0079 : pct <= 5 ? 0xF008E : 0xF007A + Math.max(0, Math.round(pct / 10) - 1)
+            return { show: has, glyph: iw.nf(g), text: pct + "%", color: chg ? Theme.success : pct <= Math.max(10, Prefs.battCrit) ? Theme.error : Theme.textVariant }
+        }
+        case "notif": return { show: Notifs.active && Notifs.unread > 0, glyph: iw.nf(0xF009A), text: String(Notifs.unread), color: Prefs.accent }
+        case "dnd": return { show: Notifs.active && Notifs.quiet, glyph: iw.nf(0xF009B), text: "", color: Theme.textVariant }
+        case "vpn": return { show: Vpn.on, glyph: iw.nf(0xF0565), text: "", color: Theme.success }
+        case "mic": return { show: !!p.source && !!p.source.audio && p.source.audio.muted, glyph: iw.nf(0xF036D), text: "", color: Theme.error }
+        case "volume": return { show: !!p.sink && !!p.sink.audio && p.sink.audio.muted, glyph: iw.nf(0xF0581), text: "", color: Theme.warning }
+        case "bt": return { show: iw.btConnected.length > 0, glyph: iw.nf(0xF00B1), text: "", color: Theme.textVariant }
+        case "awake": return { show: p.awake, glyph: iw.nf(0xF0176), text: "", color: Theme.warning }
+        case "night": return { show: NightLight.on, glyph: iw.nf(0xF0594), text: "", color: Theme.textVariant }
+        case "layout": {
+            var n = Niri.layouts[Niri.layoutIdx] || "", first = n.split(/[\s(]/)[0]
+            var known = { English: "EN", Russian: "RU", Ukrainian: "UA", Belarusian: "BY", German: "DE", French: "FR", Spanish: "ES", Polish: "PL", Kazakh: "KZ" }
+            return { show: Niri.layouts.length > 1, glyph: "", text: known[first] || first.slice(0, 2).toUpperCase(), color: Theme.textSecondary }
+        }
+        }
+        return { show: false }
+    }
     function plain(s) { return s.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim() }
     Binding { target: Notifs; property: "hold"; value: iw.peek && iw.shows("notif") }
 
@@ -287,6 +321,7 @@ PanelWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 x: iw.p.inlineAct ? 15 : Math.round((parent.width - width) / 2)
                 spacing: 8
+                IconRow { id: iconsL; side: "left"; visible: implicitWidth > 0 && !iw.p.inlineAct }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: iw.p.clockTime
@@ -299,24 +334,11 @@ PanelWindow {
                     text: iw.p.clockDate
                     color: Theme.textSecondary; font.pixelSize: Theme.fs(12)
                 }
-                Row {   // погода: значок и температура
-                    visible: iw.p.clockWeather !== "" && !iw.p.inlineAct
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 4
-                    leftPadding: 6
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: Weather.ok ? Weather.icon(Weather.data.now.code, Weather.data.now.day) : ""
-                        color: Theme.textVariant; font.family: Prefs.iconFont; font.pixelSize: Theme.fs(14)
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: iw.p.clockWeather
-                        color: Theme.textSecondary; font.pixelSize: Theme.fs(12)
-                        font.features: ({ "tnum": 1 })
-                    }
-                }
+                IconRow { id: iconsR; side: "right"; visible: implicitWidth > 0 && !iw.p.inlineAct; leftPadding: 4 }
             }
+            // ширина значков — ядру, чтобы остров вырос под них
+            Binding { target: iw.p; property: "clockIconsW"
+                      value: (iconsL.visible ? iconsL.implicitWidth + 8 : 0) + (iconsR.visible ? iconsR.implicitWidth + 8 : 0) }
             }
         }
         Rectangle {   // шов между часами и строками активностей
@@ -794,6 +816,41 @@ PanelWindow {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: { var t = iw.p.pluginById("timer"); if (t) iw.p.openCategory(t.categories[0]); else iw.p.open() }
+        }
+    }
+
+    // строка значков у часов; inline-компонент не видит id — данные через iw передаются свойством
+    component IconRow: Row {
+        id: ir
+        property string side
+        property var hub: iw
+        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+        spacing: 7
+        Repeater {
+            model: Prefs.islandIcons.filter(x => x.on && x.side === ir.side)
+            delegate: Row {
+                id: ic
+                required property var modelData
+                readonly property var info: ir.hub.iconInfo(modelData.id)
+                visible: !!info.show
+                anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                spacing: 3
+                Text {
+                    visible: !!ic.info.glyph
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: ic.info.glyph || ""
+                    color: ic.info.color || Theme.textVariant
+                    font.family: Prefs.iconFont; font.pixelSize: Theme.fs(14)
+                    Behavior on color { ColorAnimation { duration: Prefs.ms(160) } }
+                }
+                Text {
+                    visible: !!ic.info.text
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: ic.info.text || ""
+                    color: ic.modelData.id === "notif" ? ic.info.color : Theme.textSecondary
+                    font.pixelSize: Theme.fs(12); font.features: ({ "tnum": 1 })
+                }
+            }
         }
     }
 }

@@ -82,6 +82,79 @@ ColumnLayout {
         music: { glyph: 0xF075A, label: Tr.t("Музыка"), hint: Tr.t("Обложка и эквалайзер; наведение — управление"), pref: "islandMusic" },
         timer: { glyph: 0xF13AB, label: Tr.t("Таймер"), hint: Tr.t("Кольцо и остаток; наведение — отмена"), pref: "islandTimer" }
     })
+    // значки у часов
+    readonly property var iconMeta: ({
+        weather: { glyph: 0xF0590, label: Tr.t("Погода"), hint: Tr.t("значок и температура") },
+        battery: { glyph: 0xF0079, label: Tr.t("Батарея"), hint: Tr.t("процент; красная — мало, зелёная — заряжается") },
+        notif:   { glyph: 0xF009A, label: Tr.t("Непрочитанные"), hint: Tr.t("число, пока есть непрочитанные уведомления") },
+        dnd:     { glyph: 0xF009B, label: Tr.t("Не беспокоить"), hint: Tr.t("пока включено") },
+        vpn:     { glyph: 0xF0565, label: "VPN", hint: Tr.t("пока поднят туннель") },
+        mic:     { glyph: 0xF036D, label: Tr.t("Микрофон выключен"), hint: Tr.t("пока микрофон заглушён") },
+        volume:  { glyph: 0xF0581, label: Tr.t("Звук выключен"), hint: Tr.t("пока звук заглушён") },
+        bt:      { glyph: 0xF00B1, label: "Bluetooth", hint: Tr.t("пока подключено устройство") },
+        awake:   { glyph: 0xF0176, label: Tr.t("Не засыпать"), hint: Tr.t("пока включено") },
+        night:   { glyph: 0xF0594, label: Tr.t("Ночной свет"), hint: Tr.t("пока включён") },
+        layout:  { glyph: 0xF030C, label: Tr.t("Раскладка"), hint: Tr.t("EN / RU, если раскладок несколько") }
+    })
+    function iconOn(id) { var x = Prefs.islandIcons.find(i => i.id === id); return !!x && x.on }
+    function setIcon(id, patch) { Prefs.set("islandIcons", Prefs.islandIcons.map(i => i.id === id ? Object.assign({}, i, patch) : i)) }
+    function moveIcon(i, d) {
+        var o = Prefs.islandIcons.slice(), j = i + d
+        if (j < 0 || j >= o.length) return
+        var t = o[i]; o[i] = o[j]; o[j] = t
+        Prefs.set("islandIcons", o)
+    }
+    component IconSetting: Rectangle {
+        id: is
+        property var ic
+        property int pos
+        property int count
+        readonly property var meta: sv.iconMeta[ic.id] || ({})
+        implicitHeight: 48
+        radius: Theme.r(14)
+        color: Theme.surface
+        border.color: Theme.outline
+        opacity: ic.on ? 1 : 0.72
+        Behavior on opacity { NumberAnimation { duration: Prefs.ms(160) } }
+        Column {
+            x: 6; anchors.verticalCenter: parent.verticalCenter
+            ArrowBtn { glyph: 0xF0143; enabled: is.pos > 0; onClicked: sv.moveIcon(is.pos, -1) }
+            ArrowBtn { glyph: 0xF0140; enabled: is.pos < is.count - 1; onClicked: sv.moveIcon(is.pos, 1) }
+        }
+        Text {
+            x: 38; anchors.verticalCenter: parent.verticalCenter
+            text: String.fromCodePoint(is.meta.glyph || 0xF0337)
+            color: is.ic.on ? Prefs.accent : Theme.textMuted
+            font.family: Prefs.iconFont; font.pixelSize: Theme.fs(18)
+            Behavior on color { ColorAnimation { duration: Prefs.ms(160) } }
+        }
+        Column {
+            x: 68; anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - 68 - 150
+            spacing: 1
+            Text { width: parent.width; text: is.meta.label || is.ic.id; color: Theme.text; font.pixelSize: Theme.fs(13); elide: Text.ElideRight }
+            Text { width: parent.width; text: is.meta.hint || ""; color: Theme.textMuted; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+        }
+        Rectangle {   // сторона от часов: щелчок меняет
+            anchors.right: sw.left; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter
+            width: sideT.implicitWidth + 20; height: 26; radius: 13
+            color: sideMa.pressed ? Theme.surfacePressed : sideMa.containsMouse ? Theme.surfaceHigher : Theme.surfaceHigh
+            border.color: Theme.outline
+            scale: sideMa.pressed ? 0.94 : 1
+            Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+            Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+            Text { id: sideT; anchors.centerIn: parent; text: is.ic.side === "left" ? Tr.t("← слева") : Tr.t("справа →")
+                   color: Theme.textSecondary; font.pixelSize: Theme.fs(11) }
+            MouseArea { id: sideMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: sv.setIcon(is.ic.id, { side: is.ic.side === "left" ? "right" : "left" }) }
+        }
+        Switch {
+            id: sw
+            anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
+            checked: is.ic.on
+            onToggled: sv.setIcon(is.ic.id, { on: !is.ic.on })
+        }
+    }
     function moveIsland(i, d) {
         var o = Prefs.islandOrder.slice(), j = i + d
         if (j < 0 || j >= o.length) return
@@ -670,13 +743,25 @@ ColumnLayout {
             checked: Prefs.clockSeconds
             onToggled: Prefs.set("clockSeconds", !Prefs.clockSeconds)
         }
-        ToggleRow {
-            visible: Prefs.bar && Prefs.weather
-            icon: String.fromCodePoint(0xF050F)
-            label: Tr.t("Температура у часов")
-            checked: Prefs.islandWeather
-            onToggled: Prefs.set("islandWeather", !Prefs.islandWeather)
+        // ---- значки у часов: какие, с какой стороны, в каком порядке ----
+        Header { visible: Prefs.bar; text: Tr.t("ЗНАЧКИ У ЧАСОВ") }
+        Text {
+            visible: Prefs.bar
+            Layout.fillWidth: true
+            text: Tr.t("Видны, только когда есть что показать (VPN — пока он включён, микрофон — пока выключен и т. п.). ←→ — сторона от часов, ↑↓ — порядок")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11)
+            wrapMode: Text.WordWrap
         }
+        Repeater {
+            model: Prefs.bar ? Prefs.islandIcons : []
+            delegate: IconSetting {
+                required property var modelData
+                required property int index
+                Layout.fillWidth: true
+                ic: modelData; pos: index; count: Prefs.islandIcons.length
+            }
+        }
+        Item { visible: Prefs.bar; implicitHeight: 4 }
         // ---- строки острова: что показывать и в каком порядке (сверху — главнее в компактном виде) ----
         Header { visible: sv.island || Prefs.bar; text: Tr.t("СТРОКИ ОСТРОВА") }
         Text {
@@ -1217,8 +1302,8 @@ ColumnLayout {
             visible: Prefs.weather && Prefs.bar
             icon: String.fromCodePoint(0xF050F)
             label: Tr.t("Температура у часов")
-            checked: Prefs.islandWeather
-            onToggled: Prefs.set("islandWeather", !Prefs.islandWeather)
+            checked: sv.iconOn("weather")
+            onToggled: sv.setIcon("weather", { on: !sv.iconOn("weather") })
         }
         Header { text: Tr.t("КАЛЕНДАРЬ") }
         ToggleRow {

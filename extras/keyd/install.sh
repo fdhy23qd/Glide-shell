@@ -15,7 +15,8 @@ if [ "${1:-}" = "--remove" ]; then
 fi
 pacman -Q keyd >/dev/null 2>&1 || pacman -S --needed --noconfirm keyd
 mkdir -p /etc/keyd
-[ -f "$conf" ] && [ ! -f "$conf.before-glide" ] && cp "$conf" "$conf.before-glide"
+# копия — только чужой настройки (повторная установка не должна сохранить нашу прежнюю как «исходную»)
+if [ -f "$conf" ] && [ ! -f "$conf.before-glide" ] && ! grep -q "Glide Shell" "$conf"; then cp "$conf" "$conf.before-glide"; fi
 install -m 644 "$src/super-tap.conf" "$conf"
 systemctl enable --now keyd
 keyd reload 2>/dev/null || true
