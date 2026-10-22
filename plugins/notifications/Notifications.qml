@@ -85,27 +85,46 @@ ColumnLayout {
 
             // заголовок стопки
             Rectangle {
-                visible: grp.many
+                visible: true
                 Layout.fillWidth: true
                 implicitHeight: 30; radius: Theme.r(15)
                 color: hdrMa.pressed ? Theme.surfacePressed : hdrMa.containsMouse ? Theme.surfaceHigh : "transparent"
                 Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
-                MouseArea { id: hdrMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: nv.toggleGroup(grp.g.key) }
+                MouseArea { id: hdrMa; anchors.fill: parent; hoverEnabled: grp.many; enabled: grp.many
+                            cursorShape: Qt.PointingHandCursor; onClicked: nv.toggleGroup(grp.g.key) }
                 Text {
                     x: 10; anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 90
-                    text: grp.g.app + "  ·  " + grp.g.entries.length
+                    text: grp.g.app + (grp.many ? "  ·  " + grp.g.entries.length : "")
                     color: Theme.textSecondary; font.pixelSize: Theme.fs(12); font.bold: true
                     textFormat: Text.PlainText; elide: Text.ElideRight
                 }
                 Text {   // свернуть / раскрыть
+                    id: chev
+                    visible: grp.many
+                    width: grp.many ? implicitWidth : 0
                     anchors.right: clr.left; anchors.rightMargin: 6; anchors.verticalCenter: parent.verticalCenter
                     text: nv.nf(0xF0140)
                     rotation: grp.open ? 180 : 0
                     Behavior on rotation { NumberAnimation { duration: Prefs.ms(200); easing.type: Easing.OutCubic } }
                     color: Theme.textSecondary
                     font.family: nv.iconFont; font.pixelSize: Theme.fs(16)
+                }
+                Rectangle {   // без всплывашек от этого приложения (история — остаётся)
+                    id: muteBtn
+                    readonly property bool muted: Prefs.notifMuted.indexOf(grp.g.app) >= 0
+                    anchors.right: chev.left; anchors.rightMargin: 4; anchors.verticalCenter: parent.verticalCenter
+                    width: 24; height: 24; radius: Theme.r(12)
+                    color: muteMa.pressed ? Theme.surfacePressed : muteMa.containsMouse ? Theme.surfaceHigher : "transparent"
+                    scale: muteMa.pressed ? 0.85 : 1
+                    Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+                    Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+                    Text { anchors.centerIn: parent; text: nv.nf(muteBtn.muted ? 0xF009B : 0xF009A)
+                           color: muteBtn.muted ? Theme.warning : Theme.textSecondary; font.family: nv.iconFont; font.pixelSize: Theme.fs(13) }
+                    MouseArea { id: muteMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onClicked: { Prefs.notifMute(grp.g.app, !muteBtn.muted)
+                                             if (nv.api) nv.api.flash(nv.nf(muteBtn.muted ? 0xF009A : 0xF009B), muteBtn.muted ? Tr.t("Всплывашки снова: ") + grp.g.app
+                                                                       : Tr.t("Без всплывашек: ") + grp.g.app, Theme.textVariant) } }
                 }
                 Rectangle {   // убрать всю стопку
                     id: clr

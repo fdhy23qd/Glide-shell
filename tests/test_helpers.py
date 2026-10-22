@@ -116,6 +116,22 @@ case "$*" in *--list-types*) printf '%s\\n' {' '.join(repr(t) for t in types.spl
         self.run_py(self.script, "clear")
         self.assertEqual(self.items(), [])
 
+    def test_pins_survive_clear(self):
+        self.offer("важное"); self.offer("мусор")
+        rows = json.loads(self.run_py(self.script, "json").stdout)
+        pid = next(r["id"] for r in rows if r.get("text") == "важное")
+        self.run_py(self.script, "pin", pid)
+        rows = json.loads(self.run_py(self.script, "json").stdout)
+        self.assertEqual([(r["text"], r["pinned"]) for r in rows], [("важное", True), ("мусор", False)])
+        self.run_py(self.script, "clear")
+        rows = json.loads(self.run_py(self.script, "json").stdout)
+        self.assertEqual([(r["text"], r["pinned"]) for r in rows], [("важное", True)])   # закреплённое осталось
+        pins = self.state / "glide-shell" / "clipboard-pins.json"
+        self.assertEqual(stat.S_IMODE(pins.stat().st_mode) & 0o077, 0)
+        self.run_py(self.script, "unpin", pid)
+        rows = json.loads(self.run_py(self.script, "json").stdout)
+        self.assertEqual([(r["text"], r["pinned"]) for r in rows], [("важное", False)])   # вернулось в историю
+
 
 # ---------------------------------------------------------------- настройки
 class Config(Sandbox):
@@ -279,7 +295,7 @@ class NiriSettings(Sandbox):
         (d / "config.kdl").write_text(
             'input {\n    keyboard {\n        xkb {\n            layout "us,ru"\n        }\n        numlock\n    }\n'
             '    touchpad {\n        tap\n        natural-scroll\n    }\n    warp-mouse-to-focus\n}\n\n'
-            'binds {\n    Mod+T hotkey-overlay-title="Терминал" { spawn "alacritty"; }\n}\n')
+            'binds {\n    Mod+T hotkey-overlay-title="Терминал" { spawn "alacritty"; }\n    Mod+O hotkey-overlay-title=null { toggle-overview; }\n}\n')
         env = dict(os.environ, GLIDE_NIRI_DIR=str(d))
         run = lambda *a: json.loads(subprocess.run([sys.executable, "-I", str(TOOLS / "glide-niri.py"), *a], env=env,
                                                    capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=30).stdout)
@@ -288,6 +304,19 @@ class NiriSettings(Sandbox):
         self.assertEqual(r["input"]["keyboard"]["layout"], "us,ru")
         self.assertTrue(r["input"]["touchpad"]["tap"])
         self.assertEqual(r["binds"][0]["title"], "Терминал")
+        self.assertEqual(r["binds"][1]["title"], "")                 # null — скрыта из подсказки, не строка «null»
+        # клавиши: смена сочетания (старое в config.kdl закомментировано), новая, удаление, ошибка — откат
+        self.assertTrue(run("bind", json.dumps({"key": "Mod+Return", "argv": ["spawn", "alacritty"], "title": "Терминал", "old": "Mod+T"}))["ok"])
+        self.assertIn("// [glide-shell] ", (d / "config.kdl").read_text())
+        self.assertTrue(run("bind", json.dumps({"key": "Mod+Shift+F", "argv": ["fullscreen-window"]}))["ok"])
+        keys = {b["key"] for b in run("read")["binds"]}
+        self.assertTrue({"Mod+Return", "Mod+Shift+F"} <= keys)
+        self.assertNotIn("Mod+T", keys)
+        self.assertTrue(run("bind", json.dumps({"delete": "Mod+Shift+F"}))["ok"])
+        self.assertNotIn("Mod+Shift+F", {b["key"] for b in run("read")["binds"]})
+        before = (d / "glide-settings.kdl").read_text()
+        self.assertFalse(run("bind", json.dumps({"key": "Mod+Z", "argv": ["нет-такого-действия"]}))["ok"])
+        self.assertEqual((d / "glide-settings.kdl").read_text(), before)
         self.assertTrue(run("set-input", json.dumps({"touchpad": {"tap": False}, "keyboard": {"repeat_rate": 40}}))["ok"])
         r = run("read")
         self.assertTrue(r["managed"])
@@ -299,10 +328,71 @@ class NiriSettings(Sandbox):
         self.assertIn('include "glide-settings.kdl"', conf)
         self.assertIn("// [glide-shell] input {", conf)
         self.assertTrue(list(d.glob("config.kdl.before-glide-*")))
+        # внешний вид: зазоры, рамка, угол — в glide-settings.kdl, и обратно
+        self.assertTrue(run("set-look", json.dumps({"gaps": 10, "ring": {"on": True, "width": 3, "color": "#7b61ff"}, "hotcorner": False}))["ok"])
+        lk = run("read")["look"]
+        self.assertEqual((lk["gaps"], lk["ring"]["on"], lk["ring"]["width"], lk["hotcorner"]), (10, True, 3, False))
+        self.assertTrue(run("set-look", json.dumps({"hotcorner": True, "ring": {"on": False}}))["ok"])
+        lk = run("read")["look"]
+        self.assertEqual((lk["ring"]["on"], lk["hotcorner"]), (False, True))
+        # мониторы: положение, VRR, выключенный — в glide-outputs.kdl, подключённый первым
+        self.assertTrue(run("save-outputs", json.dumps([{"name": "eDP-1", "mode": "1366x768@60.000", "scale": 1, "x": 0, "y": 0, "vrr": True},
+                                                        {"name": "HDMI-A-1", "off": True}]))["ok"])
+        out = (d / "glide-outputs.kdl").read_text()
+        self.assertIn("variable-refresh-rate", out)
+        self.assertIn("position x=0 y=0", out)
+        self.assertRegex(out, r'output "HDMI-A-1" \{\s*off\s*\}')
+        self.assertTrue((d / "config.kdl").read_text().startswith("// Glide Shell: мониторы"))
         # ошибка niri → откат обоих файлов
         before = (d / "glide-settings.kdl").read_text()
         self.assertFalse(run("set-input", json.dumps({"keyboard": {"repeat_rate": "много"}}))["ok"])
         self.assertEqual((d / "glide-settings.kdl").read_text(), before)
+
+
+class Backup(Sandbox):
+    """Копия настроек: config.json и свои плагины — да, ключ — нет; восстановление сначала сохраняет текущее."""
+
+    def test_export_import(self):
+        home = self.tmp / "home"; home.mkdir()
+        sh = self.cfg / "glide-shell"; sh.mkdir(parents=True, exist_ok=True)
+        (sh / "config.json").write_text('{"panel": {"accent": "#123456"}}')
+        (sh / "anthropic-key").write_text("секрет")
+        (sh / "plugins" / "мой").mkdir(parents=True); (sh / "plugins" / "мой" / "plugin.json").write_text("{}")
+        env = {"HOME": str(home)}
+        path = self.run_py(TOOLS / "glide-backup.py", "export", env=env).stdout.strip()
+        import tarfile
+        names = tarfile.open(path).getnames()
+        self.assertIn("glide-shell/config.json", names)
+        self.assertIn("glide-shell/plugins/мой/plugin.json", names)
+        self.assertNotIn("glide-shell/anthropic-key", names)
+        (sh / "config.json").write_text('{"panel": {"accent": "#ffffff"}}')
+        r = json.loads(self.run_py(TOOLS / "glide-backup.py", "import", path, env=env).stdout)
+        self.assertTrue(r["ok"])
+        self.assertIn("#123456", (sh / "config.json").read_text())
+        self.assertTrue(list(home.glob("*-before-import.tar.gz")))
+
+
+class Autostart(Sandbox):
+    """XDG-автозапуск: системное выключается своей копией с Hidden=true, своё — добавляется и удаляется."""
+
+    def test_toggle_add_remove(self):
+        sysd = self.tmp / "xdg" / "autostart"; sysd.mkdir(parents=True)
+        (sysd / "sys.desktop").write_text("[Desktop Entry]\nType=Application\nName=Системное\nExec=true\n")
+        (sysd / "gnome.desktop").write_text("[Desktop Entry]\nType=Application\nName=Только GNOME\nExec=true\nOnlyShowIn=GNOME;\n")
+        apps = self.tmp / "data" / "applications"; apps.mkdir(parents=True)
+        (apps / "app.desktop").write_text("[Desktop Entry]\nType=Application\nName=Приложение\nExec=app\n")
+        env = {"XDG_CONFIG_DIRS": str(self.tmp / "xdg"), "XDG_DATA_DIRS": str(self.tmp / "data"), "XDG_CURRENT_DESKTOP": "niri"}
+        ls = lambda: {e["file"]: e for e in json.loads(self.run_py(TOOLS / "glide-autostart.py", "list", env=env).stdout)}
+        self.assertEqual(set(ls()), {"sys.desktop"})                    # только для GNOME — не показано
+        self.run_py(TOOLS / "glide-autostart.py", "set", "sys.desktop", "off", env=env)
+        self.assertFalse(ls()["sys.desktop"]["enabled"])
+        self.assertTrue((sysd / "sys.desktop").read_text().count("Hidden") == 0)   # системный файл не тронут
+        self.run_py(TOOLS / "glide-autostart.py", "set", "sys.desktop", "on", env=env)
+        self.assertTrue(ls()["sys.desktop"]["enabled"])
+        self.run_py(TOOLS / "glide-autostart.py", "add", "app.desktop", env=env)
+        self.assertTrue(ls()["app.desktop"]["mine"])
+        self.run_py(TOOLS / "glide-autostart.py", "remove", "app.desktop", env=env)
+        self.assertNotIn("app.desktop", ls())
 
 
 class Holidays(unittest.TestCase):

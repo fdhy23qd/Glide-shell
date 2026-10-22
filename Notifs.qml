@@ -126,6 +126,7 @@ Singleton {
     function show(e) {
         var critical = e.urgency === NotificationUrgency.Critical
         if ((quiet || replyLock) && !critical) return   // пишут ответ — новое не вытесняет (оно в истории)
+        if (!critical && Prefs.notifMuted.indexOf(e.appName || "") >= 0) return   // приложение без всплывашек — только история
         popup = e
         if (critical) { popupTimer.stop(); return }   // срочное висит, пока не закроют
         var t = e.n && e.n.expireTimeout > 0 ? e.n.expireTimeout * 1000 : 6000

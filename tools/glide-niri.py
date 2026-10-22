@@ -122,7 +122,8 @@ def parse(src):
                 if tk[0] == "slashdash":                     # закомментированный аргумент
                     pos += 2; continue
                 if pos + 2 < len(toks) and toks[pos + 1][0] == "=":
-                    node.props[str(tk[1])] = toks[pos + 2][1]; pos += 3
+                    pv = toks[pos + 2]
+                    node.props[str(tk[1])] = None if pv[0] == "id" and pv[1] in ("null", "#null") else pv[1]; pos += 3
                 else:
                     v = tk[1]
                     if tk[0] == "id" and v in ("true", "#true"): v = True
@@ -164,7 +165,7 @@ def render(node, src, depth):
         for a in node.args:
             head += " " + (q(a) if isinstance(a, str) else ("true" if a is True else "false" if a is False else str(a)))
         for k, v in node.props.items():
-            head += f" {k}=" + (q(v) if isinstance(v, str) else str(v))
+            head += f" {k}=" + (q(v) if isinstance(v, str) else "null" if v is None else str(v))
     if node.children is None:
         return pad + head
     inner = "\n".join(render(c, src, depth + 1) for c in node.children)
@@ -209,16 +210,101 @@ def read_input(tree):
     }
 
 
-def read_binds(tree, src):
-    out = []
-    for b in find(tree, "binds"):
-        for n in b.children or []:
-            act = n.children[0] if n.children else None
-            action = ""
-            if act is not None:
-                action = act.name + (" " + " ".join(str(a) for a in act.args) if act.args else "")
-            out.append({"key": n.name, "title": n.props.get("hotkey-overlay-title", ""), "action": action[:200]})
+EDITABLE = ("config.kdl", "glide-settings.kdl", "glide-shell.kdl")   # файлы DMS он перезаписывает — не правим
+
+
+def bind_files(path=None, seen=None):
+    """[(файл, дерево, текст)] по порядку подключения — для клавиш (где какая лежит)."""
+    path = path or CONFIG
+    seen = seen if seen is not None else set()
+    if path in seen or not path.exists():
+        return []
+    seen.add(path)
+    src = path.read_text()
+    tree = parse(src)
+    out = [(path, tree, src)]
+    for n in tree:
+        if n.name == "include" and n.args:
+            out += bind_files((path.parent / str(n.args[0])).resolve(), seen)
     return out
+
+
+def read_binds(tree=None, src=None):
+    """Все клавиши; одна клавиша в нескольких файлах — побеждает последняя (как у niri)."""
+    found = {}
+    for path, t, s in bind_files():
+        for b in find(t, "binds"):
+            for n in b.children or []:
+                act = n.children[0] if n.children else None
+                action = [act.name] + [str(a) for a in act.args] if act is not None else []
+                found[n.name.lower()] = {"key": n.name, "title": n.props.get("hotkey-overlay-title") or "",
+                                         "action": " ".join(action)[:200], "argv": action,
+                                         "file": path.name, "editable": path.name in EDITABLE}
+    return list(found.values())
+
+
+def comment_out(path, key):
+    """Закомментировать привязку key в файле (с пометкой), если она там есть."""
+    src = path.read_text()
+    for b in find(parse(src), "binds"):
+        for n in b.children or []:
+            if n.name.lower() == key.lower():
+                ls = src.rfind("\n", 0, n.start) + 1
+                le = src.find("\n", n.end)
+                le = len(src) if le < 0 else le
+                block = "\n".join(MARK + l for l in src[ls:le].split("\n"))
+                path.write_text(src[:ls] + block + src[le:])
+                return True
+    return False
+
+
+def bind_line(key, argv, title):
+    head = key + (f" hotkey-overlay-title={q(title)}" if title else "")
+    name, args = argv[0], argv[1:]
+    def arg(a):
+        return a if re.fullmatch(r"-?\d+", a) and name not in ("spawn", "spawn-sh") else q(a)
+    return f"{head} {{ {name}{''.join(' ' + arg(a) for a in args)}; }}"
+
+
+def edit_bind(op):
+    """op: {key, argv, title, old} — поставить (old ≠ key: старую закомментировать); {delete: key} — убрать."""
+    files = {p.name: p for p, _, _ in bind_files()}
+    snapshot = {p: p.read_text() for p in files.values()}
+    had_settings = SETTINGS.exists()
+    try:
+        ensure_settings()
+        files["glide-settings.kdl"] = SETTINGS
+        if not had_settings:
+            snapshot.setdefault(SETTINGS, None)
+        drop = op.get("delete") or (op.get("old") if op.get("old") and op.get("old").lower() != op["key"].lower() else None)
+        if drop:
+            for name in EDITABLE:
+                if name in files and name != "glide-settings.kdl":
+                    comment_out(files[name], drop)
+        # в glide-settings.kdl — блок binds со своими привязками; ту же клавишу — заменить
+        src = SETTINGS.read_text()
+        tree = parse(src)
+        keep = []
+        for b in find(tree, "binds"):
+            for n in b.children or []:
+                if n.name.lower() not in {(drop or "").lower(), (op.get("key") or "").lower()}:
+                    keep.append(src[n.start:n.end])
+        if not op.get("delete"):
+            keep.append(bind_line(op["key"], op["argv"], op.get("title", "")))
+        tree = [n for n in tree if n.name != "binds"]
+        body = "\n\n".join(render(n, src, 0) for n in tree)
+        if keep:
+            body += "\n\n// клавиши из панели («Устройства» → «Горячие клавиши»)\nbinds {\n" + "\n".join("    " + k for k in keep) + "\n}"
+        SETTINGS.write_text(HEAD + "\n" + body.strip("\n") + "\n")
+        err = validate()
+        if err:
+            raise RuntimeError(err)
+        return {"ok": True}
+    except Exception as e:
+        for p, t in snapshot.items():
+            if t is None: p.unlink(missing_ok=True)
+            else: p.write_text(t)
+        return {"ok": False, "error": str(e)}
 
 
 def effective_tree():
@@ -376,6 +462,167 @@ def set_input(patch):
         return {"ok": False, "error": str(e)}
 
 
+# ------------------------------------------------------------------ внешний вид: окна, анимации, курсор, угол
+def collect(path=None, seen=None):
+    """Верхние узлы конфига по порядку подключения (include — на своём месте), чтобы считать итоговые значения."""
+    path = path or CONFIG
+    seen = seen if seen is not None else set()
+    if path in seen or not path.exists():
+        return []
+    seen.add(path)
+    out = []
+    for n in parse(path.read_text()):
+        if n.name == "include" and n.args:
+            out += collect((path.parent / str(n.args[0])).resolve(), seen)
+        else:
+            out.append(n)
+    return out
+
+
+def last(nodes, *path):
+    """Итоговое значение по пути (последнее определение побеждает): узел или None."""
+    found = None
+    for top in nodes:
+        if top.name != path[0]:
+            continue
+        cur = top
+        for name in path[1:]:
+            cur = cur.child(name) if cur else None
+        if cur is not None:
+            found = cur
+    return found
+
+
+def read_look():
+    ns = collect()
+    def num(*p, d=None):
+        n = last(ns, *p); return n.args[0] if n is not None and n.args else d
+    def onoff(*p):   # {off} / {on} у секции: последнее слово побеждает
+        st = None
+        for top in ns:
+            if top.name != p[0]: continue
+            cur = top
+            for name in p[1:]: cur = cur.child(name) if cur else None
+            if cur is None: continue
+            if cur.child("off") is not None: st = False
+            if cur.child("on") is not None: st = True
+        return st
+    radius = None
+    for n in ns:
+        if n.name == "window-rule" and n.child("match") is None and n.child("geometry-corner-radius") is not None:
+            radius = n.child("geometry-corner-radius").args[0]
+    ccol = num("layout", "center-focused-column", d="never")
+    anim_off = onoff("animations") is False
+    slow = num("animations", "slowdown", d=1.0)
+    ring_on, border_on = onoff("layout", "focus-ring"), onoff("layout", "border")
+    return {
+        "gaps": num("layout", "gaps", d=16), "center": ccol,
+        "colw": num("layout", "default-column-width", "proportion", d=0.5),
+        "ring": {"on": ring_on is not False, "width": num("layout", "focus-ring", "width", d=4),
+                 "color": num("layout", "focus-ring", "active-color", d="")},
+        "border": {"on": border_on is True, "width": num("layout", "border", "width", d=4),
+                   "color": num("layout", "border", "active-color", d="")},
+        "radius": radius or 0,
+        "anim": "off" if anim_off else ("fast" if slow and slow < 0.9 else "normal"),
+        "cursor": {"theme": num("cursor", "xcursor-theme", d=""), "size": num("cursor", "xcursor-size", d=24),
+                   "hide_typing": last(ns, "cursor", "hide-when-typing") is not None},
+        "hotcorner": last(ns, "gestures", "hot-corners", "off") is None,
+    }
+
+
+def ensure_settings():
+    """glide-settings.kdl есть и подключён последним (без переноса ввода — для внешнего вида он не нужен)."""
+    if not SETTINGS.exists():
+        SETTINGS.write_text(HEAD + "\n")
+    conf = CONFIG.read_text()
+    if 'include "glide-settings.kdl"' not in conf:
+        backup(CONFIG)
+        CONFIG.write_text(conf.rstrip("\n") + '\n\n// Glide Shell: ввод и прочие настройки niri из панели (подключать последним)\ninclude "glide-settings.kdl"\n')
+
+
+def top_node(tree, name, pick=None):
+    for n in reversed(tree):
+        if n.name == name and (pick is None or pick(n)):
+            if n.children is None: n.children = []
+            return n
+    n = Node(name, 0); n.children = []; n.dirty = True; n.args_changed = True
+    tree.append(n)
+    return n
+
+
+def sub(node, name):
+    return ensure(node, name, None)
+
+
+def set_look(patch):
+    old_conf = CONFIG.read_text()
+    old_set = SETTINGS.read_text() if SETTINGS.exists() else None
+    try:
+        ensure_settings()
+        src = SETTINGS.read_text()
+        tree = parse(src)
+        def touch(*ns):
+            for n in ns: n.dirty = True
+        if any(k in patch for k in ("gaps", "center", "colw", "ring", "border")):
+            lay = top_node(tree, "layout"); touch(lay)
+            if "gaps" in patch: set_val(lay, "gaps", int(patch["gaps"]))
+            if "center" in patch: set_val(lay, "center-focused-column", patch["center"])
+            if "colw" in patch:
+                dcw = sub(lay, "default-column-width"); touch(dcw)
+                dcw.children = []
+                set_val(dcw, "proportion", float(patch["colw"]))
+            for key, name in (("ring", "focus-ring"), ("border", "border")):
+                if key not in patch: continue
+                p = patch[key]; nd = sub(lay, name); touch(nd)
+                if "on" in p:
+                    set_flag(nd, "off", not p["on"]); set_flag(nd, "on", bool(p["on"]))
+                if p.get("width"): set_val(nd, "width", int(p["width"]))
+                if "color" in p: set_val(nd, "active-color", p["color"] or None)
+        if "radius" in patch:
+            r = int(patch["radius"])
+            wr = top_node(tree, "window-rule", lambda n: n.child("match") is None and n.child("geometry-corner-radius") is not None)
+            touch(wr)
+            set_val(wr, "geometry-corner-radius", r)
+            set_val(wr, "clip-to-geometry", True if r > 0 else None)
+        if "anim" in patch:
+            an = top_node(tree, "animations"); touch(an)
+            set_flag(an, "off", patch["anim"] == "off"); set_flag(an, "on", patch["anim"] != "off")
+            set_val(an, "slowdown", 0.6 if patch["anim"] == "fast" else None)
+        if "cursor" in patch:
+            c = patch["cursor"]; cu = top_node(tree, "cursor"); touch(cu)
+            if "theme" in c: set_val(cu, "xcursor-theme", c["theme"] or None)
+            if "size" in c: set_val(cu, "xcursor-size", int(c["size"]) if c["size"] else None)
+            if "hide_typing" in c:
+                set_val(cu, "hide-when-typing", None)       # флаг: сбросить и поставить заново
+                if c["hide_typing"]:
+                    set_flag(cu, "hide-when-typing", True)
+        if "hotcorner" in patch:
+            g = top_node(tree, "gestures"); touch(g)
+            hc = sub(g, "hot-corners"); touch(hc)
+            set_flag(hc, "off", not patch["hotcorner"])
+            if not hc.children: g.children = [x for x in g.children if x.name != "hot-corners"]
+        write_settings(tree, src)
+        err = validate()
+        if err:
+            raise RuntimeError(err)
+        return {"ok": True}
+    except Exception as e:
+        CONFIG.write_text(old_conf)
+        if old_set is None: SETTINGS.unlink(missing_ok=True)
+        else: SETTINGS.write_text(old_set)
+        return {"ok": False, "error": str(e)}
+
+
+def cursor_themes():
+    out = set()
+    for base in (Path("/usr/share/icons"), Path.home() / ".local/share/icons", Path.home() / ".icons"):
+        if base.is_dir():
+            for d in base.iterdir():
+                if (d / "cursors").is_dir():
+                    out.add(d.name)
+    return sorted(out)
+
+
 # ------------------------------------------------------------------ мониторы
 def save_outputs(items):
     old_conf = CONFIG.read_text()
@@ -391,6 +638,7 @@ def save_outputs(items):
                 if o.get("scale"): lines.append(f"    scale {float(o['scale']):g}")
                 if o.get("transform") and o["transform"] != "normal": lines.append(f"    transform {q(o['transform'])}")
                 if "x" in o and "y" in o: lines.append(f"    position x={int(o['x'])} y={int(o['y'])}")
+                if o.get("vrr"): lines.append("    variable-refresh-rate")
             blocks.append(f"output {q(o['name'])} {{\n" + "\n".join(lines) + "\n}")
         OUTPUTS.write_text(HEAD + "// Мониторы: этот файл подключён ПЕРВЫМ — у niri для монитора побеждает первое определение.\n\n"
                            + "\n\n".join(blocks) + "\n")
@@ -413,9 +661,16 @@ def main():
     if cmd == "read":
         tree, src, managed = effective_tree()
         csrc = CONFIG.read_text()
-        print(json.dumps({"managed": managed, "input": read_input(tree), "binds": read_binds(parse(csrc), csrc)}, ensure_ascii=False))
+        print(json.dumps({"managed": managed, "input": read_input(tree), "binds": read_binds(),
+                          "look": read_look(), "cursors": cursor_themes(),
+                          "spawns": [" ".join(str(x) for x in n.args) for n in collect() if n.name in ("spawn-at-startup", "spawn-sh-at-startup")]},
+                         ensure_ascii=False))
     elif cmd == "set-input":
         print(json.dumps(set_input(json.loads(sys.argv[2])), ensure_ascii=False))
+    elif cmd == "bind":
+        print(json.dumps(edit_bind(json.loads(sys.argv[2])), ensure_ascii=False))
+    elif cmd == "set-look":
+        print(json.dumps(set_look(json.loads(sys.argv[2])), ensure_ascii=False))
     elif cmd == "save-outputs":
         print(json.dumps(save_outputs(json.loads(sys.argv[2])), ensure_ascii=False))
     else:
