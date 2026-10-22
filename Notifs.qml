@@ -178,6 +178,17 @@ Singleton {
         if (e.n) e.n.dismiss()
         drop(e)
     }
+    // несколько разом (стопка приложения): список меняется один раз — иначе после первого удаления
+    // интерфейс перестраивается посреди цикла, и вызывающий его элемент уже уничтожен
+    function removeMany(entries) {
+        var gone = entries.slice()
+        for (var e of gone) {
+            if (e.n) e.n.dismiss()
+            if (popup === e) hidePopup()
+            if (e.unread) { e.unread = false; unread = Math.max(0, unread - 1) }
+        }
+        list = list.filter(x => gone.indexOf(x) < 0)
+    }
     // ---- история на диске: переживает перезапуск оболочки (Prefs.notifKeep) ----
     // ~/.local/state/glide-shell/notifications.json, права 0600 (в уведомлениях бывают личные сообщения).
     // Пишется не чаще раза в секунду; живое уведомление (n) и действия не сохраняются, картинка — только файл.
@@ -233,9 +244,9 @@ Singleton {
         unread = 0
     }
     function removeApp(app) {   // убрать из истории все уведомления приложения (IPC notifClear — после проверок)
-        var n = 0
-        for (var e of list.slice()) if (e.appName === app) { remove(e); n++ }
-        return n
+        var mine = list.filter(e => e.appName === app)
+        removeMany(mine)
+        return mine.length
     }
     function markRead() { for (var e of list) e.unread = false; unread = 0 }
 
