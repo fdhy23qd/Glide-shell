@@ -2,6 +2,11 @@
 
 Новое — сверху. English: see [README.md](README.md); история ведётся по-русски.
 
+- **v0.88** — API плагинов и виджетов, версия 1 (`ApiScope.qml`, docs/API.md и API.ru.md): у каждого плагина и виджета
+  свой объект — хранилище (`api.storage`), настройки из `plugin.json` («settings» — поля во вкладке «Плагины»),
+  `api.notify`, события (`opened`, `closed`, `themeUpdated`, `notification`), `api.niri`, `api.player`, громкость,
+  батарея; виджеты получают тот же API. Плагин может добавить свой элемент бара (`"bar": "Bar.qml"`).
+  Заготовка рабочего плагина или виджета — `tools/glide-plugin.py new|widget ID`.
 - **v0.87** — быстрый просмотр файла в поиске: Shift+Пробел или «глаз» у строки — картинка, первая страница PDF,
   кадр видео, начало текста, содержимое папки, размер и дата (`tools/glide-preview.py`, кэш в ~/.cache/glide-shell/preview);
   просмотр едет за выбором стрелками, Esc закрывает. Обновления Arch в баре (`ArchUpdates.qml`, `tools/glide-archupdates.py`):

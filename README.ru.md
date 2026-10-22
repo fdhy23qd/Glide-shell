@@ -78,7 +78,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.87`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v0.88`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -330,6 +330,10 @@ qs -c glide-shell ipc call lock status    # lock | test | preview | unlocked
 ```
 
 ## Написать плагин
+
+Полный справочник — **[docs/API.ru.md](docs/API.ru.md)** (хранилище, настройки, события, элементы бара, виджеты).
+Рабочая заготовка: `python3 ~/.config/quickshell/glide-shell/tools/glide-plugin.py new my-plugin`.
+
 Папка `~/.config/glide-shell/plugins/<имя>/` с `plugin.json` (тот же `id` заменяет встроенный;
 примеры — в `examples/`). Список перечитывается при каждом открытии панели.
 ```json
@@ -396,6 +400,8 @@ Ctrl+Alt+F2 → вход в консоли → `sudo sh …/greeter/install.sh -
 `2fa` → код `123456`) и `GREETD_SOCK=… GLIDE_GREETER_TEST=1 [GLIDE_GREETER_AUTOTYPE="nope,glide"] qs -p greeter`.
 
 ## Свои виджеты рабочего стола
+
+Общий API с плагинами — [docs/API.ru.md](docs/API.ru.md); заготовка — `tools/glide-plugin.py widget my-widget`.
 
 Папка `~/.config/glide-shell/widgets/<имя>/` (при первой установке там пример `countdown` — обратный отсчёт):
 
