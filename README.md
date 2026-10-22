@@ -144,7 +144,8 @@ notification history, chat history) goes to `~/.local/state/glide-shell/`, with 
 
 ## Writing a plugin
 
-Full reference: **[docs/API.md](docs/API.md)** (storage, settings, events, bar items, widgets). A working
+Full reference: **[docs/API.md](docs/API.md)** (storage, settings, events, bar items, widgets; security and
+compatibility rules in section 10). A working
 starter plugin: `python3 ~/.config/quickshell/glide-shell/tools/glide-plugin.py new my-plugin`.
 
 Create `~/.config/glide-shell/plugins/<name>/plugin.json`. A plugin with the same `id` as a built-in one

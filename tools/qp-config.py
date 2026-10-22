@@ -3,6 +3,7 @@
 
   qp-config.py set panel.width 440        значение — JSON (true, 120, "текст")
   qp-config.py toggle-disabled <id>       включить/выключить плагин
+  qp-config.py disable-many '["id", …]'  выключить несколько (безопасный режим с экрана блокировки)
   qp-config.py move-category <id> <±1>    сдвинуть категорию в порядке
   qp-config.py reset-panel                сбросить настройки панели
 """
@@ -34,6 +35,11 @@ elif cmd == "toggle-disabled":
         dis.remove(args[0])
     else:
         dis.append(args[0])
+elif cmd == "disable-many":   # безопасный режим: выключить список плагинов разом
+    dis = cfg.setdefault("disabled", [])
+    for pid in json.loads(args[0]):
+        if pid not in dis:
+            dis.append(pid)
 elif cmd == "move-category":
     # текущий видимый порядок приходит третьим аргументом, чтобы учесть категории не из списка
     order = json.loads(args[2]) if len(args) > 2 else cfg.get("categoryOrder", [])

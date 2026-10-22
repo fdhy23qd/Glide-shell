@@ -233,6 +233,30 @@ Item {
                 font.pixelSize: Theme.fs(13)
                 color: view.lock.error ? Theme.error : Theme.warning
             }
+            Rectangle {   // аварийный выход: сторонний плагин сломал панель — войти без них (сработает только после пароля)
+                readonly property int count: view.lock.panel ? view.lock.panel.userPluginsOn.length : 0
+                readonly property bool on: view.lock.safeAfterUnlock
+                visible: count > 0
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: safeRow.implicitWidth + 24; height: 30; radius: Theme.r(15)
+                color: on ? Qt.rgba(Theme.warning.r, Theme.warning.g, Theme.warning.b, safeMa.containsMouse ? 0.32 : 0.22)
+                          : safeMa.pressed ? Theme.surfacePressed : safeMa.containsMouse ? Theme.surfaceHigher : Theme.surface
+                border.color: on ? Theme.warning : Theme.outline
+                scale: safeMa.pressed ? 0.95 : 1
+                Behavior on color { ColorAnimation { duration: Prefs.ms(140) } }
+                Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+                Row {
+                    id: safeRow
+                    anchors.centerIn: parent
+                    spacing: 6
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: view.nf(parent.parent.on ? 0xF0132 : 0xF0131)
+                           color: parent.parent.on ? Theme.warning : Theme.textSecondary; font.family: view.iconFont; font.pixelSize: Theme.fs(14) }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: Tr.t("Войти без сторонних плагинов (") + parent.parent.count + ")"
+                           color: parent.parent.on ? Theme.text : Theme.textSecondary; font.pixelSize: Theme.fs(12) }
+                }
+                MouseArea { id: safeMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: { view.lock.safeAfterUnlock = !view.lock.safeAfterUnlock; input.forceActiveFocus() } }
+            }
         }
 
         // ---- низ: раскладка и батарея ----

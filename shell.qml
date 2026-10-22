@@ -899,6 +899,16 @@ ShellRoot {
 
     // ---------- настройки ----------
     function togglePlugin(id) { Prefs.run(["toggle-disabled", id]) }
+    // безопасный режим (с замка, после пароля): выключить все сторонние плагины — встроенные остаются
+    readonly property var userPluginsOn: allPlugins.filter(p => p.user && !p.disabled && !p.problem)
+    function safeMode() {
+        var ids = userPluginsOn.map(p => p.id)
+        if (!ids.length) return
+        Prefs.run(["disable-many", JSON.stringify(ids)])
+        flash(String.fromCodePoint(0xF0431), Tr.t("Сторонние плагины выключены: ") + ids.length + Tr.t(" — вернуть в «Плагинах»"), Theme.warning)
+        safeRefresh.restart()   // запись в config.json — по очереди; перечитать, когда допишется
+    }
+    Timer { id: safeRefresh; interval: 800; onTriggered: discover.running = true }
     function moveCategory(id, d) {
         Prefs.run(["move-category", id, String(d), JSON.stringify(categories.map(c => c.id))])
     }
@@ -1008,7 +1018,7 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.95 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v0.96 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

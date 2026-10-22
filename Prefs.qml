@@ -43,6 +43,7 @@ Singleton {
     readonly property bool welcome: data.welcome === true
     readonly property bool welcomeDone: data.welcomeDone === true
     readonly property bool fileSearch: data.fileSearch !== false
+    readonly property bool pluginLock: data.pluginLock !== false   // включать/выключать плагины — только по паролю
     readonly property var pluginSettings: data.pluginSettings || ({})        // настройки плагинов из plugin.json: {id: {key: value}}
     function setPluginSetting(id, key, value) {
         var all = JSON.parse(JSON.stringify(pluginSettings))

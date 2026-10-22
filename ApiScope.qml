@@ -32,7 +32,8 @@ QtObject {
     readonly property var kdeconnect: KdeConnect
     readonly property var theme: Theme
     readonly property string iconFont: Prefs.iconFont
-    function setPref(key, value) { Prefs.set(key, value) }
+    // защиту плагинов паролем плагин снять не может (иначе выключил бы её сам себе)
+    function setPref(key, value) { if (key !== "pluginLock") Prefs.set(key, value) }
     function setAwake(on) { shell.setAwake(on) }
     function run(argv, text) { shell.runRaw(argv, text || "", "") }
     function close() { shell.close() }
@@ -99,7 +100,9 @@ QtObject {
             function tryFinish() {
                 if (finished || exitCode === null || !outDone || !errDone) return
                 finished = true
-                try { if (cb) cb(exitCode, jout.text, jerr.text) } catch (e) { console.warn("glide-shell: api.exec: " + e) }
+                // программа не нашлась: под setpriv это код 127 и его сообщение — для плагина тоже -1, как «не запустилась»
+                var code = exitCode === 127 && /^setpriv: /m.test(jerr.text) ? -1 : exitCode
+                try { if (cb) cb(code, jout.text, jerr.text) } catch (e) { console.warn("glide-shell: api.exec: " + e) }
                 destroy()
             }
             function cancel() { if (running) { aborted = true; signal(15) } }
@@ -115,7 +118,8 @@ QtObject {
         if (typeof opts === "function") { cb = opts; opts = {} }
         opts = opts || {}
         var env = Object.assign({ QP_DIR: manifest.dir || "" }, opts.env || {})
-        var j = execComp.createObject(api, { command: argv, environment: env, cb: cb || null, input: opts.stdin || "",
+        // setpriv --pdeathsig: упала оболочка — программа не остаётся сиротой (выключили плагин — её убивает сам Process)
+        var j = execComp.createObject(api, { command: ["setpriv", "--pdeathsig", "TERM"].concat(argv), environment: env, cb: cb || null, input: opts.stdin || "",
                                              timeoutMs: opts.timeout === undefined ? 60000 : opts.timeout })
         j.running = true
         j.startCheck.start()
@@ -153,7 +157,13 @@ QtObject {
         atomicWrites: true
         watchChanges: true                  // раздел плагина и его элемент бара — разные объекты, файл один
         onFileChanged: reload()
-        onLoaded: { try { api.stored = JSON.parse(text()) || {} } catch (e) { api.stored = {} } }
+        onLoaded: {
+            try { api.stored = JSON.parse(text()) || {} } catch (e) {
+                // повреждён: начать с пустого, но прежний файл сохранить рядом (.broken) — первая запись его бы затёрла
+                if (text().trim()) Quickshell.execDetached(["cp", "-f", api.storeFile, api.storeFile + ".broken"])
+                api.stored = {}
+            }
+        }
     }
     property Timer saveLater: Timer { interval: 300; onTriggered: api.storeView.setText(JSON.stringify(api.stored)) }
 

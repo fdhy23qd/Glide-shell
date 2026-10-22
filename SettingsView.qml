@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
+import Quickshell.Services.Pam
 
 // Экран настроек: поведение и вид панели, включение плагинов, порядок категорий.
 ColumnLayout {
@@ -109,6 +110,39 @@ ColumnLayout {
         if (j < 0 || j >= o.length) return
         var t = o[i]; o[i] = o[j]; o[j] = t
         Prefs.set("barItems", o)
+    }
+    // ---- изменение плагинов по паролю (Prefs.pluginLock): что ждёт подтверждения ----
+    property string guardFor: ""      // id плагина или «lock» — снять защиту
+    property string guardName: ""
+    property bool guardTurnOn: false
+    property string guardErr: ""
+    function guarded(what, name, turnOn) {
+        if (!Prefs.pluginLock && what !== "lock") { sv.panel.togglePlugin(what); return }
+        guardFor = what; guardName = name || ""; guardTurnOn = !!turnOn; guardErr = ""; guardInput.text = ""
+    }
+    function guardCancel() { plPam.abort(); guardFor = ""; guardInput.text = ""; guardErr = "" }
+    function guardSubmit() {
+        if (plPam.active || !guardInput.text) return
+        plPam.pw = guardInput.text
+        plPam.start()
+    }
+    PamContext {
+        id: plPam
+        property string pw: ""
+        config: "login"
+        configDirectory: "/etc/pam.d"
+        onResponseRequiredChanged: if (responseRequired) respond(pw)
+        onCompleted: result => {
+            pw = ""
+            if (result === PamResult.Success) {
+                if (sv.guardFor === "lock") Prefs.set("pluginLock", false); else sv.panel.togglePlugin(sv.guardFor)
+                sv.guardFor = ""; guardInput.text = ""
+            } else {
+                sv.guardErr = result === PamResult.MaxTries ? Tr.t("Слишком много попыток") : Tr.t("Неверный пароль")
+                guardInput.text = ""
+            }
+        }
+        onError: err => { pw = ""; sv.guardErr = Tr.t("Ошибка проверки пароля") }
     }
     function pluginBarMeta(id) {   // элемент бара из плагина: его значок и имя
         var pl = id.indexOf("plugin:") === 0 && sv.panel ? sv.panel.pluginById(id.slice(7)) : null
@@ -2627,6 +2661,65 @@ ColumnLayout {
 
         // ---- плагины ----
         Header { text: Tr.t("ПЛАГИНЫ") }
+        ToggleRow {
+            icon: String.fromCodePoint(0xF033E)
+            label: Tr.t("Включать и выключать плагины — по паролю")
+            hint: Tr.t("Защита от случайного или чужого изменения. Снять защиту — тоже по паролю. Плагин сам её не снимет.")
+            checked: Prefs.pluginLock
+            onToggled: Prefs.pluginLock ? sv.guarded("lock", "") : Prefs.set("pluginLock", true)
+        }
+        Rectangle {   // пароль для изменения плагинов (тот же PAM, что у экрана блокировки)
+            id: guardCard
+            visible: sv.guardFor !== ""
+            Layout.fillWidth: true
+            implicitHeight: guardCol.implicitHeight + 24
+            radius: Theme.r(16)
+            color: Theme.surface
+            border.color: sv.guardErr ? Theme.error : Prefs.accent
+            onVisibleChanged: if (visible) guardInput.forceActiveFocus()
+            ColumnLayout {
+                id: guardCol
+                x: 14; y: 12; width: parent.width - 28
+                spacing: 8
+                Text {
+                    Layout.fillWidth: true
+                    text: sv.guardFor === "lock" ? Tr.t("Пароль, чтобы снять защиту плагинов")
+                        : (sv.guardTurnOn ? Tr.t("Пароль, чтобы включить «") : Tr.t("Пароль, чтобы выключить «")) + sv.guardName + "»"
+                    color: Theme.text; font.pixelSize: Theme.fs(13); font.weight: Font.DemiBold; wrapMode: Text.WordWrap
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 36; radius: Theme.r(18)
+                    color: Theme.background
+                    border.width: guardInput.activeFocus ? 2 : 1
+                    border.color: guardInput.activeFocus ? Prefs.accent : Theme.outline
+                    HoverHandler { cursorShape: Qt.IBeamCursor }
+                    TextInput {
+                        id: guardInput
+                        anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
+                        verticalAlignment: TextInput.AlignVCenter
+                        echoMode: TextInput.Password; passwordCharacter: "●"
+                        readOnly: plPam.active
+                        color: Theme.text; font.pixelSize: Theme.fs(13); clip: true
+                        onTextChanged: sv.guardErr = ""
+                        Keys.onReturnPressed: sv.guardSubmit()
+                        Keys.onEnterPressed: sv.guardSubmit()
+                        Keys.onEscapePressed: sv.guardCancel()
+                    }
+                }
+                Text {
+                    visible: !!sv.guardErr
+                    text: sv.guardErr
+                    color: Theme.error; font.pixelSize: Theme.fs(12)
+                }
+                RowLayout {
+                    spacing: 8
+                    ActionBtn { glyph: String.fromCodePoint(0xF012C); text: plPam.active ? Tr.t("Проверка…") : Tr.t("Подтвердить")
+                                enabled: !plPam.active && guardInput.text !== ""; onClicked: sv.guardSubmit() }
+                    ActionBtn { glyph: String.fromCodePoint(0xF0156); text: Tr.t("Отмена"); onClicked: sv.guardCancel() }
+                }
+            }
+        }
         Repeater {
             model: sv.panel ? sv.panel.allPlugins : []
             delegate: ColumnLayout {
@@ -2644,7 +2737,7 @@ ColumnLayout {
                     label: plRow.modelData.name
                     hint: plRow.modelData.problem ? Tr.t("Не загружен: ") + plRow.modelData.problem : ""
                     checked: !plRow.modelData.disabled && !plRow.modelData.problem
-                    onToggled: sv.panel.togglePlugin(plRow.modelData.id)
+                    onToggled: sv.guarded(plRow.modelData.id, plRow.modelData.name, !!plRow.modelData.disabled)
                 }
                 Repeater {
                     model: plRow.schema
