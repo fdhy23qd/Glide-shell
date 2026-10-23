@@ -52,16 +52,21 @@ ColumnLayout {
         wrapMode: Text.Wrap
     }
     Loader {
+        id: secLd
         Layout.fillWidth: true
         visible: !!plugin.qml
-        source: plugin.qml ? "file://" + plugin.dir + "/" + plugin.qml + "?v=" + (plugin.mtime || 0) : ""
-        onStatusChanged: if (status === Loader.Error)
-            qmlError.text = Tr.t("Плагин не загрузился: ") + Qt.createComponent(source).errorString().trim()
-        onLoaded: {
+        // api — начальным свойством (setSource): есть уже в Component.onCompleted плагина, а не «чуть позже»
+        readonly property string url: plugin.qml ? "file://" + plugin.dir + "/" + plugin.qml + "?v=" + (plugin.mtime || 0) : ""
+        function load() {
+            if (!url) { source = ""; return }
             Permissions.register(scope, plugin.id, plugin.name, plugin)   // кто это на самом деле — до того, как отдать api
-            item.api = scope
-            if ("pluginDir" in item) item.pluginDir = plugin.dir   // QML-плагину — его папка
+            setSource(url, { api: scope })
         }
+        onUrlChanged: load()
+        Component.onCompleted: load()
+        onStatusChanged: if (status === Loader.Error)
+            qmlError.text = Tr.t("Плагин не загрузился: ") + Qt.createComponent(url).errorString().trim()
+        onLoaded: if ("pluginDir" in item) item.pluginDir = plugin.dir   // QML-плагину — его папка
     }
 
     ApiScope {   // свой API у каждого плагина: хранилище, настройки, уведомления — от его имени (docs/API.md)

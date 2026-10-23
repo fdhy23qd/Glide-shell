@@ -6,6 +6,9 @@ Item {
     id: chip
     property var api
     readonly property bool want: !!api && api.settings.showBar
+    // подсказка при наведении (строка или {title, rows, hint})
+    readonly property var tip: api ? { title: "Вода сегодня", rows: [{ name: "Выпито", value: count + " из " + api.settings.goal }],
+                                       hint: "Щелчок — открыть раздел" } : null
     readonly property int count: api && api.storage.get("day", "") === api.today ? api.storage.get("count", 0) : 0
 
     implicitWidth: row.implicitWidth

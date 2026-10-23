@@ -655,13 +655,25 @@ PanelWindow {
             implicitWidth: ld.item ? Math.min(240, Math.max(0, ld.item.implicitWidth || 0)) : 0
             implicitHeight: 24
             clip: true
+            // подсказка по наведению (API 2): у элемента свойство tip — строка или {title, rows: [{name, value, color}], hint}
+            readonly property var tipData: ld.item && ld.item.tip !== undefined && ld.item.tip !== null && ld.item.tip !== "" ? ld.item.tip : null
+            readonly property string tipKey: tipData ? "plugin:" + pid : ""
+            readonly property bool hot: ppHover.hovered
+            onHotChanged: if (tipKey) bar.tipHover(pp)
+            HoverHandler { id: ppHover }   // не мешает щелчкам самого элемента
             ApiScope { id: ps; owner: pp.pid; ownerName: pp.plugin ? pp.plugin.name : pp.pid; manifest: pp.plugin || ({}) }
             Loader {
                 id: ld
                 anchors.verticalCenter: parent.verticalCenter
-                source: pp.plugin && pp.plugin.bar ? "file://" + pp.plugin.dir + "/" + pp.plugin.bar + "?v=" + (pp.plugin.mtime || 0) : ""
-                onLoaded: { Permissions.register(ps, pp.pid, pp.plugin.name, pp.plugin); item.api = ps
-                            if ("pluginDir" in item) item.pluginDir = pp.plugin.dir }
+                readonly property string url: pp.plugin && pp.plugin.bar ? "file://" + pp.plugin.dir + "/" + pp.plugin.bar + "?v=" + (pp.plugin.mtime || 0) : ""
+                function load() {   // api — начальным свойством: есть уже в Component.onCompleted элемента
+                    if (!url) { source = ""; return }
+                    Permissions.register(ps, pp.pid, pp.plugin.name, pp.plugin)
+                    setSource(url, { api: ps })
+                }
+                onUrlChanged: load()
+                Component.onCompleted: load()
+                onLoaded: if ("pluginDir" in item) item.pluginDir = pp.plugin.dir
                 onStatusChanged: if (status === Loader.Error) console.warn("glide-shell: элемент бара плагина " + pp.pid + " не загрузился")
             }
         }
@@ -936,7 +948,7 @@ PanelWindow {
         Loader {
             id: tipLoader
             width: parent.width
-            sourceComponent: ({ windows: winTip, cpu: procTip, mem: procTip, battery: battTip, layout: layoutTip,
+            sourceComponent: capDrop.key.indexOf("plugin:") === 0 ? pluginTip : ({ windows: winTip, cpu: procTip, mem: procTip, battery: battTip, layout: layoutTip,
                                 clipboard: clipTip, notifications: notifTip, phone: phoneTip, tray: trayTip, vpn: vpnTip, updates: updatesTip })[capDrop.key] || simpleTip
         }
     }
@@ -1101,6 +1113,48 @@ PanelWindow {
             }
             TipLine { visible: parent.all.length > 8; text: Tr.t("…и ещё ") + (parent.all.length - 8) }
             TipHint { text: Tr.t("Щелчок — обновить в терминале") }
+        }
+    }
+    Component {   // подсказка значка плагина: его tip — строка или {title, rows: [{name, value, color}], hint}; только текст
+        id: pluginTip
+        Column {
+            id: ptc
+            spacing: 3
+            readonly property var d: {
+                var t = bar.tipItem ? bar.tipItem.tipData : null
+                return typeof t === "string" ? { title: t } : t && typeof t === "object" ? t : {}
+            }
+            readonly property var rows: Array.isArray(d.rows) ? d.rows.slice(0, 10) : []
+            Text {
+                visible: text !== ""
+                width: parent.width
+                text: ptc.d.title !== undefined ? String(ptc.d.title) : ""
+                textFormat: Text.PlainText
+                color: Theme.text; font.pixelSize: Theme.fs(13); font.weight: Font.DemiBold
+                elide: Text.ElideRight
+            }
+            Repeater {
+                model: ptc.rows
+                delegate: Item {
+                    required property var modelData
+                    width: ptc.width
+                    height: 20
+                    Text { width: parent.width - pv.width - 8; anchors.verticalCenter: parent.verticalCenter
+                           text: modelData && modelData.name !== undefined ? String(modelData.name) : ""
+                           textFormat: Text.PlainText; color: Theme.textVariant; font.pixelSize: Theme.fs(12); elide: Text.ElideRight }
+                    Text { id: pv; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                           text: modelData && modelData.value !== undefined ? String(modelData.value) : ""
+                           textFormat: Text.PlainText; font.pixelSize: Theme.fs(12); font.features: ({ "tnum": 1 })
+                           color: modelData && typeof modelData.color === "string" && modelData.color ? modelData.color : Theme.text }
+                }
+            }
+            Text {
+                visible: text !== ""
+                width: parent.width
+                text: ptc.d.hint !== undefined ? String(ptc.d.hint) : ""
+                textFormat: Text.PlainText
+                color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+            }
         }
     }
     Component {

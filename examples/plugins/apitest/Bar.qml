@@ -7,6 +7,17 @@ Item {
     property var api
     readonly property var last: api ? api.storage.get("summary", null) : null
     readonly property bool want: !!api && api.settings.showBar
+    // подсказка при наведении: заголовок, строки «имя … значение», подпись
+    readonly property var tip: !api ? null : {
+        title: "Проверка API",
+        rows: [
+            { name: "Пройдено", value: last ? String(last.ok) : "—", color: Theme.success },
+            { name: "Не прошло", value: last ? String(last.fail) : "—", color: last && last.fail ? Theme.error : Theme.textSecondary },
+            { name: "Выдано разрешений", value: api.permissions.granted.length + " из " + api.permissions.requested.length },
+            { name: "Служба, тиков", value: String(api.storage.get("serviceTicks", 0)) }
+        ],
+        hint: "Щелчок — открыть раздел проверки"
+    }
     implicitWidth: row.implicitWidth
     implicitHeight: 24
     Row {
