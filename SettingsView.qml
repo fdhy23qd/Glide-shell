@@ -2812,6 +2812,11 @@ ColumnLayout {
             checked: Prefs.pluginLock
             onToggled: Prefs.pluginLock ? sv.guarded("lock", "") : Prefs.set("pluginLock", true)
         }
+        Text {   // главное о безопасности — здесь, а не только в документации: до неё мало кто дочитает
+            Layout.fillWidth: true
+            text: Tr.t("⚠ Песочницы нет: разрешения сдерживают только плагин, который пользуется api. Жёлтая пометка под плагином — код обходит их и может всё, что можешь ты. Ставь только плагины, которые прочитал или автору которых доверяешь.")
+            color: Theme.warning; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
         Rectangle {   // пароль для изменения плагинов (тот же PAM, что у экрана блокировки)
             id: guardCard
             visible: sv.guardFor !== ""

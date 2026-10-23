@@ -1075,5 +1075,6 @@
  "Плагин написан до разрешений (API 1) и рассчитан на полный доступ: запуск программ, сеть, буфер, чужие уведомления, окна, телефон, настройки. Разрешай, только если доверяешь автору.": "The plugin was written before permissions (API 1) and expects full access: running programs, network, clipboard, other apps' notifications, windows, phone, settings. Allow only if you trust the author.",
  "Плагин старого формата (API 1) просит все разрешения и пока не получил ни одного — его команды и фоновые процессы не работают.": "An old-format plugin (API 1) asks for all permissions and has none yet — its commands and background processes don't run.",
  "Плагин старого формата (API 1): часть разрешений выключена.": "Old-format plugin (API 1): some permissions are off.",
- "Разрешить всё…": "Allow all…"
+ "Разрешить всё…": "Allow all…",
+ "⚠ Песочницы нет: разрешения сдерживают только плагин, который пользуется api. Жёлтая пометка под плагином — код обходит их и может всё, что можешь ты. Ставь только плагины, которые прочитал или автору которых доверяешь.": "⚠ There is no sandbox: permissions only restrain a plugin that sticks to api. A yellow mark under a plugin means its code goes around them and can do anything you can. Install only plugins you have read or whose author you trust."
 }
