@@ -23,7 +23,7 @@ Singleton {
         phone:         { glyph: 0xF011C, title: Tr.t("Телефон"), hint: Tr.t("api.kdeconnect — устройства, их уведомления и команды") },
         system:        { glyph: 0xF0493, title: Tr.t("Настройки оболочки"), hint: Tr.t("api.setPref, api.setAwake, api.recorder — менять настройки, «не засыпать», запись экрана") }
     })
-    function title(p) { return meta[p] ? meta[p].title : p }
+    function title(p) { return p === "*" ? Tr.t("все разрешения (плагин старого формата)") : meta[p] ? meta[p].title : p }
 
     // ---------- кто есть кто: объект api → настоящий id и замороженная копия манифеста ----------
     // Заполняет только код оболочки, создающий api (раздел плагина, бар, служба, виджет), до того как отдать его
@@ -66,9 +66,11 @@ Singleton {
         onLoadFailed: perms.fromFile("")
     }
     Component.onCompleted: if (!ready) { var t = ""; try { t = file.text() } catch (e) {} fromFile(t) }
+    // какие наборы уже установленного одобрены один раз при переходе на v1.1 (plugins, widgets) — см. migrateLegacy
+    property var legacy: ({})
     function fromFile(raw) {
         if (!ready) {   // при старте файл принимается как есть: правили его, пока оболочка не работала — значит, человек
-            try { grants = (JSON.parse(raw) || {}).plugins || {} } catch (e) { grants = {} }
+            try { var d = JSON.parse(raw) || {}; grants = d.plugins || {}; legacy = d.legacy || {} } catch (e) { grants = {}; legacy = {} }
             written = raw
             ready = true
             return
@@ -80,7 +82,7 @@ Singleton {
     }
     function save(g) {
         grants = g
-        written = JSON.stringify({ version: 1, plugins: g }, null, 1) + "\n"
+        written = JSON.stringify({ version: 1, legacy: legacy, plugins: g }, null, 1) + "\n"
         file.setText(written)
     }
 
@@ -99,7 +101,9 @@ Singleton {
         if (trusted(m)) return true
         if (requested(m).indexOf(p) < 0) return false
         var e = entry(owner, m)
-        if (!e) return apiOf(m) < 2   // API 1 без записи — всё, как раньше; API 2 — ничего, пока человек не выдаст
+        // без записи — ничего, пока человек не выдаст: и у API 2, и у API 1 (иначе любой скачанный плагин с «"api": 1»
+        // молча получал бы всё). Установленное до v1.1 одобрено один раз — migrateLegacy
+        if (!e) return false
         return (e.granted || []).indexOf(p) >= 0
     }
     // "granted" | "denied" (отказал человек — плагин больше не спрашивает) | "ask" (не решено)
@@ -111,7 +115,7 @@ Singleton {
     function grantedList(owner, m) { return requested(m).filter(p => has(owner, m, p)) }
     function change(owner, m, p, on) {
         var g = JSON.parse(JSON.stringify(grants)), e = entry(owner, m)
-        e = e ? JSON.parse(JSON.stringify(e)) : { api: apiOf(m), granted: apiOf(m) < 2 ? requested(m).slice() : [], denied: [] }
+        e = e ? JSON.parse(JSON.stringify(e)) : { api: apiOf(m), granted: [], denied: [] }
         e.api = apiOf(m)
         e.granted = (e.granted || []).filter(x => x !== p)
         e.denied = (e.denied || []).filter(x => x !== p)
@@ -119,6 +123,25 @@ Singleton {
         g[owner] = e
         save(g)
     }
+    // один раз при переходе: сторонние плагины (или свои виджеты) API 1, стоявшие до v1.1, получают то, что имели
+    // (всё) — их ставил сам человек. Всё, что появится потом, начинает без прав. items: [{owner, m}]
+    function migrateLegacy(kind, items) {
+        if (!ready || legacy[kind]) return
+        var g = JSON.parse(JSON.stringify(grants))
+        for (var it of items)
+            if (!trusted(it.m) && apiOf(it.m) < 2 && !g[it.owner])
+                g[it.owner] = { api: 1, granted: requested(it.m).slice(), denied: [] }
+        var l = Object.assign({}, legacy); l[kind] = true; legacy = l
+        save(g)
+        console.log("glide-shell: разрешения — установленное до v1.1 (" + kind + ") одобрено: " + items.length)
+    }
+    // «Разрешить всё» (плагин старого формата просит всё) — тот же вопрос с паролем, perm = "*"
+    function askAll(owner, name, m) {
+        if (trusted(m)) return
+        pam.abort(); error = ""
+        pending = { owner: owner, name: name || owner, perm: "*", reason: "", manifest: m }
+    }
+
     // забрать — без пароля (безопасное направление)
     function revoke(owner, m, p) { if (!trusted(m) && has(owner, m, p)) change(owner, m, p, false) }
     // забыть решения: плагин снова сможет спросить (API 1 — снова всё разрешено)
@@ -161,7 +184,11 @@ Singleton {
     function grantPending() {
         var p = pending
         pending = null; error = ""
-        if (p) change(p.owner, p.manifest, p.perm, true)
+        if (p && p.perm === "*") {   // всё объявленное разом
+            var g = JSON.parse(JSON.stringify(grants))
+            g[p.owner] = { api: apiOf(p.manifest), granted: requested(p.manifest).slice(), denied: [] }
+            save(g)
+        } else if (p) change(p.owner, p.manifest, p.perm, true)
     }
     function deny() {
         pam.abort()

@@ -10,8 +10,8 @@ Glide Shell can be extended in three ways:
 | **Desktop widget** | `~/.config/glide-shell/widgets/<id>/` | QML |
 | **Another app** talking to the shell | D-Bus / `glide-shell` command | any |
 
-API version: **2**. Put `"api": 2` in `plugin.json`. Plugins with `"api": 1` (or no field) keep working as before:
-things are only ever added. What is new in version 2: [section 3a](#3a-new-in-version-2); permissions:
+API version: **2**. Put `"api": 2` in `plugin.json`. Plugins with `"api": 1` (or no field) still load, but a
+third-party one gets no permissions until you allow them (see section 3b). What is new in version 2: [section 3a](#3a-new-in-version-2); permissions:
 [section 3b](#3b-permissions); how to move a plugin over: [section 12](#12-moving-from-version-1-to-2).
 
 Quick start: `python3 ~/.config/quickshell/glide-shell/tools/glide-plugin.py new my-plugin "My plugin"`
@@ -168,7 +168,7 @@ Item {
 | Field | Meaning |
 |---|---|
 | `api` | API version: `1` or `2`. No field means `1`. Newer than the shell knows: the plugin is not loaded. |
-| `permissions` | API 2 only: the permissions the plugin needs: `exec`, `network`, `clipboard`, `notifications`, `windows`, `phone`, `system` (section 3b). A person grants them; no field means none. An API 1 plugin gets everything and this field is ignored. |
+| `permissions` | API 2 only: the permissions the plugin needs: `exec`, `network`, `clipboard`, `notifications`, `windows`, `phone`, `system` (section 3b). A person grants them; no field means none. An API 1 plugin asks for all of them (this field is ignored) and gets them only when you allow it. |
 | `id`, `name`, `icon` | Required: `id` and `name`. A plugin with the same `id` as a built-in one replaces it. `icon`: the character itself (`"󰖌"`, a Nerd Font glyph) or its hex code (`"F058C"`); both work here and in `widget.json`. |
 | `category` | Panel category: `power`, `control`, `media`, `clipboard`, `apps`, `quick`, `today`, `phone`, `ai`, `dev`, `text`, `system`, `net`, `notify` or your own id. A new id makes a new category (`categoryName`, `categoryIcon`). |
 | `priority` | Order inside the category: higher comes first. |
@@ -531,8 +531,10 @@ need no permissions: they are part of the shell. Your widgets' permissions are a
 - Permissions are kept in `~/.config/glide-shell/permissions.json`. If the file changes while the shell runs, the
   shell restores its own copy and shows a warning. Edit it by hand only while the shell is stopped
   (`systemctl --user stop glide-shell`).
-- An API 1 plugin still gets everything, or old plugins would break. You can take away what it does not need with the
-  same switches.
+- A third-party API 1 plugin (or one with no `api` field) asks for **all** permissions and gets **none** until you
+  allow them: one by one, or with "Allow all…" under it (password, with a warning). Until then its commands and
+  `daemon` do not run. Otherwise anyone could get every permission silently by writing `"api": 1`. Plugins and own
+  widgets that were installed before Glide Shell 1.1 were approved once during the upgrade.
 - A plugin that moves from API 1 to 2 starts from scratch: decisions made for the old version do not carry over.
 - Built-in plugins get everything, but built-in means only a plugin in the shell's own folder. A `trusted` field in
   your own `plugin.json` gives nothing.
@@ -827,8 +829,8 @@ built-in one replaces it and also gets the built-in's storage and settings.
 
 ### Compatibility
 
-- The API version is the `api` field: `1` or `2`. Glide Shell 1.0 understands both. An API 1 plugin works as before
-  and gets every permission; the version 2 additions (section 3a) are available to it too.
+- The API version is the `api` field: `1` or `2`. Glide Shell 1.0 understands both. A third-party API 1 plugin
+  needs your consent for everything (section 3b); the version 2 additions (section 3a) are available to it too.
 - Within a version, things are only added: new fields of `api`, new manifest fields, new optional arguments, new
   D-Bus methods and signals.
 - **Breaking changes** need version 3: removing or renaming anything listed in this document, changing a type or a

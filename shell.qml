@@ -993,6 +993,8 @@ ShellRoot {
             root.plugins = d.plugins
             root.updateDaemons()
             root.allPlugins = d.allPlugins || []
+            // один раз: сторонние плагины API 1, что стояли до v1.1, остаются одобренными (Permissions.migrateLegacy)
+            Permissions.migrateLegacy("plugins", root.allPlugins.filter(p => p.user && !p.problem).map(p => ({ owner: p.id, m: p })))
             Prefs.data = d.panel || {}
             console.log("glide-shell: " + d.plugins.length + " plugins, " + d.categories.length + " categories"
                         + (fresh ? "" : Tr.t(" (кэш)")))
@@ -1039,7 +1041,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v1.0 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v1.1 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

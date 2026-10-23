@@ -21,7 +21,13 @@ Scope {
         id: scanner
         running: true
         command: ["python3", "-I", Quickshell.shellDir + "/tools/glide-widgets.py"]
-        stdout: StdioCollector { onStreamFinished: { try { dw.customs = JSON.parse(text) } catch (e) { dw.customs = [] } } }
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { dw.customs = JSON.parse(text) } catch (e) { dw.customs = [] }
+                // один раз: свои виджеты API 1, что стояли до v1.1, остаются одобренными
+                Permissions.migrateLegacy("widgets", dw.customs.map(w => ({ owner: "widget-" + w.id, m: w })))
+            }
+        }
     }
 
     // ---- правка рабочего стола: виджеты над окнами, тянуть мышью (IPC panel editDesktop, «Виджеты» в настройках) ----

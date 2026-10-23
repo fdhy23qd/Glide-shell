@@ -185,7 +185,7 @@ class Permissions(unittest.TestCase):
                 "import QtQuick\nimport Quickshell.Io\nItem { Process { command: ['id'] } }\n")
             every, loaded = discover(cfg, tmp)
             self.assertEqual(every["old"]["permissions"], PERMISSIONS_V2)        # API 1 — просит всё…
-            self.assertEqual(every["old"]["granted"], PERMISSIONS_V2)            # …и получает, как раньше
+            self.assertEqual(every["old"]["granted"], [])                        # …но без согласия человека — ничего (v1.1)
             self.assertEqual(every["new"]["permissions"], ["exec", "network"])   # неизвестное — мимо
             self.assertEqual(every["new"]["unknownPermissions"], ["bogus"])
             self.assertEqual(every["new"]["granted"], [])                         # API 2 — ничего, пока человек не выдаст

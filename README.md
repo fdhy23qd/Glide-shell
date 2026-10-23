@@ -181,8 +181,8 @@ replaces it. More examples are in [`examples/`](examples/).
 - **Permissions (API 2):** the risky parts (running programs with `exec`, the network, the clipboard, other apps'
   notifications, windows, the phone, shell settings) work only if you allow them in Settings → Plugins →
   Permissions under the plugin. A plugin can only ask; granting takes your login password (with plugin protection
-  on), taking away takes one click. Plugins with `"api": 1` work as before and get everything; you can take away
-  what they don't need.
+  on), taking away takes one click. Third-party plugins with `"api": 1` get nothing until you allow it
+  ("Allow all…" or one by one); ones installed before 1.1 were approved once.
 - **Items:** a `button` runs its `command`, an `input` runs on Enter, and a `list` shows the lines its `list`
   command prints and runs `command` with the line you click.
 - **Commands:** commands are argv arrays with no shell. Placeholders `{text}` and `{dir}` are filled in, and the
