@@ -169,6 +169,9 @@ notification history, chat history) goes to `~/.local/state/glide-shell/`, with 
 >   but any program running as you can change the file while the shell is stopped.
 > - **A third-party plugin starts with no permissions**, old ones with `"api": 1` included. You grant them yourself.
 > - **Install only plugins you have read or whose author you trust.** Details: [docs/API.md, section 10](docs/API.md#10-security-data-and-compatibility).
+> - **Not reviewed by security professionals.** The plugin and permission system was built by one person who is not a
+>   security expert, with an AI assistant helping to look for holes. Treat it as a reasonable effort, not a guarantee,
+>   and please report anything you find.
 
 Full reference: **[docs/API.md](docs/API.md)** (storage, settings, events, bar items, widgets; permissions in
 section 3b; security and compatibility rules in section 10). A working

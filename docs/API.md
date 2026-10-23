@@ -28,6 +28,9 @@ creates a working plugin that uses all of the API below: a panel section, a bar 
 >   but any program running as you can change the file while the shell is stopped.
 > - **A third-party plugin starts with no permissions**, old ones with `"api": 1` included. You grant them yourself.
 > - **Install only plugins you have read or whose author you trust.** Details: [section 10](#10-security-data-and-compatibility).
+> - **Not reviewed by security professionals.** The plugin and permission system was built by one person who is not a
+>   security expert, with an AI assistant helping to look for holes. Treat it as a reasonable effort, not a guarantee,
+>   and please report anything you find.
 
 ## Contents
 
