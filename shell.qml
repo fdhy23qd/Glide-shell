@@ -790,10 +790,13 @@ ShellRoot {
             id: svc
             required property var modelData
             property ApiScope scope: ApiScope { owner: svc.modelData.id; ownerName: svc.modelData.name; manifest: svc.modelData }
-            source: "file://" + modelData.dir + "/" + modelData.service + "?v=" + modelData.mtime
-            // полный манифест (api, permissions, trusted) — из списка оболочки, а не урезанная подпись serviceSig
-            onLoaded: { Permissions.register(scope, modelData.id, modelData.name, root.pluginById(modelData.id) || {}); item.api = scope
-                        if ("pluginDir" in item) item.pluginDir = modelData.dir }
+            // полный манифест (api, permissions, trusted) — из списка оболочки, а не урезанная подпись serviceSig;
+            // api — начальным свойством: есть уже в Component.onCompleted службы
+            Component.onCompleted: {
+                Permissions.register(scope, modelData.id, modelData.name, root.pluginById(modelData.id) || {})
+                setSource("file://" + modelData.dir + "/" + modelData.service + "?v=" + modelData.mtime, { api: scope })
+            }
+            onLoaded: if ("pluginDir" in item) item.pluginDir = modelData.dir
             onStatusChanged: if (status === Loader.Error) console.warn("glide-shell: служба плагина " + modelData.id + " не загрузилась")
         }
     }
@@ -1041,7 +1044,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v1.1 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v1.2 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

@@ -104,7 +104,7 @@ import qs
 
 ColumnLayout {
     id: root
-    property var api                     // set right after creation: null until then
+    property var api                     // already set in Component.onCompleted
     spacing: 12
     readonly property int goal: api ? api.settings.goal : 8
     // api.today changes at midnight, so yesterday's count stops counting by itself
@@ -340,7 +340,7 @@ Settings → Island. From a script: `qs -c glide-shell ipc call panel activity I
 ```qml
 Connections {
     target: api
-    ignoreUnknownSignals: true          // api arrives after the item is created
+    ignoreUnknownSignals: true          // harmless; needed in Glide Shell before 1.1
     function onOpened() {}               // the panel opened
     function onClosed() {}
     function onThemeUpdated() {}         // accent, tone or light/dark mode changed
@@ -577,8 +577,9 @@ ColumnLayout {
 }
 ```
 
-`api` is assigned right after the item is created, so it is `null` during the first moment. Write bindings as
-`api ? … : default` and handlers as `root.api.…` (they only run later). The section's width is set by the panel, and
+`api` is passed as an initial property (since Glide Shell 1.1), so it is set before `Component.onCompleted` of a
+section, a bar item and a service. Guards like `api ? … : default` are still harmless and keep the plugin working on
+older versions, where `api` arrived a moment later. The section's width is set by the panel, and
 its height comes from `implicitHeight`. A `ColumnLayout` or `Column` root needs no explicit size; do not set a fixed
 height.
 
@@ -644,6 +645,15 @@ Item {
 
 The shell places the item in the left or right island. The user chooses which in Settings → Bar. Width is limited to
 240 px. Do not size a `Row` from its own children: `width: parent.width` inside a `Row` creates a layout loop.
+
+**Tooltip on hover.** Give the item a `tip` property and the shell shows it in the same drop-down as built-in items,
+updating it live. `tip` is a string, or `{title, rows: [{name, value, color}], hint}` (up to 10 rows; plain text only,
+`color` is optional). `null` or an empty string means no tooltip.
+
+```qml
+readonly property var tip: ({ title: "Water today", rows: [{ name: "Glasses", value: count + " of 8" }],
+                              hint: "Click to open" })
+```
 
 [↑ Contents](#contents)
 
