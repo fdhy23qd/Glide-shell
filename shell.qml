@@ -574,6 +574,11 @@ ShellRoot {
         p.running = true
     }
     function run(plugin, spec, text) {
+        if (!spec.handoff && !Permissions.has(plugin.id, plugin, "exec")) {   // API 2: команды кнопок — по разрешению «exec»
+            flash(String.fromCodePoint(0xF033E), Tr.t("«") + plugin.name + Tr.t("»: нужно разрешение «Запуск программ»"), Theme.warning)
+            Permissions.request(plugin.id, plugin.name, plugin, "exec", "")
+            return
+        }
         if (spec.handoff) {   // не команда, а передача текста другому плагину (например, в чат ИИ)
             var target = pluginById(spec.handoff)
             if (!target) return
@@ -784,9 +789,11 @@ ShellRoot {
         delegate: Loader {
             id: svc
             required property var modelData
-            property ApiScope scope: ApiScope { shell: root; owner: svc.modelData.id; ownerName: svc.modelData.name; manifest: svc.modelData }
+            property ApiScope scope: ApiScope { owner: svc.modelData.id; ownerName: svc.modelData.name; manifest: svc.modelData }
             source: "file://" + modelData.dir + "/" + modelData.service + "?v=" + modelData.mtime
-            onLoaded: { item.api = scope; if ("pluginDir" in item) item.pluginDir = modelData.dir }
+            // полный манифест (api, permissions, trusted) — из списка оболочки, а не урезанная подпись serviceSig
+            onLoaded: { Permissions.register(scope, modelData.id, modelData.name, root.pluginById(modelData.id) || {}); item.api = scope
+                        if ("pluginDir" in item) item.pluginDir = modelData.dir }
             onStatusChanged: if (status === Loader.Error) console.warn("glide-shell: служба плагина " + modelData.id + " не загрузилась")
         }
     }
@@ -808,6 +815,7 @@ ShellRoot {
         case "close": close(); break
         case "search": if (shown) win.setSearch(m.text || ""); else { pendingSearch = m.text || ""; open() } break
         case "dnd": Notifs.setDnd(!!m.on); break
+        case "settings": showSettings(m.page || ""); break
         default: return "unknown op"
         }
         return "ok"
@@ -878,6 +886,18 @@ ShellRoot {
     }
     function setCategory(id) { settingsOpen = false; category = id; clearSearch() }
     function openSettings() { settingsOpen = !settingsOpen; clearSearch() }
+    function showSettings(page) { settingsPage = page || "look"; settingsOpen = true; clearSearch(); if (!shown) open() }
+
+    // ---------- разрешения плагинов (Permissions.qml) и сообщения между ними (api.send → onMessage) ----------
+    signal pluginMessage(string from, string to, string name, var data)
+    Connections {
+        target: Permissions
+        function onAsked(owner) { root.showSettings("plugins") }   // плагин попросил разрешение — вопрос в «Плагинах»
+        function onTampered() {
+            root.flash(String.fromCodePoint(0xF0026), Tr.t("Разрешения плагинов изменили в обход настроек — изменение отменено"), Theme.error)
+        }
+        function onGrantsChanged() { root.updateDaemons() }
+    }
 
     // ---------- страницы рейки ----------
     function setPage(p) {
@@ -1004,7 +1024,7 @@ ShellRoot {
     // и новый массив plugins пересоздавал бы все процессы (слежение за буфером терял копирования).
     property var daemons: []
     function updateDaemons() {
-        var d = root.plugins.filter(p => p.daemon).map(p => ({ id: p.id, daemon: p.daemon, dir: p.dir }))
+        var d = root.plugins.filter(p => p.daemon && Permissions.has(p.id, p, "exec")).map(p => ({ id: p.id, daemon: p.daemon, dir: p.dir }))
         if (JSON.stringify(d) !== JSON.stringify(daemons)) daemons = d
     }
     Instantiator {
@@ -1018,7 +1038,8 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        console.log("Glide Shell v0.98 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        Core.root = root   // для ApiScope (вместо прежнего api.shell)
+        console.log("Glide Shell v1.0 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

@@ -74,6 +74,139 @@ ColumnLayout {
         Switch { checked: tr.checked; onToggled: tr.toggled() }
     }
 
+    component PermAsk: Rectangle {   // вопрос о разрешении (Permissions.pending): плагин попросил или ты включил переключатель
+        id: permCard
+        readonly property var pq: Permissions.pending
+        readonly property bool risky: !!pq && Permissions.dangerous.indexOf(pq.perm) >= 0
+        Layout.fillWidth: true
+        implicitHeight: permCol.implicitHeight + 24
+        radius: Theme.r(16)
+        color: Theme.surface
+        border.width: 2
+        border.color: Permissions.error ? Theme.error : risky ? Theme.warning : Prefs.accent
+        onVisibleChanged: if (visible && Prefs.pluginLock) permInput.forceActiveFocus()
+        function submit() { Permissions.confirm(permInput.text); permInput.text = "" }
+        ColumnLayout {
+            id: permCol
+            x: 14; y: 12; width: parent.width - 28
+            spacing: 8
+            Text {
+                Layout.fillWidth: true
+                text: permCard.pq ? Tr.t("«") + permCard.pq.name + Tr.t("» просит разрешение: ") + Permissions.title(permCard.pq.perm) : ""
+                color: Theme.text; font.pixelSize: Theme.fs(13); font.weight: Font.DemiBold; wrapMode: Text.WordWrap
+            }
+            Text {
+                Layout.fillWidth: true
+                text: permCard.pq && Permissions.meta[permCard.pq.perm] ? Permissions.meta[permCard.pq.perm].hint : ""
+                color: Theme.textSecondary; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+            }
+            Text {
+                visible: !!permCard.pq && permCard.pq.reason !== ""
+                Layout.fillWidth: true
+                text: permCard.pq ? Tr.t("Плагин объясняет: ") + permCard.pq.reason : ""
+                color: Theme.textSecondary; font.pixelSize: Theme.fs(12); font.italic: true; wrapMode: Text.WordWrap
+            }
+            Text {
+                visible: permCard.risky
+                Layout.fillWidth: true
+                text: Tr.t("Это полный доступ: плагин сможет делать всё, что можешь ты. Разрешай, только если доверяешь автору.")
+                color: Theme.warning; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+            }
+            Rectangle {
+                visible: Prefs.pluginLock
+                Layout.fillWidth: true
+                implicitHeight: 36; radius: Theme.r(18)
+                color: Theme.background
+                border.width: permInput.activeFocus ? 2 : 1
+                border.color: permInput.activeFocus ? Prefs.accent : Theme.outline
+                HoverHandler { cursorShape: Qt.IBeamCursor }
+                TextInput {
+                    id: permInput
+                    anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
+                    verticalAlignment: TextInput.AlignVCenter
+                    echoMode: TextInput.Password; passwordCharacter: "●"
+                    readOnly: Permissions.checking
+                    color: Theme.text; font.pixelSize: Theme.fs(13); clip: true
+                    onTextChanged: if (text) Permissions.error = ""
+                    Keys.onReturnPressed: permCard.submit()
+                    Keys.onEnterPressed: permCard.submit()
+                    Keys.onEscapePressed: Permissions.cancel()
+                }
+                Text {
+                    visible: permInput.text === ""
+                    anchors.verticalCenter: parent.verticalCenter; x: 14
+                    text: Tr.t("Пароль от входа")
+                    color: Theme.textFaint; font.pixelSize: Theme.fs(13)
+                }
+            }
+            Text {
+                visible: !!Permissions.error
+                text: Permissions.error
+                color: Theme.error; font.pixelSize: Theme.fs(12)
+            }
+            RowLayout {
+                spacing: 8
+                ActionBtn { glyph: String.fromCodePoint(0xF012C); text: Permissions.checking ? Tr.t("Проверка…") : Tr.t("Разрешить")
+                            enabled: !Permissions.checking && (!Prefs.pluginLock || permInput.text !== ""); onClicked: permCard.submit() }
+                ActionBtn { glyph: String.fromCodePoint(0xF0156); text: Tr.t("Отказать"); onClicked: Permissions.deny() }
+                ActionBtn { glyph: String.fromCodePoint(0xF0954); text: Tr.t("Позже"); onClicked: Permissions.cancel() }
+            }
+        }
+    }
+
+    // разрешения плагина или своего виджета (API 2, Permissions.qml): свёрнуто — строка «Разрешения: 2 из 3»,
+    // раскрыто — переключатель на каждое. Включить — через вопрос с паролем (карточка вверху «Плагинов»), выключить — сразу
+    component PermBox: ColumnLayout {
+        id: pb
+        property string owner
+        property string name
+        property var man: ({})
+        property var audit: []
+        property bool open: false
+        readonly property var req: Permissions.requested(man)
+        readonly property var got: Permissions.grantedList(owner, man)
+        readonly property bool legacy: Permissions.apiOf(man) < 2
+        visible: req.length > 0 || audit.length > 0
+        Layout.fillWidth: true
+        spacing: 6
+        RowLayout {
+            visible: pb.req.length > 0
+            spacing: 6
+            Text { text: String.fromCodePoint(0xF0483); color: Theme.textMuted; font.family: Prefs.iconFont; font.pixelSize: Theme.fs(13) }
+            Text {
+                text: Tr.t("Разрешения: ") + pb.got.length + Tr.t(" из ") + pb.req.length + (pb.legacy ? Tr.t(" (API 1)") : "")
+                      + (pb.open ? "  ▾" : "  ▸")
+                color: pmMa.containsMouse ? Theme.text : Theme.textSecondary; font.pixelSize: Theme.fs(12)
+                MouseArea { id: pmMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: pb.open = !pb.open }
+            }
+        }
+        Text {
+            visible: pb.audit.length > 0
+            Layout.fillWidth: true
+            text: Tr.t("Код обращается к системе в обход разрешений: ") + pb.audit.join(", ")
+            color: Theme.warning; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
+        Text {
+            visible: pb.open && pb.legacy
+            Layout.fillWidth: true
+            text: Tr.t("Плагин для API 1 получает всё — так они писались до версии 2. Лишнее можно забрать.")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
+        PermAsk { visible: !!Permissions.pending && Permissions.pending.owner === pb.owner && Permissions.pending.fromPlugin !== true }
+        Repeater {
+            model: pb.open ? pb.req : []
+            delegate: ToggleRow {
+                required property string modelData
+                readonly property var pm: Permissions.meta[modelData] || ({})
+                icon: String.fromCodePoint(pm.glyph || 0xF0483)
+                label: (pm.title || modelData) + (Permissions.dangerous.indexOf(modelData) >= 0 ? Tr.t(" — полный доступ") : "")
+                hint: (pm.hint || "") + (Permissions.state(pb.owner, pb.man, modelData) === "denied" ? Tr.t(" Ты отказал — плагин больше не спрашивает.") : "")
+                checked: pb.got.indexOf(modelData) >= 0
+                onToggled: checked ? Permissions.revoke(pb.owner, pb.man, modelData) : Permissions.ask(pb.owner, pb.name, pb.man, modelData, "")
+            }
+        }
+    }
+
     // Сегменты: [{label, value}]; выбранный подсвечивается переезжающей плашкой
     // строка острова в настройках: ↑↓ — порядок, значок, название, выключатель (у записи экрана — всегда)
     readonly property var islandMeta: ({
@@ -2642,6 +2775,7 @@ ColumnLayout {
         visible: sv.page === "plugins"
         Layout.fillWidth: true
         spacing: 14
+        PermAsk { visible: !!Permissions.pending && Permissions.pending.fromPlugin === true }   // попросил сам плагин
         // ---- категории ----
         Header { text: Tr.t("ПОРЯДОК КАТЕГОРИЙ") }
         Repeater {
@@ -2739,6 +2873,14 @@ ColumnLayout {
                     checked: !plRow.modelData.disabled && !plRow.modelData.problem
                     onToggled: sv.guarded(plRow.modelData.id, plRow.modelData.name, !!plRow.modelData.disabled)
                 }
+                PermBox {   // встроенным разрешения не нужны: они часть оболочки
+                    visible: plRow.modelData.user === true && !plRow.modelData.problem && (req.length > 0 || audit.length > 0)
+                    Layout.leftMargin: 30
+                    owner: plRow.modelData.id
+                    name: plRow.modelData.name
+                    man: plRow.full || ({ api: plRow.modelData.api, permissions: plRow.modelData.permissions || [] })
+                    audit: plRow.modelData.audit || []
+                }
                 Repeater {
                     model: plRow.schema
                     delegate: ColumnLayout {
@@ -2784,6 +2926,25 @@ ColumnLayout {
                                                                       pso.modelData.type === "number" ? Number(v) : v)
                         }
                     }
+                }
+            }
+        }
+
+        Header { visible: sv.customs.length > 0; text: Tr.t("РАЗРЕШЕНИЯ СВОИХ ВИДЖЕТОВ") }
+        Repeater {
+            model: sv.customs
+            delegate: ColumnLayout {
+                id: cwRow
+                required property var modelData
+                Layout.fillWidth: true
+                spacing: 4
+                Text { text: cwRow.modelData.name; color: Theme.text; Layout.fillWidth: true; elide: Text.ElideRight }
+                PermBox {
+                    Layout.leftMargin: 30
+                    owner: "widget-" + cwRow.modelData.id
+                    name: cwRow.modelData.name
+                    man: cwRow.modelData
+                    audit: cwRow.modelData.audit || []
                 }
             }
         }

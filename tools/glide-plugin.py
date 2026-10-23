@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Заготовки для разработчиков Glide Shell (описание API — docs/API.md).
 
-    glide-plugin.py new ID [ИМЯ]      — плагин в ~/.config/glide-shell/plugins/ID: раздел панели (Main.qml),
-                                        элемент бара (Bar.qml) и настройки — рабочий пример всего API
+    glide-plugin.py new ID [ИМЯ]      — плагин API 2 в ~/.config/glide-shell/plugins/ID: раздел панели (Main.qml),
+                                        элемент бара (Bar.qml), настройки и запрос разрешения — рабочий пример API
     glide-plugin.py widget ID [ИМЯ]   — свой виджет рабочего стола в ~/.config/glide-shell/widgets/ID
 
 Плагин появится при следующем открытии панели (настройки — «Плагины», элемент бара — «Бар»).
@@ -19,7 +19,7 @@ PLUGIN_QML = r'''import QtQuick
 import QtQuick.Layouts
 import qs
 
-// Раздел плагина в панели. api — docs/API.md: хранилище, настройки, уведомления, события, система.
+// Раздел плагина в панели. api — docs/API.md: хранилище, настройки, уведомления, события, разрешения.
 ColumnLayout {
     id: root
     property var api
@@ -28,11 +28,13 @@ ColumnLayout {
 
     readonly property int clicks: api ? api.storage.get("clicks", 0) : 0
     property string lastNotif: ""
+    // чужие уведомления — по разрешению «notifications» (объявлено в plugin.json, выдаёт человек в «Плагинах»)
+    readonly property bool canNotifs: !!api && api.permissions.granted.indexOf("notifications") >= 0
 
     Connections {   // события оболочки (ignoreUnknownSignals: пока api не передан, сигналов у цели нет)
         target: root.api
         ignoreUnknownSignals: true
-        function onOpened() { console.log("__ID__: панель открыта") }
+        function onOpened() { root.api.log("панель открыта") }
         function onNotification(e) { root.lastNotif = e.appName + ": " + e.summary }
     }
 
@@ -62,6 +64,14 @@ ColumnLayout {
             MouseArea { id: nm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                         onClicked: root.api.notify("__NAME__", "Нажатий: " + root.clicks) }
         }
+    }
+    Text {   // без разрешения — объяснить и попросить; решает человек
+        visible: !!root.api && !root.canNotifs
+        Layout.fillWidth: true
+        text: "Чтобы показывать последнее уведомление, нужно разрешение. Нажми, чтобы спросить."
+        color: Theme.accent; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                    onClicked: root.api.permissions.request("notifications", "Показать последнее уведомление в разделе") }
     }
 }
 '''
@@ -135,15 +145,15 @@ def main():
         sys.exit(__doc__ + "\nID — латиница, цифры, - и _")
     pid, name = a[1], a[2] if len(a) > 2 else a[1]
     if a[0] == "new":
-        manifest = {"id": pid, "api": 1, "name": name, "icon": "󰐱", "category": "quick",
-                    "qml": "Main.qml", "bar": "Bar.qml",
+        manifest = {"id": pid, "api": 2, "name": name, "icon": "󰐱", "category": "quick",
+                    "qml": "Main.qml", "bar": "Bar.qml", "permissions": ["notifications"],
                     "settings": [{"key": "greeting", "type": "text", "label": "Приветствие", "default": "Привет!"},
                                  {"key": "showBar", "type": "toggle", "label": "Показывать в баре", "default": True}]}
         write(CFG / "plugins" / pid, {"plugin.json": json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
                                       "Main.qml": PLUGIN_QML.replace("__ID__", pid).replace("__NAME__", name),
                                       "Bar.qml": BAR_QML})
     else:
-        manifest = {"name": name, "icon": "F0954", "description": "",
+        manifest = {"name": name, "icon": "F0954", "description": "", "api": 2, "permissions": [],
                     "settings": [{"key": "title", "type": "text", "label": "Заголовок", "default": name}]}
         write(CFG / "widgets" / pid, {"widget.json": json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
                                       "widget.qml": WIDGET_QML})

@@ -1,0 +1,11 @@
+{
+  "id": "apitest", "api": 2, "name": "Проверка API", "icon": "󰙨", "category": "apitest",
+  "categoryName": "Проверка API", "categoryIcon": "󰙨",
+  "permissions": ["exec", "network", "clipboard", "notifications", "windows", "phone", "system"],
+  "qml": "Main.qml", "bar": "Bar.qml", "service": "Service.qml",
+  "settings": [
+    { "key": "url", "type": "text", "label": "Адрес для проверки сети", "default": "https://example.com" },
+    { "key": "showBar", "type": "toggle", "label": "Показывать в баре", "default": true },
+    { "key": "level", "type": "number", "label": "Число для проверки настроек", "default": 3, "min": 1, "max": 5 }
+  ]
+}

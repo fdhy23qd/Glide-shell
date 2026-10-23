@@ -123,7 +123,6 @@ Item {
     // что получает свой виджет — общий API плагинов и виджетов (docs/API.md) плюс размер и цвета виджета
     ApiScope {
         id: wapi
-        shell: wgt.hub.panel
         owner: "widget-" + (wgt.cfg.custom || wgt.type)
         ownerName: wgt.meta ? wgt.meta.name : owner
         manifest: wgt.meta || ({})
@@ -141,6 +140,7 @@ Item {
         var comp = Qt.createComponent(url)
         if (comp.status === Component.Error) { errText = comp.errorString().trim(); body.sourceComponent = errC; return }
         errText = ""
+        Permissions.register(wapi, "widget-" + cfg.custom, meta.name || cfg.custom, meta)   // до того, как отдать api
         body.setSource(url, { api: wapi, cfg: opts })
     }
     onMetaChanged: loadCustom()

@@ -58,6 +58,7 @@ ColumnLayout {
         onStatusChanged: if (status === Loader.Error)
             qmlError.text = Tr.t("Плагин не загрузился: ") + Qt.createComponent(source).errorString().trim()
         onLoaded: {
+            Permissions.register(scope, plugin.id, plugin.name, plugin)   // кто это на самом деле — до того, как отдать api
             item.api = scope
             if ("pluginDir" in item) item.pluginDir = plugin.dir   // QML-плагину — его папка
         }
@@ -65,7 +66,6 @@ ColumnLayout {
 
     ApiScope {   // свой API у каждого плагина: хранилище, настройки, уведомления — от его имени (docs/API.md)
         id: scope
-        shell: section.panel
         owner: section.plugin.id
         ownerName: section.plugin.name
         manifest: section.plugin

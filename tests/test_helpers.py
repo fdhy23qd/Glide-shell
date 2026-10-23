@@ -427,6 +427,15 @@ class Holidays(unittest.TestCase):
         self.assertEqual(len(days), 14)
 
 
+class DocsToc(unittest.TestCase):
+    """Оглавление документации свежее, и каждая ссылка-якорь ведёт на существующий заголовок (tools/docs-toc.py)."""
+
+    def test_toc(self):
+        r = subprocess.run([sys.executable, "-I", str(TOOLS / "docs-toc.py"), "--check"], capture_output=True, text=True,
+                           stdin=subprocess.DEVNULL, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+
 class Translation(unittest.TestCase):
     def test_every_tr_string_has_english(self):
         en = json.loads((ROOT / "i18n/en.json").read_text())
@@ -553,14 +562,15 @@ class ArchUpdates(Sandbox):
 
 
 class PluginScaffold(Sandbox):
-    """Заготовка плагина и виджета: файлы на месте, манифест — валидный JSON с api 1, bar и settings."""
+    """Заготовка плагина и виджета: файлы на месте, манифест — валидный JSON с api 2, permissions, bar и settings."""
 
     def test_new(self):
         out = self.run_py(TOOLS / "glide-plugin.py", "new", "demo", "Демо")
         self.assertEqual(out.returncode, 0, out.stderr)
         d = self.cfg / "glide-shell" / "plugins" / "demo"
         m = json.loads((d / "plugin.json").read_text())
-        self.assertEqual((m["id"], m["api"], m["bar"], m["qml"]), ("demo", 1, "Bar.qml", "Main.qml"))
+        self.assertEqual((m["id"], m["api"], m["bar"], m["qml"]), ("demo", 2, "Bar.qml", "Main.qml"))
+        self.assertEqual(m["permissions"], ["notifications"])
         self.assertTrue((d / "Main.qml").exists() and (d / "Bar.qml").exists())
         self.assertNotEqual(self.run_py(TOOLS / "glide-plugin.py", "new", "demo").returncode, 0)   # уже есть
         self.assertNotEqual(self.run_py(TOOLS / "glide-plugin.py", "new", "Плохой id").returncode, 0)

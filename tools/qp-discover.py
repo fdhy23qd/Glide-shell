@@ -16,6 +16,9 @@
 import json, os, sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from qp_audit import PERMISSIONS, audit  # noqa: E402
+
 DEFAULT_CATS = {   # значки — Material Design Icons из JetBrainsMono Nerd Font
     "quick": ("Быстро", "\U000F140B"),       # молния
     "apps": ("Приложения", "\U000F003B"),    # сетка приложений
@@ -58,8 +61,33 @@ cat_order = cfg.get("categoryOrder", list(DEFAULT_CATS))
 placement = {**(cfg.get("placement") or {}), **(prof.get("placement") or {})}
 
 
+API_VERSION = 2   # какую версию API плагинов понимает оболочка (docs/API.md)
 
-API_VERSION = 1   # какую версию API плагинов понимает оболочка (docs/API.md)
+# разрешения API 2 (docs/API.md, раздел 3б; Permissions.qml — то же правило в оболочке). Выдаёт их только человек
+# в «Настройки» → «Плагины»; записаны в ~/.config/glide-shell/permissions.json: {"plugins": {id: {"api", "granted", "denied"}}}
+try:
+    grants = json.loads((cfg_home / "permissions.json").read_text()).get("plugins") or {}
+except (OSError, ValueError, AttributeError):
+    grants = {}
+
+
+def requested(m, api):
+    """Что плагин просит: API 1 — всё (так писались первые плагины), API 2 — поле permissions."""
+    if api < 2:
+        return list(PERMISSIONS)
+    return [p for p in PERMISSIONS if p in (m.get("permissions") or [])]
+
+
+def granted(pid, api, req, trusted):
+    """Выданное сейчас: встроенным — всё; без записи API 1 — всё, API 2 — ничего; иначе — список из файла."""
+    if trusted:
+        return list(req)
+    e = grants.get(pid)
+    if not isinstance(e, dict) or ((e.get("api") if isinstance(e.get("api"), int) else 1) < 2 <= api):   # запись от прежней версии плагина не в счёт
+        return list(req) if api < 2 else []
+    return [p for p in req if p in (e.get("granted") or [])]
+
+
 
 def norm(c):
     if isinstance(c, list):
@@ -86,9 +114,19 @@ for root in roots:
             problem = f"поле api должно быть числом, а не {json.dumps(api, ensure_ascii=False)}"
         elif api > API_VERSION:
             problem = f"нужна более новая Glide Shell (API {api}, эта знает {API_VERSION})"
+        elif api >= 2 and not (isinstance(m.get("permissions", []), list)
+                               and all(isinstance(x, str) for x in m.get("permissions", []))):
+            problem = "поле permissions должно быть списком строк"
+        user = root == cfg_home / "plugins"   # сторонний (из ~/.config), а не встроенный
+        api = api if not problem else 1
+        req = requested(m, api)
+        unknown = [x for x in (m.get("permissions") or []) if api >= 2 and x not in PERMISSIONS]
+        if unknown:
+            print(f"qp-discover: {pid}: неизвестные разрешения {unknown}", file=sys.stderr)
         every[pid] = {"id": pid, "name": m["name"], "icon": m.get("icon", ""),
                       "disabled": pid in disabled or m.get("enabled") is False, "problem": problem,
-                      "user": root == cfg_home / "plugins"}   # сторонний (из ~/.config), а не встроенный
+                      "user": user, "api": api, "permissions": req, "granted": granted(pid, api, req, not user),
+                      "unknownPermissions": unknown, "audit": audit(d) if user else []}
         if problem:
             print(f"qp-discover: {pid}: {problem}", file=sys.stderr)
             found.pop(pid, None)
@@ -97,6 +135,9 @@ for root in roots:
             found.pop(pid, None)
             continue
         m["dir"] = str(d)
+        m["api"] = api
+        m["trusted"] = not user                       # встроенный: все разрешения (поле из plugin.json не в счёт)
+        m["permissions"] = req
         # время последней правки файлов плагина: ?v= в адресе QML — иначе движок берёт старую версию из кэша
         try:
             m["mtime"] = int(max(f.stat().st_mtime for f in d.iterdir() if f.is_file()))

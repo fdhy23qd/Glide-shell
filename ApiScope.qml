@@ -4,44 +4,78 @@ import Quickshell.Io
 import Quickshell.Services.Mpris
 import Quickshell.Services.UPower
 
-// API для QML-плагинов и своих виджетов, версия 1 (описание — docs/API.md). Свой объект у каждого плагина и
-// виджета: хранилище, настройки и уведомления — от его имени. Прежние поля (run, flash, copy, theme…) — как были.
+// API для QML-плагинов и своих виджетов, версия 2 (описание — docs/API.md). Свой объект у каждого плагина и
+// виджета: хранилище, настройки и уведомления — от его имени. Всё из версии 1 — как было; новое в версии 2 —
+// разрешения (Permissions.qml): что их требует, без разрешения ничего не делает и пишет об этом в журнал.
 QtObject {
     id: api
 
-    required property var shell             // корень оболочки (shell.qml)
-    property string owner: ""               // id плагина или «widget:<id>»
+    property string owner: ""               // id плагина или «widget-<id>»
     property string ownerName: owner        // имя — в уведомлениях
     property var manifest: ({})             // plugin.json / widget.json (поле settings — схема настроек)
-    readonly property int version: 1
+    readonly property int shellApi: 2       // какую версию API знает оболочка
+    // кто я на самом деле — из реестра Permissions (его заполняет код оболочки); owner и manifest выше — только для показа
+    readonly property var reg: Permissions.registry.length >= 0 ? Permissions.lookup(api) : null
+    readonly property var spec: reg ? reg.spec : ({ api: 1, permissions: [], trusted: false })
+    readonly property string me: reg ? reg.owner : ""          // настоящий id — для хранилища, файлов, настроек, сообщений
+    readonly property string meName: reg ? reg.name : ""
+    readonly property int version: Math.min(shellApi, spec.api)   // какую объявил плагин (поле api)
+    readonly property string dir: manifest.dir || ""
+
+    // ---------- разрешения (API 2): выдаёт только человек, плагин может лишь попросить ----------
+    function can(p) { return Permissions.allowed(api, p) }
+    property var warned: ({})
+    function denied(p, what) {   // одно предупреждение на разрешение — не засорять журнал из привязок
+        if (!warned[p]) {
+            var w = Object.assign({}, warned); w[p] = true; warned = w
+            console.warn("glide-shell: " + owner + ": " + what + " — нет разрешения «" + p + "» (docs/API.md, раздел 3б)")
+        }
+        return false
+    }
+    function need(p, what) { return can(p) || denied(p, what) }
+    readonly property QtObject permissions: QtObject {
+        readonly property var requested: api.reg ? Permissions.requested(api.spec) : []                 // объявлено в plugin.json
+        readonly property var granted: api.reg ? Permissions.grantedList(api.reg.owner, api.spec) : []   // выдано человеком
+        function has(p) { return api.can(p) }
+        // спросить человека: откроются «Настройки» → «Плагины» с вопросом. true — уже выдано. Раз за сеанс,
+        // только объявленное в permissions и не отказанное. Ответ — в onPermissionsUpdated.
+        function request(p, reason) { return api.reg ? Permissions.request(api.reg.owner, api.reg.name, api.spec, p, reason) : false }
+        function state(p) { return api.reg ? Permissions.state(api.reg.owner, api.spec, p) : "denied" }   // granted | denied | ask
+    }
+    signal permissionsUpdated()          // человек выдал или забрал разрешение
+    property Connections permsConn: Connections {
+        target: Permissions
+        function onGrantsChanged() { api.permissionsUpdated() }
+    }
 
     // ---------- прежнее (плагины) ----------
-    readonly property bool shown: shell.shown
-    readonly property string contextText: shell.contextText    // выделение или буфер в момент вызова
-    readonly property var handoff: shell.handoff
+    readonly property bool shown: Core.root.shown
+    readonly property string contextText: can("clipboard") ? Core.root.contextText : ""   // выделение или буфер в момент вызова
+    readonly property var handoff: Core.root.handoff
     readonly property color accent: Prefs.accent
     readonly property color accentText: Theme.accentText
-    readonly property var appCounts: shell.appCounts
-    function launchApp(entry) { shell.launchApp(entry) }
-    readonly property bool awake: shell.awake
-    readonly property var powerTimer: shell.powerTimer
-    property var now: shell.now                               // у виджета — дата (DeskWidget задаёт свою)
-    readonly property var notifs: Notifs
+    readonly property var appCounts: Core.root.appCounts
+    function launchApp(entry) { Core.root.launchApp(entry) }
+    readonly property bool awake: Core.root.awake
+    readonly property var powerTimer: Core.root.powerTimer
+    property var now: Core.root.now                               // у виджета — дата (DeskWidget задаёт свою)
+    readonly property var notifs: can("notifications") ? Notifs : null
     readonly property var weather: Weather
-    readonly property var recorder: Recorder
-    readonly property var kdeconnect: KdeConnect
+    readonly property var recorder: can("system") ? Recorder : null
+    readonly property var kdeconnect: can("phone") ? KdeConnect : null
     readonly property var theme: Theme
     readonly property string iconFont: Prefs.iconFont
     // защиту плагинов паролем плагин снять не может (иначе выключил бы её сам себе)
-    function setPref(key, value) { if (key !== "pluginLock") Prefs.set(key, value) }
-    function setAwake(on) { shell.setAwake(on) }
-    function run(argv, text) { shell.runRaw(argv, text || "", "") }
-    function close() { shell.close() }
-    function openCategory(id) { shell.openCategory(id) }
-    function copy(text) { shell.runRaw(["sh", "-c", 'printf %s "$QP_TEXT" | wl-copy'], text, "") }
-    function flash(icon, text, color) { shell.flash(icon, text, color) }
+    function setPref(key, value) { if (key !== "pluginLock" && need("system", "setPref")) Prefs.set(key, value) }
+    function setAwake(on) { if (need("system", "setAwake")) Core.root.setAwake(on) }
+    function run(argv, text) { if (need("exec", "run")) Core.root.runRaw(argv, text || "", dir) }
+    function close() { Core.root.close() }
+    function openCategory(id) { Core.root.openCategory(id) }
+    function openSettings() { Core.root.showSettings("plugins") }
+    function copy(text) { if (need("clipboard", "copy")) Core.root.runRaw(["sh", "-c", 'printf %s "$QP_TEXT" | wl-copy'], text, "") }
+    function flash(icon, text, color) { Core.root.flash(icon, text, color) }
     function openUrl(url) { Qt.openUrlExternally(url) }
-    function takeHandoff(id) { return shell.api.takeHandoff(id) }
+    function takeHandoff(id) { return Core.root.api.takeHandoff(id) }
 
     // ---------- прежнее (виджеты) — задаёт DeskWidget ----------
     property real k: 1
@@ -64,18 +98,18 @@ QtObject {
     }
 
     // ---------- система ----------
-    readonly property var niri: Niri                                         // windows, workspaces, focused…, action(…)
+    readonly property var niri: can("windows") ? Niri : null                  // windows, workspaces, focused…, action(…)
     readonly property var players: Mpris.players.values                     // все плееры MPRIS
-    readonly property var player: shell.musicPlayer || players[0] || null  // тот, что сейчас играл последним
+    readonly property var player: Core.root.musicPlayer || players[0] || null  // тот, что сейчас играл последним
     readonly property var battery: {                                        // {present, percent, charging}
         var d = UPower.displayDevice
         return { present: !!d && d.isLaptopBattery, percent: d ? Math.round(d.percentage * 100) : 0,
                  charging: !!d && d.state === UPowerDeviceState.Charging }
     }
-    readonly property real volume: shell.sink && shell.sink.audio ? shell.sink.audio.volume : 0
-    readonly property bool muted: shell.sink && shell.sink.audio ? shell.sink.audio.muted : false
-    function setVolume(v) { if (shell.sink && shell.sink.audio) shell.sink.audio.volume = Math.max(0, Math.min(1.5, v)) }
-    function setMuted(on) { if (shell.sink && shell.sink.audio) shell.sink.audio.muted = on }
+    readonly property real volume: Core.root.sink && Core.root.sink.audio ? Core.root.sink.audio.volume : 0
+    readonly property bool muted: Core.root.sink && Core.root.sink.audio ? Core.root.sink.audio.muted : false
+    function setVolume(v) { if (Core.root.sink && Core.root.sink.audio) Core.root.sink.audio.volume = Math.max(0, Math.min(1.5, v)) }
+    function setMuted(on) { if (Core.root.sink && Core.root.sink.audio) Core.root.sink.audio.muted = on }
     readonly property bool dnd: Notifs.quiet
 
     // ---------- запуск с результатом: api.exec(argv, {stdin, timeout, env}, (code, out, err) => …) ----------
@@ -116,6 +150,14 @@ QtObject {
     }
     function exec(argv, opts, cb) {
         if (typeof opts === "function") { cb = opts; opts = {} }
+        if (!need("exec", "exec")) {   // без разрешения — как «не запустилась», ответ тоже асинхронный
+            var fn = cb
+            if (fn) Qt.callLater(() => { try { fn(-1, "", "glide-shell: no permission: exec") } catch (e) { console.warn("glide-shell: api.exec: " + e) } })
+            return { running: false, cancel: function () {} }
+        }
+        return spawn(argv, opts, cb)
+    }
+    function spawn(argv, opts, cb) {   // внутреннее: exec без проверки (api.files)
         opts = opts || {}
         var env = Object.assign({ QP_DIR: manifest.dir || "" }, opts.env || {})
         // setpriv --pdeathsig: упала оболочка — программа не остаётся сиротой (выключили плагин — её убивает сам Process)
@@ -128,27 +170,29 @@ QtObject {
 
     // ---------- уведомление от имени плагина ----------
     function notify(title, body, icon) {
-        Quickshell.execDetached(["notify-send", "-a", ownerName || "Glide Shell", "-i", icon || "dialog-information",
+        Quickshell.execDetached(["notify-send", "-a", meName || "Glide Shell", "-i", icon || "dialog-information",
                                  String(title || ""), String(body || "")])
     }
 
     // ---------- «живые активности» в острове (Activities.qml): id — свой, внутри плагина ----------
     // props: {title, subtitle, icon, progress (0…1, меньше 0 — без процента), color, actionLabel, onClick, onAction}
     readonly property QtObject activity: QtObject {
-        function start(id, props) { return Activities.start(api.owner + "/" + id, Object.assign({ owner: api.owner }, props || {})) }
-        function update(id, props) { return Activities.update(api.owner + "/" + id, Object.assign({ owner: api.owner }, props || {})) }
-        function end(id) { Activities.end(api.owner + "/" + id) }
+        function start(id, props) { return api.me ? Activities.start(api.me + "/" + id, Object.assign({}, props || {}, { owner: api.me })) : "" }
+        function update(id, props) { return api.me ? Activities.update(api.me + "/" + id, Object.assign({}, props || {}, { owner: api.me })) : "" }
+        function end(id) { if (api.me) Activities.end(api.me + "/" + id) }
     }
 
     // ---------- хранилище: свой JSON в ~/.local/state/glide-shell/plugin-<id>.json ----------
     property var stored: ({})
-    readonly property string storeFile: owner ? (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
-                                                + "/glide-shell/plugin-" + owner.replace(/[^\w.-]/g, "_") + ".json" : ""
+    readonly property string storeFile: me ? (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
+                                                + "/glide-shell/plugin-" + me.replace(/[^\w.-]/g, "_") + ".json" : ""
     readonly property QtObject storage: QtObject {
         readonly property var all: api.stored
         function get(key, def) { return api.stored[key] !== undefined ? api.stored[key] : def }
         function set(key, value) { var c = Object.assign({}, api.stored); c[key] = value; api.stored = c; api.saveLater.restart() }
         function remove(key) { var c = Object.assign({}, api.stored); delete c[key]; api.stored = c; api.saveLater.restart() }
+        function keys() { return Object.keys(api.stored) }
+        function clear() { api.stored = {}; api.saveLater.restart() }
     }
     property FileView storeView: FileView {
         path: api.storeFile
@@ -170,7 +214,7 @@ QtObject {
     // ---------- настройки из манифеста («settings»: [{key, type, label, default, options}]) ----------
     // значения — в config.json (panel.pluginSettings[id]): попадают в резервную копию; меняются во вкладке «Плагины»
     readonly property var settings: {
-        var saved = (Prefs.pluginSettings || {})[owner] || {}, out = {}
+        var saved = (Prefs.pluginSettings || {})[me] || {}, out = {}
         for (var s of (manifest.settings || [])) {
             var v = saved[s.key] !== undefined ? saved[s.key] : s["default"]
             if (s.type === "number") {   // число: в пределах min/max (если заданы), не число — default
@@ -183,7 +227,7 @@ QtObject {
         }
         return out
     }
-    function setSetting(key, value) { Prefs.setPluginSetting(owner, key, value) }
+    function setSetting(key, value) { if (me) Prefs.setPluginSetting(me, key, value) }
 
     // ---------- события ----------
     signal opened()                    // панель открылась
@@ -191,8 +235,8 @@ QtObject {
     signal themeUpdated()              // акцент, тон или светлая/тёмная тема (не themeChanged: так зовётся смена свойства theme)
     signal notification(var entry)     // пришло уведомление: {appName, summary, body, urgency, time}
     property Connections shellConn: Connections {
-        target: api.shell
-        function onShownChanged() { if (api.shell.shown) api.opened(); else api.closed() }
+        target: Core.root
+        function onShownChanged() { if (Core.root.shown) api.opened(); else api.closed() }
     }
     property Connections themeConn: Connections {
         target: Theme
@@ -202,6 +246,97 @@ QtObject {
     }
     property Connections notifsConn: Connections {
         target: Notifs
-        function onReceived(entry) { api.notification(entry) }
+        function onReceived(entry) { if (api.can("notifications")) api.notification(entry) }
     }
+
+    // ===================== версия 2 =====================
+
+    // ---------- язык и журнал ----------
+    readonly property string lang: Tr.lang                                   // "ru" | "en"
+    function tr(ru, en) { return Tr.ru || en === undefined ? ru : en }       // свой текст на языке интерфейса
+    function fmt(args) { return "[" + owner + "] " + Array.prototype.map.call(args, a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") }
+    function log() { console.log(fmt(arguments)) }
+    function warn() { console.warn(fmt(arguments)) }
+
+    // ---------- таймеры: в QML нет setTimeout; таймеры живут не дольше этой части плагина ----------
+    property Component timerComp: Component {
+        Timer {
+            property var fn: null
+            property bool dead: false          // уже уничтожается: повторный clearTimer — без ошибки
+            onTriggered: {
+                if (!repeat) dead = true
+                try { if (fn) fn() } catch (e) { console.warn("glide-shell: " + api.owner + ": таймер: " + e) }
+                if (!repeat) destroy()
+            }
+        }
+    }
+    function setTimeout(fn, ms) { var t = timerComp.createObject(api, { fn: fn, interval: Math.max(0, ms || 0), repeat: false }); t.start(); return t }
+    function setInterval(fn, ms) { var t = timerComp.createObject(api, { fn: fn, interval: Math.max(16, ms || 0), repeat: true }); t.start(); return t }
+    function clearTimer(t) { try { if (t && !t.dead) { t.dead = true; t.stop(); t.destroy() } } catch (e) {} }
+
+    // ---------- файлы: своя папка ~/.local/share/glide-shell/plugin-data/<id> (tools/qp-files.py) ----------
+    // имена — без папок: латиница, цифры, «_», «.», «-»; обратный вызов — один раз
+    readonly property string dataDir: me ? (Quickshell.env("XDG_DATA_HOME") || Quickshell.env("HOME") + "/.local/share")
+                                              + "/glide-shell/plugin-data/" + me.replace(/[^\w.-]/g, "_") : ""
+    readonly property QtObject files: QtObject {
+        function tool(args, stdin, done) {
+            return api.spawn(["python3", "-I", Quickshell.shellDir + "/tools/qp-files.py"].concat(args), { stdin: stdin || "", timeout: 30000 }, done)
+        }
+        // cb(text) — null, если файла нет
+        function read(name, cb) { tool(["read", api.dataDir, String(name)], "", (code, out) => { if (cb) cb(code === 0 ? out : null) }) }
+        // cb(ok)
+        function write(name, text, cb) { tool(["write", api.dataDir, String(name)], JSON.stringify(String(text)), (code, out, err) => {
+            if (code !== 0) console.warn("glide-shell: " + api.owner + ": files.write: " + err.trim())
+            if (cb) cb(code === 0) }) }
+        // cb([{name, size, mtime}])
+        function list(cb) { tool(["list", api.dataDir], "", (code, out) => { var l = []; try { l = JSON.parse(out) } catch (e) {} if (cb) cb(l) }) }
+        // cb(ok)
+        function remove(name, cb) { tool(["remove", api.dataDir, String(name)], "", (code) => { if (cb) cb(code === 0) }) }
+    }
+
+    // ---------- сеть (разрешение network): api.http(url, {method, headers, body, timeout}, (status, text, headers) => …) ----------
+    // status 0 — нет разрешения, сети, ответа за timeout (по умолчанию 30 с) или адрес не http(s)
+    function http(url, opts, cb) {
+        if (typeof opts === "function") { cb = opts; opts = {} }
+        opts = opts || {}
+        var done = false
+        function finish(status, text, headers) {
+            if (done) return
+            done = true
+            try { if (cb) cb(status, text, headers || {}) } catch (e) { console.warn("glide-shell: api.http: " + e) }
+        }
+        if (!need("network", "http") || !/^https?:\/\//i.test(String(url))) { Qt.callLater(() => finish(0, "", {})); return { abort: function () {} } }
+        var x = new XMLHttpRequest()
+        var timer = api.setTimeout(() => { x.abort(); finish(0, "", {}) }, opts.timeout || 30000)
+        x.onreadystatechange = function () {
+            if (x.readyState !== XMLHttpRequest.DONE) return
+            api.clearTimer(timer)
+            var h = {}
+            for (var line of (x.getAllResponseHeaders() || "").split(/\r?\n/)) {
+                var i = line.indexOf(":")
+                if (i > 0) h[line.slice(0, i).trim().toLowerCase()] = line.slice(i + 1).trim()
+            }
+            finish(x.status, x.responseText, h)
+        }
+        x.open(opts.method || "GET", String(url))
+        for (var k in (opts.headers || {})) x.setRequestHeader(k, String(opts.headers[k]))
+        var body = opts.body
+        x.send(body === undefined ? null : typeof body === "string" ? body : JSON.stringify(body))
+        return { abort: function () { api.clearTimer(timer); x.abort(); finish(0, "", {}) } }
+    }
+
+    // ---------- сообщения между плагинами: api.send(id | "*", name, data) → у получателя onMessage(from, name, data) ----------
+    signal message(string from, string name, var data)
+    function send(to, name, data) {
+        var copy = data === undefined ? null : JSON.parse(JSON.stringify(data))   // получателю — копия, не общий объект
+        if (me) Core.root.pluginMessage(me, String(to), String(name), copy)
+    }
+    property Connections busConn: Connections {
+        target: Core.root
+        ignoreUnknownSignals: true
+        function onPluginMessage(from, to, name, data) {
+            if (api.me && from !== api.me && (to === api.me || to === "*")) api.message(from, name, data)
+        }
+    }
+    Component.onDestruction: Permissions.unregister(api)
 }

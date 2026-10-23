@@ -20,6 +20,21 @@ Developed and used daily on Arch Linux with niri 26.04, Quickshell 0.3 and Qt 6.
 > tested on one laptop with one screen. Multi-monitor setups, other distributions and other app combinations
 > are at your own risk for now. Bug reports are welcome. The code comments and the changelog are in Russian.
 
+## Contents
+
+<!-- toc -->
+- [Companion apps](#companion-apps)
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Writing a plugin](#writing-a-plugin)
+- [AI chat](#ai-chat)
+- [Privacy](#privacy)
+- [Tests](#tests)
+- [License](#license)
+<!-- /toc -->
+
 ## Companion apps
 
 [**Glide Apps**](https://github.com/fdhy23qd/Glide-apps) are lightweight apps in the same style that follow the shell's
@@ -144,8 +159,8 @@ notification history, chat history) goes to `~/.local/state/glide-shell/`, with 
 
 ## Writing a plugin
 
-Full reference: **[docs/API.md](docs/API.md)** (storage, settings, events, bar items, widgets; security and
-compatibility rules in section 10). A working
+Full reference: **[docs/API.md](docs/API.md)** (storage, settings, events, bar items, widgets; permissions in
+section 3b; security and compatibility rules in section 10). A working
 starter plugin: `python3 ~/.config/quickshell/glide-shell/tools/glide-plugin.py new my-plugin`.
 
 Create `~/.config/glide-shell/plugins/<name>/plugin.json`. A plugin with the same `id` as a built-in one
@@ -153,7 +168,8 @@ replaces it. More examples are in [`examples/`](examples/).
 
 ```json
 {
-  "id": "my-plugin", "api": 1, "name": "My plugin", "icon": "★", "category": "quick",
+  "id": "my-plugin", "api": 2, "name": "My plugin", "icon": "★", "category": "quick",
+  "permissions": ["exec"],
   "items": [
     { "type": "button", "label": "Hello", "command": ["notify-send", "Hello"] },
     { "type": "input", "placeholder": "Text → Enter", "command": ["sh", "{dir}/do.sh"] },
@@ -162,6 +178,11 @@ replaces it. More examples are in [`examples/`](examples/).
 }
 ```
 
+- **Permissions (API 2):** the risky parts (running programs with `exec`, the network, the clipboard, other apps'
+  notifications, windows, the phone, shell settings) work only if you allow them in Settings → Plugins →
+  Permissions under the plugin. A plugin can only ask; granting takes your login password (with plugin protection
+  on), taking away takes one click. Plugins with `"api": 1` work as before and get everything; you can take away
+  what they don't need.
 - **Items:** a `button` runs its `command`, an `input` runs on Enter, and a `list` shows the lines its `list`
   command prints and runs `command` with the line you click.
 - **Commands:** commands are argv arrays with no shell. Placeholders `{text}` and `{dir}` are filled in, and the
@@ -181,7 +202,9 @@ replaces it. More examples are in [`examples/`](examples/).
   (`run`, `close`, `copy`, `flash`, `shown`, `accent`, `openCategory`…). Use the shared design tokens through
   `import qs` + `Theme`.
 
-Plugins run commands with your permissions, so install only the ones you have read.
+Plugins run commands with your permissions, so install only the ones you have read. API 2 permissions limit what
+a plugin does through `api`, but there is no sandbox: the shell flags code that goes around `api` under the plugin
+in Settings → Plugins.
 
 **Desktop widgets** work the same way: put `widget.json` and `widget.qml` in `~/.config/glide-shell/widgets/<name>/`.
 The installer copies a `countdown` example there. In `widget.json`, `settings` builds the widget's options form.
