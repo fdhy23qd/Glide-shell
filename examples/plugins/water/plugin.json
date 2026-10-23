@@ -1,5 +1,6 @@
 {
-  "id": "water", "api": 1, "name": "Вода", "icon": "󰖌",
+  "id": "water", "api": 2, "name": "Вода", "icon": "󰖌",
+  "permissions": [],
   "category": "quick", "keywords": ["вода", "water", "стакан"],
   "qml": "Main.qml",
   "bar": "Bar.qml",

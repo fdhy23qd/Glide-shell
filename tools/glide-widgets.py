@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """Свои виджеты рабочего стола: ~/.config/glide-shell/widgets/<id>/{widget.json, widget.qml}.
 
-    glide-widgets.py list   → [{"id", "dir", "name", "icon", "description", "settings", "mtime", "error"}]
+    glide-widgets.py list   → [{"id", "dir", "name", "icon", "description", "settings", "mtime", "api", "permissions",
+                                "audit", "error"}]
 
 widget.json: {"name": "…", "icon": "F0954" (код значка MDI, необязательно), "description": "…",
               "settings": [{"key", "type": "text|toggle|choice", "label", "default", "options": [{"label","value"}]}],
-              "stats": true — нужны api.cpu и api.mem (опрос /proc раз в 2 с, только пока такой виджет есть)}
+              "stats": true — нужны api.cpu и api.mem (опрос /proc раз в 2 с, только пока такой виджет есть),
+              "api": 2, "permissions": ["network"] — как у плагинов (docs/API.md, раздел 3б)}
 mtime — для перезагрузки после правки файла; error — что не так с widget.json (виджет всё равно в списке).
 """
 import json
 import os
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from qp_audit import PERMISSIONS, audit  # noqa: E402
 
 root = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "glide-shell" / "widgets"
 out = []
@@ -20,6 +26,7 @@ if root.is_dir():
         if not qml.is_file():
             continue
         item = {"id": d.name, "dir": str(d), "name": d.name, "icon": "", "description": "", "settings": [],
+                "api": 1, "permissions": [], "audit": audit(d),
                 "mtime": int(max(qml.stat().st_mtime, (d / "widget.json").stat().st_mtime if (d / "widget.json").exists() else 0))}
         try:
             meta = json.loads((d / "widget.json").read_text()) if (d / "widget.json").exists() else {}
@@ -28,6 +35,10 @@ if root.is_dir():
             item["description"] = str(meta.get("description") or "")
             item["settings"] = [s for s in meta.get("settings") or [] if isinstance(s, dict) and s.get("key")]
             item["stats"] = bool(meta.get("stats"))
+            api = meta.get("api", 1)
+            item["api"] = api if isinstance(api, int) and not isinstance(api, bool) and 1 <= api <= 2 else 1
+            perms = meta.get("permissions") or []
+            item["permissions"] = [p for p in PERMISSIONS if isinstance(perms, list) and p in perms]
         except Exception as e:
             item["error"] = f"widget.json: {e}"
         out.append(item)

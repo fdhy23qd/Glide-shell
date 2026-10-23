@@ -655,12 +655,13 @@ PanelWindow {
             implicitWidth: ld.item ? Math.min(240, Math.max(0, ld.item.implicitWidth || 0)) : 0
             implicitHeight: 24
             clip: true
-            ApiScope { id: ps; shell: bar.p; owner: pp.pid; ownerName: pp.plugin ? pp.plugin.name : pp.pid; manifest: pp.plugin || ({}) }
+            ApiScope { id: ps; owner: pp.pid; ownerName: pp.plugin ? pp.plugin.name : pp.pid; manifest: pp.plugin || ({}) }
             Loader {
                 id: ld
                 anchors.verticalCenter: parent.verticalCenter
                 source: pp.plugin && pp.plugin.bar ? "file://" + pp.plugin.dir + "/" + pp.plugin.bar + "?v=" + (pp.plugin.mtime || 0) : ""
-                onLoaded: { item.api = ps; if ("pluginDir" in item) item.pluginDir = pp.plugin.dir }
+                onLoaded: { Permissions.register(ps, pp.pid, pp.plugin.name, pp.plugin); item.api = ps
+                            if ("pluginDir" in item) item.pluginDir = pp.plugin.dir }
                 onStatusChanged: if (status === Loader.Error) console.warn("glide-shell: элемент бара плагина " + pp.pid + " не загрузился")
             }
         }

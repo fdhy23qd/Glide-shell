@@ -8,6 +8,9 @@
     glide-shell open [КАТЕГОРИЯ] | close | search ТЕКСТ
     glide-shell dnd [on|off]
     glide-shell theme                       — тема JSON (акцент, светлая ли, цвета, скругления)
+    glide-shell plugins                     — плагины JSON: id, имя, включён, версия API, разрешения (что выдано)
+    glide-shell settings [РАЗДЕЛ]           — открыть настройки (plugins, look, bar…)
+    glide-shell version | api               — версия оболочки | версия API плагинов
     glide-shell watch                       — печатать события (тема, щелчки по активностям) строками JSON
 
 Служба (`--daemon`) запускается шиной сама при первом обращении (~/.local/share/dbus-1/services/org.glide.Shell.service):
@@ -41,6 +44,9 @@ XML = f"""<node><interface name="{IFACE}">
   <method name="GetDnd"><arg type="b" name="on" direction="out"/></method>
   <method name="GetTheme"><arg type="a{{sv}}" name="theme" direction="out"/></method>
   <method name="GetVersion"><arg type="s" name="version" direction="out"/></method>
+  <method name="GetApiVersion"><arg type="u" name="version" direction="out"/></method>
+  <method name="ListPlugins"><arg type="aa{{sv}}" name="plugins" direction="out"/></method>
+  <method name="OpenSettings"><arg type="s" name="page" direction="in"/></method>
   <method name="ActivityEvent"><arg type="s" name="id" direction="in"/><arg type="s" name="event" direction="in"/></method>
   <signal name="ThemeChanged"><arg type="a{{sv}}" name="theme"/></signal>
   <signal name="ActivityClicked"><arg type="s" name="id"/></signal>
@@ -71,6 +77,22 @@ def read_dnd():
         return (STATE / "dnd").read_text().strip() in ("1", "on", "true")
     except OSError:
         return False
+
+
+API_VERSION = 2   # версия API плагинов (docs/API.md); у D-Bus своя — в имени интерфейса (Shell1)
+
+
+def plugins():
+    """Плагины из qp-discover: только чтение. Разрешения так не выдать — их меняет только человек в настройках."""
+    tool = Path(__file__).resolve().parent / "qp-discover.py"
+    try:
+        r = subprocess.run([sys.executable, "-I", str(tool)], stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                           timeout=30)
+        every = json.loads(r.stdout).get("allPlugins") or []
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return []
+    keep = ("id", "name", "icon", "disabled", "user", "api", "permissions", "granted", "problem")
+    return [{k: p.get(k) for k in keep if p.get(k) is not None} for p in every]
 
 
 def version():
@@ -146,6 +168,12 @@ def daemon():
             return inv.return_value(GLib.Variant("(a{sv})", (variants(read_theme()),)))
         elif method == "GetVersion":
             return inv.return_value(GLib.Variant("(s)", (version(),)))
+        elif method == "GetApiVersion":
+            return inv.return_value(GLib.Variant("(u)", (API_VERSION,)))
+        elif method == "ListPlugins":
+            return inv.return_value(GLib.Variant("(aa{sv})", ([variants(p) for p in plugins()],)))
+        elif method == "OpenSettings":
+            to_shell({"op": "settings", "page": a[0]})
         elif method == "ActivityEvent":   # от оболочки: щелчок, кнопка, закрыли «×»
             sig = {"clicked": "ActivityClicked", "action": "ActivityAction", "closed": "ActivityClosed"}.get(a[1])
             if sig:
@@ -160,6 +188,7 @@ def daemon():
             if isinstance(v, bool): out[k] = GLib.Variant("b", v)
             elif isinstance(v, int): out[k] = GLib.Variant("i", v)
             elif isinstance(v, float): out[k] = GLib.Variant("d", v)
+            elif isinstance(v, list): out[k] = GLib.Variant("as", [str(x) for x in v])
             else: out[k] = GLib.Variant("s", str(v))
         return out
 
@@ -237,6 +266,12 @@ def cli(a):
         print(json.dumps(call("GetTheme", reply=True)[0], ensure_ascii=False))
     elif cmd == "version":
         print(call("GetVersion", reply=True)[0])
+    elif cmd == "api":
+        print(call("GetApiVersion", reply=True)[0])
+    elif cmd == "plugins":
+        print(json.dumps(call("ListPlugins", reply=True)[0], ensure_ascii=False, indent=1))
+    elif cmd == "settings":
+        call("OpenSettings", "(s)", (a[1] if len(a) > 1 else "",))
     elif cmd == "watch":
         import gi
         from gi.repository import Gio
