@@ -18,9 +18,16 @@ Quick start: `python3 ~/.config/quickshell/glide-shell/tools/glide-plugin.py new
 creates a working plugin that uses all of the API below: a panel section, a bar item and settings. For a widget, run
 `… glide-plugin.py widget my-widget`. The plugin appears the next time you open the panel.
 
-Plugins and widgets run with your permissions, like any program. An API 2 plugin gets the risky parts (running
-programs, the network, the clipboard, other apps' notifications…) only with a permission that you grant yourself
-(section 3b). Install only what you have read.
+> **⚠ Security in short: read this before installing someone else's plugin**
+>
+> - **There is no sandbox.** A plugin runs inside the shell, with your user's rights.
+> - **Permissions only restrain a plugin that sticks to `api`.** Code that uses `Process`, `XMLHttpRequest` or the
+>   shell's internals (`import qs`) can do anything you can: read your files, change the shell, rewrite its own
+>   permissions. Settings → Plugins marks such code in yellow under the plugin.
+> - **Permissions are kept in `~/.config/glide-shell/permissions.json`.** Edits made while the shell runs are undone,
+>   but any program running as you can change the file while the shell is stopped.
+> - **A third-party plugin starts with no permissions**, old ones with `"api": 1` included. You grant them yourself.
+> - **Install only plugins you have read or whose author you trust.** Details: [section 10](#10-security-data-and-compatibility).
 
 ## Contents
 

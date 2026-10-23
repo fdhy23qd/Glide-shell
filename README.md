@@ -159,6 +159,17 @@ notification history, chat history) goes to `~/.local/state/glide-shell/`, with 
 
 ## Writing a plugin
 
+> **⚠ Security in short: read this before installing someone else's plugin**
+>
+> - **There is no sandbox.** A plugin runs inside the shell, with your user's rights.
+> - **Permissions only restrain a plugin that sticks to `api`.** Code that uses `Process`, `XMLHttpRequest` or the
+>   shell's internals (`import qs`) can do anything you can: read your files, change the shell, rewrite its own
+>   permissions. Settings → Plugins marks such code in yellow under the plugin.
+> - **Permissions are kept in `~/.config/glide-shell/permissions.json`.** Edits made while the shell runs are undone,
+>   but any program running as you can change the file while the shell is stopped.
+> - **A third-party plugin starts with no permissions**, old ones with `"api": 1` included. You grant them yourself.
+> - **Install only plugins you have read or whose author you trust.** Details: [docs/API.md, section 10](docs/API.md#10-security-data-and-compatibility).
+
 Full reference: **[docs/API.md](docs/API.md)** (storage, settings, events, bar items, widgets; permissions in
 section 3b; security and compatibility rules in section 10). A working
 starter plugin: `python3 ~/.config/quickshell/glide-shell/tools/glide-plugin.py new my-plugin`.
