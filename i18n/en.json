@@ -1070,5 +1070,10 @@
  "Разрешения: ": "Permissions: ",
  "Это полный доступ: плагин сможет делать всё, что можешь ты. Разрешай, только если доверяешь автору.": "This is full access: the plugin can do anything you can. Allow it only if you trust the author.",
  "»: нужно разрешение «Запуск программ»": "”: needs the “Running programs” permission",
- "Разрешения плагинов изменили в обход настроек — изменение отменено": "Plugin permissions were changed outside Settings — the change was undone"
+ "Разрешения плагинов изменили в обход настроек — изменение отменено": "Plugin permissions were changed outside Settings — the change was undone",
+ "все разрешения (плагин старого формата)": "all permissions (old-format plugin)",
+ "Плагин написан до разрешений (API 1) и рассчитан на полный доступ: запуск программ, сеть, буфер, чужие уведомления, окна, телефон, настройки. Разрешай, только если доверяешь автору.": "The plugin was written before permissions (API 1) and expects full access: running programs, network, clipboard, other apps' notifications, windows, phone, settings. Allow only if you trust the author.",
+ "Плагин старого формата (API 1) просит все разрешения и пока не получил ни одного — его команды и фоновые процессы не работают.": "An old-format plugin (API 1) asks for all permissions and has none yet — its commands and background processes don't run.",
+ "Плагин старого формата (API 1): часть разрешений выключена.": "Old-format plugin (API 1): some permissions are off.",
+ "Разрешить всё…": "Allow all…"
 }

@@ -77,7 +77,7 @@ ColumnLayout {
     component PermAsk: Rectangle {   // вопрос о разрешении (Permissions.pending): плагин попросил или ты включил переключатель
         id: permCard
         readonly property var pq: Permissions.pending
-        readonly property bool risky: !!pq && Permissions.dangerous.indexOf(pq.perm) >= 0
+        readonly property bool risky: !!pq && (pq.perm === "*" || Permissions.dangerous.indexOf(pq.perm) >= 0)
         Layout.fillWidth: true
         implicitHeight: permCol.implicitHeight + 24
         radius: Theme.r(16)
@@ -97,7 +97,9 @@ ColumnLayout {
             }
             Text {
                 Layout.fillWidth: true
-                text: permCard.pq && Permissions.meta[permCard.pq.perm] ? Permissions.meta[permCard.pq.perm].hint : ""
+                text: !permCard.pq ? "" : permCard.pq.perm === "*"
+                      ? Tr.t("Плагин написан до разрешений (API 1) и рассчитан на полный доступ: запуск программ, сеть, буфер, чужие уведомления, окна, телефон, настройки. Разрешай, только если доверяешь автору.")
+                      : Permissions.meta[permCard.pq.perm] ? Permissions.meta[permCard.pq.perm].hint : ""
                 color: Theme.textSecondary; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
             }
             Text {
@@ -186,11 +188,19 @@ ColumnLayout {
             text: Tr.t("Код обращается к системе в обход разрешений: ") + pb.audit.join(", ")
             color: Theme.warning; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
         }
-        Text {
-            visible: pb.open && pb.legacy
+        Text {   // старый формат: без согласия — ничего (раньше получал всё молча)
+            visible: pb.legacy && pb.got.length < pb.req.length
             Layout.fillWidth: true
-            text: Tr.t("Плагин для API 1 получает всё — так они писались до версии 2. Лишнее можно забрать.")
-            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+            text: pb.got.length === 0
+                  ? Tr.t("Плагин старого формата (API 1) просит все разрешения и пока не получил ни одного — его команды и фоновые процессы не работают.")
+                  : Tr.t("Плагин старого формата (API 1): часть разрешений выключена.")
+            color: Theme.warning; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
+        ActionBtn {
+            visible: pb.legacy && pb.got.length < pb.req.length && !(Permissions.pending && Permissions.pending.owner === pb.owner)
+            glyph: String.fromCodePoint(0xF0483)
+            text: Tr.t("Разрешить всё…")
+            onClicked: Permissions.askAll(pb.owner, pb.name, pb.man)
         }
         PermAsk { visible: !!Permissions.pending && Permissions.pending.owner === pb.owner && Permissions.pending.fromPlugin !== true }
         Repeater {

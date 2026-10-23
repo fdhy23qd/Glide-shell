@@ -79,12 +79,12 @@ def requested(m, api):
 
 
 def granted(pid, api, req, trusted):
-    """Выданное сейчас: встроенным — всё; без записи API 1 — всё, API 2 — ничего; иначе — список из файла."""
+    """Выданное сейчас: встроенным — всё; без записи — ничего (и у API 1, см. Permissions.qml); иначе — список из файла."""
     if trusted:
         return list(req)
     e = grants.get(pid)
     if not isinstance(e, dict) or ((e.get("api") if isinstance(e.get("api"), int) else 1) < 2 <= api):   # запись от прежней версии плагина не в счёт
-        return list(req) if api < 2 else []
+        return []
     return [p for p in req if p in (e.get("granted") or [])]
 
 
