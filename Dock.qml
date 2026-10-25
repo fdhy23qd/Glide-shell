@@ -463,7 +463,7 @@ PanelWindow {
                 delegate: MenuItem {
                     required property var modelData
                     glyph: String.fromCodePoint(0xF05AF)
-                    text: (Niri.windows[modelData.id] || modelData).title || Tr.t("окно")
+                    text: Niri.titleFor(Niri.windows[modelData.id] || modelData) || Tr.t("окно")
                     onClicked: { Niri.focusWindow(modelData.id); menu.close() }
                 }
             }

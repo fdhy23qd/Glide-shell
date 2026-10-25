@@ -146,6 +146,11 @@ Singleton {
     readonly property int dndFrom: num(data.dndFrom, 23)
     readonly property int dndTo: num(data.dndTo, 8)
     readonly property bool dndCasting: data.dndCasting !== false
+    // приватность уведомлений: full — всё, title — без текста, app — только «Новое уведомление» и приложение
+    readonly property string notifContent: ["full", "title", "app"].indexOf(data.notifContent) >= 0 ? data.notifContent : "full"
+    readonly property bool notifHideCapture: data.notifHideCapture !== false   // запись/демонстрация — как «app»
+    readonly property string recOutput: typeof data.recOutput === "string" ? data.recOutput : ""   // монитор записи; "" — где фокус
+    readonly property var privacyApps: Array.isArray(data.privacyApps) ? data.privacyApps : []   // скрыты на записи (niri)
 
     // ---- расписание пар (plugins/schedule, campus.syktsu.ru) ----
     readonly property string scheduleGroup: typeof data.scheduleGroup === "string" ? data.scheduleGroup : ""

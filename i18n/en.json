@@ -1080,5 +1080,17 @@
  "Сообщения другим плагинам": "Messages to other plugins",
  "api.send и onMessage с другими плагинами (между своими частями — без разрешения)": "api.send and onMessage with other plugins (between a plugin's own parts — no permission needed)",
  "Цвет острова": "Island color",
- "api.island.tint — окрашивать остров (камера, микрофон и демонстрация экрана всегда впереди)": "api.island.tint — tint the island (camera, microphone and screen sharing always come first)"
+ "api.island.tint — окрашивать остров (камера, микрофон и демонстрация экрана всегда впереди)": "api.island.tint — tint the island (camera, microphone and screen sharing always come first)",
+ "Пока идёт демонстрация в звонке или запись экрана — чужие сообщения не всплывают": "While sharing the screen in a call or recording it, other apps' messages don't pop up",
+ "ПРИВАТНОСТЬ": "PRIVACY",
+ "Что показывать в уведомлениях (остров, панель, подсказка колокольчика)": "What notifications show (island, panel, bell tooltip)",
+ "Всё": "Everything",
+ "Без текста": "No text",
+ "Только приложение": "App only",
+ "Скрывать уведомления на записи и демонстрации": "Hide notifications while recording or sharing",
+ "Пока экран пишут или показывают — только «Новое уведомление» и приложение, без текста и картинок": "While the screen is recorded or shared: only “New notification” and the app, no text or images",
+ "Скрывать окна на записи, демонстрации и скриншотах — niri рисует вместо них чёрное. Выбери из открытых:": "Hide windows from recordings, screen sharing and screenshots (niri draws black instead). Pick from open apps:",
+ "не удалось": "failed",
+ "Новое уведомление": "New notification",
+ "Где фокус": "Focused"
 }

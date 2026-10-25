@@ -246,7 +246,7 @@ ColumnLayout {
             Text {
                 Layout.fillWidth: true
                 visible: text !== ""
-                text: card.e ? card.e.summary : ""
+                text: card.e ? card.hub.ns.titleOf(card.e) : ""
                 color: Theme.text; font.pixelSize: Theme.fs(13); font.bold: true
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
@@ -256,7 +256,7 @@ ColumnLayout {
             Text {
                 Layout.fillWidth: true
                 visible: text !== ""
-                text: card.e ? card.e.body : ""
+                text: card.e ? card.hub.ns.bodyOf(card.e) : ""
                 color: Theme.textVariant; font.pixelSize: Theme.fs(12)
                 textFormat: Text.StyledText
                 wrapMode: Text.Wrap

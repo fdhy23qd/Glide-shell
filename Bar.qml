@@ -410,7 +410,7 @@ PanelWindow {
                 id: winTitle
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.min(implicitWidth, 220)
-                text: bar.focusedWindow ? bar.focusedWindow.title : ""
+                text: Niri.titleFor(bar.focusedWindow)
                 color: winMa.containsMouse ? Theme.text : Theme.textVariant   // наведение — ярче, нажатие — чуть меньше
                 scale: winMa.pressed ? 0.96 : 1
                 Behavior on color { ColorAnimation { duration: Prefs.ms(140) } }
@@ -911,7 +911,7 @@ PanelWindow {
             if (ca !== cb) return ca - cb
             return (ws[a.workspace_id] || 0) - (ws[b.workspace_id] || 0) || a.id - b.id
         })
-        return out.map(w => ({ id: w.id, title: w.title || w.app_id, app: w.app_id,
+        return out.map(w => ({ id: w.id, title: Niri.titleFor(w) || w.app_id, app: w.app_id,
                                ws: ws[w.workspace_id] || 0, here: w.workspace_id === cur, focused: w.id === focusedId }))
     }
 
@@ -1079,7 +1079,7 @@ PanelWindow {
             TipTitle {
                 text: !Notifs.active ? Tr.t("Уведомления") : Notifs.unread > 0 ? Tr.t("Непрочитанных: ") + Notifs.unread : Tr.t("Новых уведомлений нет")
             }
-            TipLine { visible: !!parent.last; text: parent.last ? (parent.last.appName ? parent.last.appName + ": " : "") + parent.last.summary : "" }
+            TipLine { visible: !!parent.last; text: parent.last ? (parent.last.appName ? parent.last.appName + ": " : "") + Notifs.titleOf(parent.last) : "" }
             TipHint { text: (bar.dnd ? Tr.t("«Не беспокоить» включено. ") : "") + Tr.t("Щелчок — история, правый — «не беспокоить»") }
         }
     }

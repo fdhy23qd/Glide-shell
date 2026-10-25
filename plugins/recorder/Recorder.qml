@@ -14,6 +14,8 @@ ColumnLayout {
     readonly property string iconFont: api && api.iconFont ? api.iconFont : "JetBrainsMono Nerd Font"
     readonly property bool shown: api ? api.shown : false
     property string audio: ""   // "" | system | mic
+    // выбранный монитор, пока он подключён; иначе — тот, где фокус
+    readonly property string output: Quickshell.screens.some(sc => sc.name === Prefs.recOutput) ? Prefs.recOutput : ""
     spacing: 8
 
     function nf(code) { return String.fromCodePoint(code) }
@@ -50,25 +52,23 @@ ColumnLayout {
             spacing: 6
             Repeater {
                 model: [{ v: "", l: Tr.t("Без звука"), g: 0xF075F }, { v: "system", l: Tr.t("Звук системы"), g: 0xF057E }, { v: "mic", l: Tr.t("Микрофон"), g: 0xF036C }]
-                delegate: Rectangle {
-                    Behavior on border.color { ColorAnimation { duration: Prefs.ms(140) } }
+                delegate: Chip {
                     required property var modelData
-                    readonly property bool on: rv.audio === modelData.v
-                    width: chipRow.implicitWidth + 22; height: 30; radius: Theme.r(15)
-                    color: on ? Qt.rgba(rv.accent.r, rv.accent.g, rv.accent.b, cm.containsMouse ? 0.32 : 0.22)
-                              : (cm.pressed ? Theme.surfaceHigher : cm.containsMouse ? Theme.surfaceHigh : Theme.surface)
-                    border.color: on ? rv.accent : "transparent"
-                    scale: cm.pressed ? 0.95 : 1
-                    Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
-                    Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
-                    Row {
-                        id: chipRow
-                        anchors.centerIn: parent
-                        spacing: 6
-                        Text { anchors.verticalCenter: parent.verticalCenter; text: rv.nf(modelData.g); color: Theme.textVariant; font.family: rv.iconFont; font.pixelSize: Theme.fs(13) }
-                        Text { anchors.verticalCenter: parent.verticalCenter; text: modelData.l; color: Theme.text; font.pixelSize: Theme.fs(12) }
-                    }
-                    MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: rv.audio = modelData.v }
+                    on: rv.audio === modelData.v; glyph: modelData.g; label: modelData.l
+                    onClicked: rv.audio = modelData.v
+                }
+            }
+        }
+        Flow {   // монитор — когда их больше одного (Prefs.recOutput; "" — тот, где фокус)
+            visible: Quickshell.screens.length > 1
+            Layout.fillWidth: true
+            spacing: 6
+            Repeater {
+                model: [{ v: "", l: Tr.t("Где фокус") }].concat(Quickshell.screens.map(sc => ({ v: sc.name, l: sc.name })))
+                delegate: Chip {
+                    required property var modelData
+                    on: rv.output === modelData.v; glyph: modelData.v ? 0xF0379 : 0xF01A4; label: modelData.l
+                    onClicked: Prefs.set("recOutput", modelData.v)
                 }
             }
         }
@@ -95,6 +95,29 @@ ColumnLayout {
         }
     }
 
+    component Chip: Rectangle {
+        id: chip
+        property bool on: false
+        property int glyph: 0
+        property string label
+        signal clicked()
+        Behavior on border.color { ColorAnimation { duration: Prefs.ms(140) } }
+        width: chipRow.implicitWidth + 22; height: 30; radius: Theme.r(15)
+        color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, cm.containsMouse ? 0.32 : 0.22)
+                  : (cm.pressed ? Theme.surfaceHigher : cm.containsMouse ? Theme.surfaceHigh : Theme.surface)
+        border.color: on ? Theme.accent : "transparent"
+        scale: cm.pressed ? 0.95 : 1
+        Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+        Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+        Row {
+            id: chipRow
+            anchors.centerIn: parent
+            spacing: 6
+            Text { anchors.verticalCenter: parent.verticalCenter; text: String.fromCodePoint(chip.glyph); color: Theme.textVariant; font.family: Prefs.iconFont; font.pixelSize: Theme.fs(13) }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: chip.label; color: Theme.text; font.pixelSize: Theme.fs(12) }
+        }
+        MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: chip.clicked() }
+    }
     component Btn: Rectangle {
         id: b
         property string label

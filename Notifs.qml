@@ -46,7 +46,12 @@ Singleton {
 
     // «тишина» = вручную, по расписанию (Prefs.dndFrom..dndTo, часы) или пока идёт демонстрация экрана
     property bool night: false
-    readonly property bool casting: Prefs.dndCasting && Niri.casts.length > 0
+    readonly property bool capturing: Niri.casts.length > 0 || Recorder.recording   // демонстрация или своя запись экрана
+    readonly property bool casting: Prefs.dndCasting && capturing
+    // что показывать из уведомления (Prefs.notifContent; на записи и демонстрации — только приложение)
+    readonly property string privacy: Prefs.notifHideCapture && capturing ? "app" : Prefs.notifContent
+    function titleOf(e) { return !e ? "" : privacy === "app" ? Tr.t("Новое уведомление") : e.summary || "" }
+    function bodyOf(e) { return e && privacy === "full" ? e.body || "" : "" }
     readonly property bool quiet: dnd || night || casting
     readonly property string quietReason: dnd ? Tr.t("вручную") : casting ? Tr.t("идёт демонстрация экрана") : night ? Tr.t("по расписанию") : ""
     function checkNight() {
@@ -273,7 +278,7 @@ Singleton {
     // значок: картинка из уведомления, иначе значок приложения (путь, file://, имя из темы или .desktop)
     function iconFor(e) {
         if (!e) return ""
-        if (e.image) return e.image
+        if (e.image && privacy === "full") return e.image   // картинка — тоже содержимое
         var i = e.appIcon
         if (i.startsWith("/")) return "file://" + i
         if (i.indexOf("://") > 0) return i

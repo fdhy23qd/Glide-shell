@@ -168,6 +168,13 @@ Singleton {
     }
 
     // ---- действия ----
+    // заголовок окна для показа: у приложений, скрытых на записи (Prefs.privacyApps), пока экран пишут или
+    // показывают — только имя приложения (в заголовке бывает имя чата, страница, файл)
+    function titleFor(w) {
+        if (!w) return ""
+        if (Notifs.capturing && Prefs.privacyApps.indexOf(w.app_id) >= 0) { var e = entryFor(w.app_id); return (e && e.name) || w.app_id || "" }
+        return w.title || ""
+    }
     function action(args) { Quickshell.execDetached(["niri", "msg", "action"].concat(args)) }
     function focusWindow(id) { action(["focus-window", "--id", String(id)]) }
     function closeWindow(id) { action(["close-window", "--id", String(id)]) }

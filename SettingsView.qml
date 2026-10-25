@@ -1829,9 +1829,90 @@ ColumnLayout {
         ToggleRow {
             icon: String.fromCodePoint(0xF0379)
             label: Tr.t("«Не беспокоить» при демонстрации экрана")
-            hint: Tr.t("Пока идёт демонстрация в звонке или запись через портал — чужие сообщения не всплывают")
+            hint: Tr.t("Пока идёт демонстрация в звонке или запись экрана — чужие сообщения не всплывают")
             checked: Prefs.dndCasting
             onToggled: Prefs.set("dndCasting", !Prefs.dndCasting)
+        }
+
+        Header { text: Tr.t("ПРИВАТНОСТЬ") }
+        ChoiceRow {
+            label: Tr.t("Что показывать в уведомлениях (остров, панель, подсказка колокольчика)")
+            options: [{ label: Tr.t("Всё"), value: "full" }, { label: Tr.t("Без текста"), value: "title" },
+                      { label: Tr.t("Только приложение"), value: "app" }]
+            current: Prefs.notifContent
+            onPicked: (v) => Prefs.set("notifContent", v)
+        }
+        ToggleRow {
+            icon: String.fromCodePoint(0xF0209)
+            label: Tr.t("Скрывать уведомления на записи и демонстрации")
+            hint: Tr.t("Пока экран пишут или показывают — только «Новое уведомление» и приложение, без текста и картинок")
+            checked: Prefs.notifHideCapture
+            onToggled: Prefs.set("notifHideCapture", !Prefs.notifHideCapture)
+        }
+        // окна, которые niri закрашивает на записи, демонстрации и скриншотах (glide-niri.py privacy → glide-privacy.kdl)
+        ColumnLayout {
+            id: privApps
+            Layout.fillWidth: true
+            spacing: 6
+            property string error: ""
+            readonly property var openApps: {
+                var a = []
+                for (var k in Niri.windows) { var id = Niri.windows[k].app_id; if (id && a.indexOf(id) < 0 && Prefs.privacyApps.indexOf(id) < 0) a.push(id) }
+                return a.sort()
+            }
+            function save(list) {
+                if (privProc.running) return
+                privProc.want = list
+                privProc.command = ["python3", "-I", Quickshell.shellDir + "/tools/glide-niri.py", "privacy", JSON.stringify(list)]
+                privProc.running = true
+            }
+            Process {
+                id: privProc
+                property var want: []
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        var r = {}
+                        try { r = JSON.parse(text) } catch (e) { r = { ok: false, error: text } }
+                        privApps.error = r.ok ? "" : (r.error || Tr.t("не удалось"))
+                        if (r.ok) Prefs.set("privacyApps", r.apps)
+                    }
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                text: Tr.t("Скрывать окна на записи, демонстрации и скриншотах — niri рисует вместо них чёрное. Выбери из открытых:")
+                color: Theme.textSecondary; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+            }
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: Prefs.privacyApps
+                    delegate: ActionBtn {
+                        required property string modelData
+                        glyph: String.fromCodePoint(0xF0209)
+                        text: modelData + "  ✕"
+                        enabled: !privProc.running
+                        onClicked: privApps.save(Prefs.privacyApps.filter(x => x !== modelData))
+                    }
+                }
+                Repeater {
+                    model: privApps.openApps
+                    delegate: ActionBtn {
+                        required property string modelData
+                        glyph: String.fromCodePoint(0xF0415)
+                        text: modelData
+                        enabled: !privProc.running
+                        onClicked: privApps.save(Prefs.privacyApps.concat([modelData]))
+                    }
+                }
+            }
+            Text {
+                visible: privApps.error !== ""
+                Layout.fillWidth: true
+                text: privApps.error
+                color: Theme.error; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+            }
         }
 
     }

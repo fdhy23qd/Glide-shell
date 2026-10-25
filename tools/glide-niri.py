@@ -4,6 +4,8 @@
     glide-niri.py read                 — JSON: {"managed", "input": {...}, "binds": [...]}
     glide-niri.py set-input JSON        — изменить ввод (частичный JSON того же вида), проверить niri validate
     glide-niri.py save-outputs JSON     — [{name, mode "WxH@R", scale, transform, x, y, off}] → glide-outputs.kdl
+    glide-niri.py privacy JSON          — ["app-id", …]: окна этих приложений niri закрашивает на записи и
+                                          демонстрации экрана (block-out-from "screen-capture") → glide-privacy.kdl
 
 Как устроено (проверено на niri 26.04): у обычных разделов (input, layout…) из нескольких определений побеждает
 ПОСЛЕДНЕЕ и слияние идёт по полям, у мониторов (output "имя") — ПЕРВОЕ. Флаги вида `tap` позже выключить нельзя
@@ -25,6 +27,7 @@ NIRI = Path(os.environ.get("GLIDE_NIRI_DIR") or Path(os.environ.get("XDG_CONFIG_
 CONFIG = NIRI / "config.kdl"
 SETTINGS = NIRI / "glide-settings.kdl"
 OUTPUTS = NIRI / "glide-outputs.kdl"
+PRIVACY = NIRI / "glide-privacy.kdl"
 MARK = "// [glide-shell] "
 HEAD = "// Glide Shell: настройки niri из панели («Настройки» → «niri»). Файл пишет оболочка — правки руками\n" \
        "// сохраняются, пока их не поменяли в панели.\n"
@@ -655,6 +658,30 @@ def save_outputs(items):
         return {"ok": False, "error": str(e)}
 
 
+def save_privacy(apps):
+    """Правила окон: приложения из списка скрыты на записи, демонстрации и скриншотах (niri рисует там чёрное).
+    Отдельный файл — правила окон у niri складываются, порядок подключения не важен."""
+    apps = [a for a in dict.fromkeys(str(x).strip() for x in apps) if a]
+    old_conf = CONFIG.read_text()
+    old_priv = PRIVACY.read_text() if PRIVACY.exists() else None
+    try:
+        rules = [f"window-rule {{\n    match app-id={q('^' + re.escape(a) + '$')}\n    block-out-from \"screen-capture\"\n}}" for a in apps]
+        PRIVACY.write_text(HEAD + "// Приватность: окна этих приложений скрыты на записи и демонстрации экрана.\n\n"
+                           + "\n\n".join(rules) + "\n")
+        if 'include "glide-privacy.kdl"' not in old_conf:
+            backup(CONFIG)
+            CONFIG.write_text(old_conf.rstrip("\n") + '\n\n// Glide Shell: окна, скрытые на записи экрана\ninclude "glide-privacy.kdl"\n')
+        err = validate()
+        if err:
+            raise RuntimeError(err)
+        return {"ok": True, "apps": apps}
+    except Exception as e:
+        CONFIG.write_text(old_conf)
+        if old_priv is None: PRIVACY.unlink(missing_ok=True)
+        else: PRIVACY.write_text(old_priv)
+        return {"ok": False, "error": str(e)}
+
+
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "read"
     if cmd == "read":
@@ -672,8 +699,10 @@ def main():
         print(json.dumps(set_look(json.loads(sys.argv[2])), ensure_ascii=False))
     elif cmd == "save-outputs":
         print(json.dumps(save_outputs(json.loads(sys.argv[2])), ensure_ascii=False))
+    elif cmd == "privacy":
+        print(json.dumps(save_privacy(json.loads(sys.argv[2])), ensure_ascii=False))
     else:
-        sys.exit("glide-niri.py read | set-input JSON | save-outputs JSON")
+        sys.exit("glide-niri.py read | set-input JSON | save-outputs JSON | privacy JSON")
 
 
 if __name__ == "__main__":

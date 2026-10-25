@@ -31,7 +31,9 @@ Singleton {
     function check() { if (!probe.running) probe.running = true }
 
     readonly property string dir: (Quickshell.env("XDG_VIDEOS_DIR") || Quickshell.env("HOME") + "/Видео") + "/Записи экрана"
-    function output() {   // экран с фокусом: без -o wf-recorder при нескольких мониторах спрашивает в терминале
+    function output() {   // выбранный монитор (Prefs.recOutput, если подключён) или тот, где фокус:
+        // без -o wf-recorder при нескольких мониторах спрашивает в терминале
+        if (Prefs.recOutput && Quickshell.screens.some(sc => sc.name === Prefs.recOutput)) return Prefs.recOutput
         for (var w of Niri.workspaces) if (w.is_focused) return w.output
         return ""
     }

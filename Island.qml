@@ -770,7 +770,7 @@ PanelWindow {
             Text {
                 x: 36; width: parent.width - 36 - 14
                 anchors.verticalCenter: parent.verticalCenter
-                text: parent.last ? parent.last.summary + (parent.last.body ? "  ·  " + iw.plain(parent.last.body) : "") : ""
+                text: parent.last ? Notifs.titleOf(parent.last) + (Notifs.bodyOf(parent.last) ? "  ·  " + iw.plain(Notifs.bodyOf(parent.last)) : "") : ""
                 color: Theme.text; font.pixelSize: Theme.fs(12)
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
@@ -793,14 +793,14 @@ PanelWindow {
             }
             Text {
                 x: 68; y: 26; width: parent.width - 68 - 44
-                text: parent.last ? parent.last.summary : ""
+                text: Notifs.titleOf(parent.last)
                 color: Theme.text; font.pixelSize: Theme.fs(13); font.bold: true
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
             }
             Text {
                 x: 68; y: 45; width: parent.width - 68 - 16
-                text: parent.last ? parent.last.body : ""
+                text: Notifs.bodyOf(parent.last)
                 color: Theme.textVariant; font.pixelSize: Theme.fs(12)
                 textFormat: Text.StyledText
                 wrapMode: Text.Wrap
