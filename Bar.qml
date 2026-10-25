@@ -850,7 +850,7 @@ PanelWindow {
         var cap = capOf(t)
         if (!cap) return
         tipItem = t
-        capDrop.show(t.tipKey, bar, cap, t.mapToItem(cap, t.width / 2, 0).x, 250, false)
+        capDrop.show(t.tipKey, bar, cap, t.mapToItem(cap, t.width / 2, 0).x, 250, false, t)
     }
     property var tipItem: null          // чей значок описывает открытая подсказка (трей — его modelData)
     Timer { id: tipDelay; interval: 550; onTriggered: bar.openTip() }
@@ -889,7 +889,7 @@ PanelWindow {
         if (!t) return Tr.t("нет капсулы ") + key
         var cap = capOf(t)
         tipTarget = t; tipItem = t
-        capDrop.show(key, bar, cap, t.mapToItem(cap, t.width / 2, 0).x, 250, false)
+        capDrop.show(key, bar, cap, t.mapToItem(cap, t.width / 2, 0).x, 250, false, t)
         return "ok"
     }
     function toggleWindows(from, grab) {   // grab: false — из IPC (захват попапа только после ввода)
@@ -897,7 +897,7 @@ PanelWindow {
         tipDelay.stop()
         // капсула узкая (мало места под список) — прежний раздел «Окна» в панели
         var cap = capOf(from)
-        if (!from.visible || !cap || !capDrop.show("windows", bar, cap, from.mapToItem(cap, from.width / 2, 0).x, 300, grab !== false))
+        if (!from.visible || !cap || !capDrop.show("windows", bar, cap, from.mapToItem(cap, from.width / 2, 0).x, 300, grab !== false, from))
             openPlugin("windows")
     }
     // окна: сначала текущего рабочего стола, потом остальных (по номеру стола)

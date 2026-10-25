@@ -53,6 +53,7 @@ creates a working plugin that uses all of the API below: a panel section, a bar 
   - [Files](#files)
   - [Network](#network)
   - [Messages between plugins](#messages-between-plugins)
+  - [Island color](#island-color)
   - [Version 2 reference](#version-2-reference)
 - [3b. Permissions](#3b-permissions)
   - [How to ask](#how-to-ask)
@@ -61,6 +62,7 @@ creates a working plugin that uses all of the API below: a panel section, a bar 
   - [What permissions do not do](#what-permissions-do-not-do)
 - [4. Plugin section (qml)](#4-plugin-section-qml)
 - [4a. Where plugin code runs and how long it lives](#4a-where-plugin-code-runs-and-how-long-it-lives)
+  - [Performance](#performance)
 - [5. Bar item (bar)](#5-bar-item-bar)
 - [6. Debugging](#6-debugging)
 - [7. Other apps: D-Bus `org.glide.Shell` and the `glide-shell` command](#7-other-apps-d-bus-orgglideshell-and-the-glide-shell-command)
@@ -178,7 +180,7 @@ Item {
 | Field | Meaning |
 |---|---|
 | `api` | API version: `1` or `2`. No field means `1`. Newer than the shell knows: the plugin is not loaded. |
-| `permissions` | API 2 only: the permissions the plugin needs: `exec`, `network`, `clipboard`, `notifications`, `windows`, `phone`, `system` (section 3b). A person grants them; no field means none. An API 1 plugin asks for all of them (this field is ignored) and gets them only when you allow it. |
+| `permissions` | API 2 only: the permissions the plugin needs: `exec`, `network`, `clipboard`, `notifications`, `windows`, `phone`, `system`, `messages`, `island` (section 3b). A person grants them; no field means none. An API 1 plugin asks for all of them (this field is ignored) and gets them only when you allow it. |
 | `id`, `name`, `icon` | Required: `id` and `name`. A plugin with the same `id` as a built-in one replaces it. `icon`: the character itself (`"󰖌"`, a Nerd Font glyph) or its hex code (`"F058C"`); both work here and in `widget.json`. |
 | `category` | Panel category: `power`, `control`, `media`, `clipboard`, `apps`, `quick`, `today`, `phone`, `ai`, `dev`, `text`, `system`, `net`, `notify` or your own id. A new id makes a new category (`categoryName`, `categoryIcon`). |
 | `priority` | Order inside the category: higher comes first. |
@@ -455,7 +457,38 @@ Connections {
 ```
 
 Every part of the receiver that exists right now gets the message: the section, the bar item, the service. `data`
-arrives as a copy (through JSON); you never receive your own messages. No permission needed.
+arrives as a copy (through JSON). `send` returns `true` if the message went out.
+
+**Your own parts need no permission.** A plugin's section, service and bar item are separate objects.
+`api.send("<your id>", …)` reaches the other parts of your plugin, but not the part that sent it. This is how a
+section asks its service to do something:
+
+```qml
+// Main.qml (section)                                // Service.qml (service)
+onClicked: api.send("devhub", "sync", {})           function onMessage(from, name, data) { if (name === "sync") svc.load() }
+```
+
+**Other plugins need the `messages` permission** (since Glide Shell 1.3). Without it, `send` to another id sends
+nothing and returns `false`, and messages from other plugins don't arrive. Both the sender and the receiver need it.
+`"*"` without the permission reaches only your own parts. Old-format plugins that were fully approved before 1.3 got
+`messages` automatically. Your parts can also share data through `api.storage`: there is one file, and every part
+sees a change.
+
+### Island color
+
+Since Glide Shell 1.3, permission `island`. A plugin can tint the island: a light tinted fill and the outline.
+
+```qml
+api.island.tint("#7b61ff")   // true: accepted; a bad color or no permission: false
+api.island.clear()           // remove your color
+```
+
+With several colors, the island shows all of them as a still left-to-right gradient. Camera (green), microphone
+(amber) and screen sharing or recording (red) always come first, so a plugin cannot hide them. At most three plugin
+colors are shown, the most recently set ones. A plugin has one color: a new `tint` replaces the old one. Alpha is
+dropped. The color goes away by itself when the part that set it is destroyed, and when the person revokes the
+permission, so set a long-lived color from the service. `api.island.colors` is what plugins have put on the island
+right now (`[{owner, color}]`).
 
 ### Version 2 reference
 
@@ -480,7 +513,9 @@ arrives as a copy (through JSON); you never receive your own messages. No permis
 | `files.list(cb)` | `cb([{name, size, mtime}])` | — | `mtime` in ms since 1970 |
 | `files.remove(name, cb)` | `cb(ok)` | — | A missing file also gives `true` |
 | `http(url, opts, cb)` | `{abort()}` | — | `cb(status, text, headers)` runs once; header names are lower-case |
-| `send(to, name, data)` | returns nothing | — | `data`: anything `JSON.stringify` accepts |
+| `send(to, name, data)` | `bool`: sent | — | `data`: anything `JSON.stringify` accepts. Another plugin's id needs `messages` |
+| `island.tint(color)`, `island.clear()` | `bool` / nothing | — | Permission `island`. Color: `#rgb`, `#rrggbb`, `#aarrggbb` or a name |
+| `island.colors` | list of `{owner, color}` | yes | |
 | Signals `permissionsUpdated`, `message(from, name, data)` | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ Contents](#contents)
@@ -502,6 +537,8 @@ Everything else needs a permission. **Only a person grants and changes them**; a
 | `windows` | `api.niri`: windows, workspaces, niri actions |
 | `phone` | `api.kdeconnect`: phones, their notifications and commands |
 | `system` | `api.setPref`, `api.setAwake`, `api.recorder`. **Almost full access**: shell settings can do a lot |
+| `messages` | `api.send` to other plugins and messages from them. Not needed between your plugin's own parts |
+| `island` | `api.island.tint`: the island's color |
 
 Without the permission, functions do nothing (`exec` answers `code` = -1, `http` answers `status` = 0), properties are
 empty (`contextText` = `""`; `niri`, `notifs`, `kdeconnect`, `recorder` = `null`), and the log gets one warning.
@@ -619,7 +656,21 @@ Names that start with `on` and a capital letter are signal handlers, not propert
 similar names instead.
 
 QML: Qt 6.8 or newer is required, so inline components (`component Btn: Rectangle {…}`) are fine.
-`api.activity.update` from QML has no rate limit; once a second is cheap.
+
+### Performance
+
+The shell usually takes less than 1% of a CPU core. One plugin can easily push that to 15% if it:
+
+- **runs an animation forever** (`loops: Animation.Infinite`, `running: true` all the time). That redraws the bar or
+  panel 60 times a second, constantly. Animate only in response to an event: a value changed, the mouse hovered.
+  Keep durations short, 300–400 ms at most;
+- **updates an activity more than once a second**, or calls `activity.start` from a timer. Call `start` once, then
+  `update`, and only when the value really changed. Once a second is cheap; every 150 ms is not;
+- **polls** something that has an event (`onOpened`, `api.player` and `api.niri` signals), or runs programs through
+  `api.exec` more often than once every few seconds.
+
+Removing your activity when the plugin is turned off is your job too: call `api.activity.end` in the service's
+`Component.onDestruction`.
 
 [↑ Contents](#contents)
 

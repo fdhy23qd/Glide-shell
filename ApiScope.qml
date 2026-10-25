@@ -45,7 +45,7 @@ QtObject {
     signal permissionsUpdated()          // человек выдал или забрал разрешение
     property Connections permsConn: Connections {
         target: Permissions
-        function onGrantsChanged() { api.permissionsUpdated() }
+        function onGrantsChanged() { if (api.tinted && !api.can("island")) api.island.clear(); api.permissionsUpdated() }
     }
 
     // ---------- прежнее (плагины) ----------
@@ -180,6 +180,20 @@ QtObject {
         function start(id, props) { return api.me ? Activities.start(api.me + "/" + id, Object.assign({}, props || {}, { owner: api.me })) : "" }
         function update(id, props) { return api.me ? Activities.update(api.me + "/" + id, Object.assign({}, props || {}, { owner: api.me })) : "" }
         function end(id) { if (api.me) Activities.end(api.me + "/" + id) }
+    }
+
+    // ---------- цвет острова (разрешение «island»): камера, микрофон и демонстрация экрана всегда впереди ----------
+    // цвет живёт, пока жива часть плагина, которая его задала: надолго — из службы (service)
+    property bool tinted: false
+    readonly property QtObject island: QtObject {
+        readonly property var colors: Core.islandTints
+        function tint(c) {
+            if (!api.me || !api.need("island", "api.island.tint")) return false
+            var ok = Core.setTint(api.me, c)
+            api.tinted = ok
+            return ok
+        }
+        function clear() { if (api.me && api.tinted) { Core.setTint(api.me, ""); api.tinted = false } }
     }
 
     // ---------- хранилище: свой JSON в ~/.local/state/glide-shell/plugin-<id>.json ----------
@@ -326,17 +340,25 @@ QtObject {
     }
 
     // ---------- сообщения между плагинами: api.send(id | "*", name, data) → у получателя onMessage(from, name, data) ----------
+    // Части одного плагина (раздел, служба, элемент бара) пишут друг другу без разрешения: send(свой id, …) доходит
+    // до остальных частей, но не до самой себя. С другими плагинами — разрешение «messages» у обоих.
     signal message(string from, string name, var data)
     function send(to, name, data) {
+        if (!me) return false
+        to = String(to)
+        if (to !== me && !need("messages", "send")) return false
         var copy = data === undefined ? null : JSON.parse(JSON.stringify(data))   // получателю — копия, не общий объект
-        if (me) Core.root.pluginMessage(me, String(to), String(name), copy)
+        Core.root.pluginMessage(me, to, String(name), copy, api)
+        return true
     }
     property Connections busConn: Connections {
         target: Core.root
         ignoreUnknownSignals: true
-        function onPluginMessage(from, to, name, data) {
-            if (api.me && from !== api.me && (to === api.me || to === "*")) api.message(from, name, data)
+        function onPluginMessage(from, to, name, data, sender) {
+            if (!api.me || sender === api || (to !== api.me && to !== "*")) return
+            if (from !== api.me && !api.can("messages")) return   // чужие — только с разрешением; «*» без него — лишь своим
+            api.message(from, name, data)
         }
     }
-    Component.onDestruction: Permissions.unregister(api)
+    Component.onDestruction: { island.clear(); Permissions.unregister(api) }
 }

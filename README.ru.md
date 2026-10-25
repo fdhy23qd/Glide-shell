@@ -87,7 +87,7 @@ sh setup.sh --uninstall   # убрать (настройки остаются; -
 предлагает заменить их: «да» — останавливает сразу, убирает из автозапуска и не даёт шине поднять их демон заново
 (уведомления заработают без перезахода; `--uninstall` вернёт всё как было), «нет» — оставляет их, а у Glide Shell
 выключает уведомления и окно пароля (и при переустановке тоже); ставит оболочку службой systemd (`install.sh`);
-создаёт первые настройки (плагин расписания пар — выключен); добавляет клавиши в `~/.config/niri/glide-shell.kdl`
+создаёт первые настройки (плагин расписания пар одного вуза — СыктГУ — выключен); добавляет клавиши в `~/.config/niri/glide-shell.kdl`
 (Mod+D — приложения, Super+Alt+L — замок, яркость, Mod+Shift+Escape — перезапуск) — занятые у пользователя
 пропускает, конфиг проверяет `niri validate` и при ошибке возвращает как было. Копии изменённых файлов — рядом.
 
@@ -109,7 +109,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v1.2`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v1.3`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,

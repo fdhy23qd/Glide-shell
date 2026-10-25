@@ -71,12 +71,25 @@ ShellRoot {
     // режим «прижать к верху»: пока в острове активность, он поднимается вплотную к краю экрана
     readonly property int islandTop: Prefs.islandMode === "raise" && activity !== "idle" && activity !== "" ? 0 : 6
     readonly property int islandRadius: Theme.radiusXl
-    // пока приложение пишет камеру или микрофон, остров окрашивается: камера — зелёным, микрофон — янтарным
-    readonly property color privacyColor: camApps.length ? Theme.success : Theme.warning
-    readonly property bool privacyOn: Prefs.islandPrivacy && (camApps.length > 0 || micApps.length > 0)
-    readonly property color islandColor: privacyOn ? Qt.tint(Theme.backgroundBar, Qt.rgba(privacyColor.r, privacyColor.g, privacyColor.b, 0.16))
+    // пока приложение пишет камеру или микрофон или идёт демонстрация (запись) экрана, остров окрашивается: камера —
+    // зелёным, микрофон — янтарным, экран — красным; за ними — цвета плагинов (api.island.tint, не больше трёх).
+    // Один цвет — заливка с оттенком и обводка; несколько — неподвижный градиент (IslandTint)
+    readonly property bool castOn: Niri.casts.length > 0 || Recorder.recording
+    readonly property bool privacyOn: Prefs.islandPrivacy && (camApps.length > 0 || micApps.length > 0 || castOn)
+    readonly property var islandColors: {
+        var c = []
+        if (Prefs.islandPrivacy) {
+            if (camApps.length) c.push(Theme.success)
+            if (micApps.length) c.push(Theme.warning)
+            if (castOn) c.push(Theme.error)
+        }
+        for (var t of Core.islandTints.slice(-3)) c.push(t.color)
+        return c
+    }
+    readonly property color islandOne: islandColors.length === 1 ? islandColors[0] : Theme.outline
+    readonly property color islandColor: islandColors.length === 1 ? Qt.tint(Theme.backgroundBar, Qt.rgba(islandOne.r, islandOne.g, islandOne.b, 0.16))
                                                    : Theme.backgroundBar   // и раскрытая панель (blob) — тем же цветом
-    readonly property color islandBorder: privacyOn ? privacyColor : Theme.outline   // обводка, как у карточек Glide
+    readonly property color islandBorder: islandColors.length > 1 ? "transparent" : islandOne   // обводка, как у карточек Glide
     property bool islandHover: false      // курсор над островом (уход — с задержкой)
     property bool islandClosing: false    // панель закрыта, но фигура ещё сжимается в остров
     property double closedAt: 0
@@ -892,7 +905,7 @@ ShellRoot {
     function showSettings(page) { settingsPage = page || "look"; settingsOpen = true; clearSearch(); if (!shown) open() }
 
     // ---------- разрешения плагинов (Permissions.qml) и сообщения между ними (api.send → onMessage) ----------
-    signal pluginMessage(string from, string to, string name, var data)
+    signal pluginMessage(string from, string to, string name, var data, var sender)   // sender — объект api отправителя
     Connections {
         target: Permissions
         function onAsked(owner) { root.showSettings("plugins") }   // плагин попросил разрешение — вопрос в «Плагинах»
@@ -998,6 +1011,7 @@ ShellRoot {
             root.allPlugins = d.allPlugins || []
             // один раз: сторонние плагины API 1, что стояли до v1.1, остаются одобренными (Permissions.migrateLegacy)
             Permissions.migrateLegacy("plugins", root.allPlugins.filter(p => p.user && !p.problem).map(p => ({ owner: p.id, m: p })))
+            Permissions.migrateMessages()
             Prefs.data = d.panel || {}
             console.log("glide-shell: " + d.plugins.length + " plugins, " + d.categories.length + " categories"
                         + (fresh ? "" : Tr.t(" (кэш)")))
@@ -1044,7 +1058,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v1.2 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v1.3 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

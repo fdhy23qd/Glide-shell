@@ -99,6 +99,7 @@ PanelWindow {
             // открытие — с отскоком, закрытие — мягко, без провала меньше острова
             Behavior on width { enabled: Prefs.anim > 0; Spring { bounce: root.shown ? 0.3 : 0.06; speed: root.shown ? 1 : 1.25 } }
             Behavior on height { enabled: Prefs.anim > 0; Spring { bounce: root.shown ? 0.22 : 0.04; speed: root.shown ? 0.85 : 1.2 } }
+            IslandTint { colors: root.shown ? [] : root.islandColors; radius: blob.radius }
             MouseArea { anchors.fill: parent }   // клик по фигуре не закрывает панель
         }
 

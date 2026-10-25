@@ -40,15 +40,18 @@ PopupWindow {
         onFinished: {
             if (!cd.closing) return
             cd.closing = false; cd.visible = false; cd.key = ""
-            if (cd.pending) { var a = cd.pending; cd.pending = null; cd.show(a[0], a[1], a[2], a[3], a[4], a[5]) }
+            if (cd.pending) { var a = cd.pending; cd.pending = null; cd.show(a[0], a[1], a[2], a[3], a[4], a[5], a[6]) }
         }
     }
 
-    // win — окно бара, capItem — капсула, cx — центр капли (от левого края капсулы), w — ширина
+    // win — окно бара, capItem — капсула, cx — центр капли (от левого края капсулы), w — ширина,
+    // src — значок, под которым капля (по нему она пересчитывает место, когда капсула сдвигается)
     property var pending: null              // открыть другую каплю, когда эта втянется
-    function show(k, win, capItem, cx, w, grab) {
+    property var src: null
+    property real cx: 0
+    function show(k, win, capItem, cx, w, grab, src) {
         if (visible && key !== "" && key !== k && Prefs.anim > 0) {   // переход к соседней капсуле: втянуть и налить заново
-            pending = [k, win, capItem, cx, w, grab]
+            pending = [k, win, capItem, cx, w, grab, src]
             if (!closing) { closing = true; pour.stop(); drain.restart() }
             return true
         }
@@ -61,6 +64,8 @@ PopupWindow {
         menuW = fits ? w : Math.max(180, capItem.width - 2 * (r + fillet))
         if (capItem.width - 2 * (r + fillet) < menuW) { hide(); return false }
         attached = true
+        cd.src = src || null
+        cd.cx = cx
         menuL = Math.max(r + fillet, Math.min(capItem.width - r - fillet - menuW, cx - menuW / 2))
         cap = capItem
         key = k
@@ -75,6 +80,24 @@ PopupWindow {
         visible = true
         pour.restart()
         return true
+    }
+    // капсула сдвинулась или изменила ширину (остров, содержимое) — попап и текст едут вместе с контуром,
+    // иначе контур уезжал из окна попапа и обрезался, а текст оставался на старом месте
+    function relayout() {
+        if (!visible || !cap) return
+        if (src && src.visible) cx = src.mapToItem(cap, src.width / 2, 0).x
+        var r = Math.min(cap.radius, cap.height / 2)
+        menuL = Math.max(r + fillet, Math.min(cap.width - r - fillet - menuW, cx - menuW / 2))
+        var pl = cap.x + menuL - fillet - 2
+        if (pl === popLeft) return
+        popLeft = pl
+        anchor.rect.x = pl; anchor.rect.y = cap.y + cap.height
+        anchor.updateAnchor()
+    }
+    Connections {
+        target: cd.cap
+        function onXChanged() { cd.relayout() }
+        function onWidthChanged() { cd.relayout() }
     }
     function hide() {
         pending = null

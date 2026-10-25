@@ -18,6 +18,12 @@ ColumnLayout {
         var vals = Object.keys(r).map(k => r[k]).filter(x => x.ok !== null)
         if (api) api.storage.set("summary", { ok: vals.filter(x => x.ok).length, fail: vals.filter(x => !x.ok).length })
     }
+    property var replies: ({})   // имя ответа службы → что сделать с ним
+    function ask(name, reply, data, done, onReply) {
+        replies[reply] = onReply
+        root.api.setTimeout(() => { if (root.replies[reply]) { delete root.replies[reply]; done(false, "служба не ответила за 2 с") } }, 2000)
+        root.api.send("apitest", name, data || {})
+    }
     function has(p) { return api && api.permissions.has(p) }
 
     Connections {
@@ -26,6 +32,11 @@ ColumnLayout {
         function onNotification(e) { root.notifSeen++ }
         function onThemeUpdated() { root.themeEvents++ }
         function onPermissionsUpdated() { root.runAll() }
+        // ответы своей службы (части одного плагина пишут друг другу без разрешения)
+        function onMessage(from, name, data) {
+            if (from !== "apitest" || !root.replies[name]) return
+            var cb = root.replies[name]; delete root.replies[name]; cb(data)
+        }
     }
 
     // ---- проверки: perm — какое разрешение нужно ("" — без разрешения) ----
@@ -100,11 +111,17 @@ ColumnLayout {
         { key: "service", perm: "", title: "service — фоновая служба плагина", run: function (done) {
             var n = root.api.storage.get("serviceTicks", 0)
             done(n > 0, n > 0 ? "жива, тиков: " + n : "ещё не тикала (подожди 5 с после старта)") } },
-        { key: "send", perm: "", title: "api.send — сообщение другим плагинам", run: function (done) {
-            root.api.send("*", "ping", { from: "apitest" }); done(true, "отправлено всем") } },
+        { key: "self", perm: "", title: "api.send своей службе — без разрешения", run: function (done) {
+            var t = Date.now()
+            root.ask("echo", "echo-reply", { t: t }, done, d => done(d.t === t, "служба ответила за " + (Date.now() - t) + " мс")) } },
+        { key: "send", perm: "messages", title: "api.send — другим плагинам", run: function (done) {
+            var ok = root.api.send("*", "ping", { from: "apitest" }) && root.api.send("water", "ping", {})
+            done(ok, ok ? "отправлено (всем и «water»)" : "не отправлено") } },
+        { key: "island", perm: "island", title: "api.island.tint — цвет острова на 6 с", run: function (done) {
+            root.ask("tint", "tint-reply", {}, done, d => done(d.ok, d.ok ? "остров окрашен из службы, снимется через 6 с" : "tint вернул false")) } },
         { key: "perms", perm: "", title: "api.permissions — что объявлено и выдано", run: function (done) {
             var p = root.api.permissions
-            done(p.requested.length === 7, "выдано " + p.granted.length + " из " + p.requested.length + ": " + p.granted.join(", ")) } }
+            done(p.requested.length === 9, "выдано " + p.granted.length + " из " + p.requested.length + ": " + p.granted.join(", ")) } }
     ]
 
     function runAll() {

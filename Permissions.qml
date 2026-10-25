@@ -12,7 +12,7 @@ import Quickshell.Services.Pam
 Singleton {
     id: perms
 
-    readonly property var all: ["exec", "network", "clipboard", "notifications", "windows", "phone", "system"]
+    readonly property var all: ["exec", "network", "clipboard", "notifications", "windows", "phone", "system", "messages", "island"]
     readonly property var dangerous: ["exec", "system"]   // по сути полный доступ: выдаются с отдельным предупреждением
     readonly property var meta: ({
         exec:          { glyph: 0xF018D, title: Tr.t("Запуск программ"), hint: Tr.t("api.run, api.exec, а также daemon и команды кнопок. Полный доступ к системе от твоего имени.") },
@@ -21,7 +21,9 @@ Singleton {
         notifications: { glyph: 0xF009A, title: Tr.t("Чужие уведомления"), hint: Tr.t("api.notifs и событие notification — что пишут другие программы") },
         windows:       { glyph: 0xF05B6, title: Tr.t("Окна"), hint: Tr.t("api.niri — список окон и управление ими") },
         phone:         { glyph: 0xF011C, title: Tr.t("Телефон"), hint: Tr.t("api.kdeconnect — устройства, их уведомления и команды") },
-        system:        { glyph: 0xF0493, title: Tr.t("Настройки оболочки"), hint: Tr.t("api.setPref, api.setAwake, api.recorder — менять настройки, «не засыпать», запись экрана") }
+        system:        { glyph: 0xF0493, title: Tr.t("Настройки оболочки"), hint: Tr.t("api.setPref, api.setAwake, api.recorder — менять настройки, «не засыпать», запись экрана") },
+        messages:      { glyph: 0xF0369, title: Tr.t("Сообщения другим плагинам"), hint: Tr.t("api.send и onMessage с другими плагинами (между своими частями — без разрешения)") },
+        island:        { glyph: 0xF0266, title: Tr.t("Цвет острова"), hint: Tr.t("api.island.tint — окрашивать остров (камера, микрофон и демонстрация экрана всегда впереди)") }
     })
     function title(p) { return p === "*" ? Tr.t("все разрешения (плагин старого формата)") : meta[p] ? meta[p].title : p }
 
@@ -134,6 +136,22 @@ Singleton {
         var l = Object.assign({}, legacy); l[kind] = true; legacy = l
         save(g)
         console.log("glide-shell: разрешения — установленное до v1.1 (" + kind + ") одобрено: " + items.length)
+    }
+    // v1.3: обмен сообщениями с другими плагинами стал разрешением «messages». Плагины старого формата, одобренные
+    // целиком (у них было всё, в том числе сообщения), получают его один раз — чтобы связка плагинов не сломалась
+    readonly property var oldAll: ["exec", "network", "clipboard", "notifications", "windows", "phone", "system"]
+    function migrateMessages() {
+        if (!ready || legacy.messages) return
+        var g = JSON.parse(JSON.stringify(grants)), n = 0
+        for (var k in g) {
+            var e = g[k]
+            if ((Number(e.api) || 1) < 2 && oldAll.every(p => (e.granted || []).indexOf(p) >= 0) && e.granted.indexOf("messages") < 0) {
+                e.granted.push("messages"); n++
+            }
+        }
+        var l = Object.assign({}, legacy); l.messages = true; legacy = l
+        save(g)
+        if (n) console.log("glide-shell: разрешения — «messages» выдано плагинам старого формата: " + n)
     }
     // «Разрешить всё» (плагин старого формата просит всё) — тот же вопрос с паролем, perm = "*"
     function askAll(owner, name, m) {

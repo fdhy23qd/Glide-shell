@@ -5,7 +5,7 @@
 import re
 
 # то же в Permissions.qml
-PERMISSIONS = ["exec", "network", "clipboard", "notifications", "windows", "phone", "system"]
+PERMISSIONS = ["exec", "network", "clipboard", "notifications", "windows", "phone", "system", "messages", "island"]
 
 # обращения к системе в обход api
 AUDIT = [(re.compile(r"import\s+Quickshell\.Io\b"), "Quickshell.Io"), (re.compile(r"\bProcess\s*\{"), "Process"),

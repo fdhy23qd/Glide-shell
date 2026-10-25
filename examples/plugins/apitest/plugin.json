@@ -1,7 +1,7 @@
 {
   "id": "apitest", "api": 2, "name": "Проверка API", "icon": "󰙨", "category": "apitest",
   "categoryName": "Проверка API", "categoryIcon": "󰙨",
-  "permissions": ["exec", "network", "clipboard", "notifications", "windows", "phone", "system"],
+  "permissions": ["exec", "network", "clipboard", "notifications", "windows", "phone", "system", "messages", "island"],
   "qml": "Main.qml", "bar": "Bar.qml", "service": "Service.qml",
   "settings": [
     { "key": "url", "type": "text", "label": "Адрес для проверки сети", "default": "https://example.com" },

@@ -39,7 +39,7 @@ API_V2 = API_V1 | {
 }
 PERMISSIONS_OBJ_V2 = {"requested", "granted", "has", "request", "state"}
 FILES_V2 = {"read", "write", "list", "remove"}
-PERMISSIONS_V2 = ["exec", "network", "clipboard", "notifications", "windows", "phone", "system"]
+PERMISSIONS_V2 = ["exec", "network", "clipboard", "notifications", "windows", "phone", "system", "messages", "island"]
 STORAGE_V1 = {"get", "set", "remove", "all"}
 STORAGE_V2 = STORAGE_V1 | {"keys", "clear"}
 ACTIVITY_V1 = {"start", "update", "end"}

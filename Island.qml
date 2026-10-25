@@ -316,6 +316,7 @@ PanelWindow {
         visible: !(iw.p.island && iw.p.panelVisible && !iw.p.blobAtCompact)
         scale: tap.pressed ? 0.96 : 1
         clip: true
+        IslandTint { colors: iw.p.islandColors; radius: pill.radius }
         Behavior on width { enabled: Prefs.anim > 0; Spring { bounce: 0.3 } }
         Behavior on height { enabled: Prefs.anim > 0; Spring { bounce: 0.24; speed: 0.9 } }
         Behavior on opacity { NumberAnimation { duration: Prefs.ms(200) } }
@@ -908,6 +909,7 @@ PanelWindow {
         x: pill.x + pill.width + (iw.bubbleOn ? 8 : -height)
         color: iw.p.islandColor
         border.color: bubbleMa.containsMouse ? Theme.textFaint : iw.p.islandBorder   // наведение — обводка ярче
+        IslandTint { colors: iw.p.islandColors; radius: bubble.radius }
         opacity: iw.bubbleOn ? 1 : 0
         scale: !iw.bubbleOn ? 0.4 : bubbleMa.pressed ? 0.88 : 1
         visible: opacity > 0

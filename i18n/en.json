@@ -1076,5 +1076,9 @@
  "Плагин старого формата (API 1) просит все разрешения и пока не получил ни одного — его команды и фоновые процессы не работают.": "An old-format plugin (API 1) asks for all permissions and has none yet — its commands and background processes don't run.",
  "Плагин старого формата (API 1): часть разрешений выключена.": "Old-format plugin (API 1): some permissions are off.",
  "Разрешить всё…": "Allow all…",
- "⚠ Песочницы нет: разрешения сдерживают только плагин, который пользуется api. Жёлтая пометка под плагином — код обходит их и может всё, что можешь ты. Ставь только плагины, которые прочитал или автору которых доверяешь.": "⚠ There is no sandbox: permissions only restrain a plugin that sticks to api. A yellow mark under a plugin means its code goes around them and can do anything you can. Install only plugins you have read or whose author you trust."
+ "⚠ Песочницы нет: разрешения сдерживают только плагин, который пользуется api. Жёлтая пометка под плагином — код обходит их и может всё, что можешь ты. Ставь только плагины, которые прочитал или автору которых доверяешь.": "⚠ There is no sandbox: permissions only restrain a plugin that sticks to api. A yellow mark under a plugin means its code goes around them and can do anything you can. Install only plugins you have read or whose author you trust.",
+ "Сообщения другим плагинам": "Messages to other plugins",
+ "api.send и onMessage с другими плагинами (между своими частями — без разрешения)": "api.send and onMessage with other plugins (between a plugin's own parts — no permission needed)",
+ "Цвет острова": "Island color",
+ "api.island.tint — окрашивать остров (камера, микрофон и демонстрация экрана всегда впереди)": "api.island.tint — tint the island (camera, microphone and screen sharing always come first)"
 }
