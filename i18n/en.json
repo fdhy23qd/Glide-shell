@@ -1205,5 +1205,20 @@
  "Заменить": "Replace",
  "Установить": "Install",
  "Плагин установлен: ": "Plugin installed: ",
- "Скопировать": "Copy"
+ "Скопировать": "Copy",
+ "ОВЕРЛЕЙ": "OVERLAY",
+ "Открыть": "Open",
+ "Клавиша: ": "Key: ",
+ "Назначить Mod+G": "Bind Mod+G",
+ "Glide: оверлей": "Glide: overlay",
+ "Поверх всего, и полноэкранных игр тоже: время, ЦП и память, температура, музыка и громкость, быстрые действия, уведомления. Esc — закрыть. Внутрь игры не встраивается: её FPS не видно (для этого MangoHud).": "On top of everything, fullscreen games included: time, CPU and memory, temperature, music and volume, quick actions, notifications. Esc closes it. It doesn't hook into the game, so the game's FPS isn't shown (use MangoHud for that).",
+ "Плашка в углу": "Corner strip",
+ "Время, ЦП, память и температура строкой в левом верхнем углу поверх всего; мышь проходит сквозь неё": "Time, CPU, memory and temperature in a line in the top-left corner, on top of everything; the mouse passes through it",
+ "Сейчас": "Now",
+ "Температура": "Temperature",
+ "Музыка и звук": "Music and sound",
+ "Ничего не играет": "Nothing playing",
+ "Остановить запись": "Stop recording",
+ "Нет уведомлений": "No notifications",
+ "ОЗУ ": "RAM "
 }

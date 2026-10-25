@@ -1060,7 +1060,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v1.7 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v1.8 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -1128,6 +1128,14 @@ ShellRoot {
         }
         function peek(on: string): string { root.islandHover = on === "on"; return String(root.islandPeek) }   // раскрыть остров, как наведением
         // «живая активность» из скрипта: title "" — убрать; progress 0…1, меньше 0 — без прогресса
+        function overlay(cmd: string): string {
+            if (cmd === "toggle") overlayLayer.toggle()
+            else if (cmd === "open") overlayLayer.open = true
+            else if (cmd === "close") overlayLayer.open = false
+            else if (cmd === "pin") Prefs.set("overlayPin", !Prefs.overlayPin)
+            else return "toggle | open | close | pin"
+            return overlayLayer.open ? "open" : "closed"
+        }
         // автоматизация: list — правила и журнал; test ID — выполнить действия правила; resume — снять паузу;
         // emit ТИП APP — событие для проверки (appOpen org.telegram.desktop и т. п.)
         function automation(cmd: string, arg: string, arg2: string): string {
@@ -1187,6 +1195,9 @@ ShellRoot {
         Dock { required property var modelData; screen: modelData; panel: root }
     }
     // автоматизация: правила «когда → если → сделать» (Prefs.automations, вкладка «Автоматизация»)
+    // оверлей поверх всего, и игр тоже (Overlay.qml): IPC panel overlay toggle|open|close|pin, клавиша — в «Поведении»
+    Overlay { id: overlayLayer; root: root }
+    function overlayOpen() { close(); overlayLayer.open = true }
     readonly property var automation: automationEngine   // для настроек
     Automation { id: automationEngine; root: root; locked: lockScreen.locked; lockScreen: lockScreen }
     LockScreen {

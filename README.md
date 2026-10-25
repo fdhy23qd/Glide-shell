@@ -100,6 +100,11 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
   counts and download progress from apps that use the Unity LauncherEntry standard (Telegram, browsers, Steam).
 - **Updates:** checks the git folder it was installed from every 6 hours and shows what's new; one click runs
   `git pull` and `install.sh` (the Glide apps too, if they were installed from git).
+- **Overlay** (like a game overlay): on top of everything, fullscreen games included. Time, CPU, memory, temperature,
+  battery, music and volume, quick actions (do not disturb, stay awake, recording, screenshot) and recent
+  notifications; Esc closes it. Bind a key in Settings → Behavior (Mod+G) or call `qs -c glide-shell ipc call panel
+  overlay toggle`. An optional click-through strip in the corner shows time, CPU, RAM and temperature. It does not
+  hook into the game, so the game's FPS is not shown (use MangoHud for that).
 - **Installing plugins from an archive:** a `.zip`, `.tar.gz` or `.glideplugin` (the same zip) from Downloads or
   `glide-shell install-plugin FILE`. You see the name, author, requested permissions and audit marks before
   installing; `tools/glide-plugin.py pack` builds such an archive.

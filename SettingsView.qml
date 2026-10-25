@@ -803,6 +803,77 @@ ColumnLayout {
             current: Prefs.battCrit
             onPicked: (v) => Prefs.set("battCrit", v)
         }
+        // ---- оверлей поверх игр (Overlay.qml): клавиша — привязка niri в glide-settings.kdl (glide-niri.py bind) ----
+        Header { text: Tr.t("ОВЕРЛЕЙ") }
+        ColumnLayout {
+            id: ovl
+            Layout.fillWidth: true
+            spacing: 8
+            property string key: ""            // какая клавиша уже вызывает оверлей ("" — никакая)
+            property string error: ""
+            readonly property string tool: Quickshell.shellDir + "/tools/glide-niri.py"
+            readonly property var argv: ["spawn", "qs", "-c", "glide-shell", "ipc", "call", "panel", "overlay", "toggle"]
+            Component.onCompleted: ovRead.running = true
+            Process {
+                id: ovRead
+                command: ["python3", "-I", ovl.tool, "read"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        try {
+                            var b = JSON.parse(text).binds.find(x => x.argv.join(" ").indexOf("panel overlay") >= 0)
+                            ovl.key = b ? b.key : ""
+                        } catch (e) {}
+                    }
+                }
+            }
+            Process {
+                id: ovBind
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        var r = {}
+                        try { r = JSON.parse(text) } catch (e) { r = { ok: false, error: text.trim() } }
+                        ovl.error = r.ok ? "" : (r.error || Tr.t("не удалось"))
+                        ovRead.running = true
+                    }
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                text: Tr.t("Поверх всего, и полноэкранных игр тоже: время, ЦП и память, температура, музыка и громкость, быстрые действия, уведомления. Esc — закрыть. Внутрь игры не встраивается: её FPS не видно (для этого MangoHud).")
+                color: Theme.textSecondary; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+            }
+            Flow {
+                Layout.fillWidth: true
+                spacing: 8
+                ActionBtn {
+                    glyph: String.fromCodePoint(0xF0379)
+                    text: Tr.t("Открыть")
+                    onClicked: sv.panel.overlayOpen()
+                }
+                ActionBtn {
+                    glyph: String.fromCodePoint(0xF030C)
+                    text: ovl.key ? Tr.t("Клавиша: ") + ovl.key : Tr.t("Назначить Mod+G")
+                    enabled: !ovl.key && !ovBind.running
+                    onClicked: {
+                        ovBind.command = ["python3", "-I", ovl.tool, "bind", JSON.stringify({ key: "Mod+G", argv: ovl.argv, title: Tr.t("Glide: оверлей") })]
+                        ovBind.running = true
+                    }
+                }
+            }
+            Text {
+                visible: ovl.error !== ""
+                Layout.fillWidth: true
+                text: ovl.error
+                color: Theme.error; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+            }
+            ToggleRow {
+                icon: String.fromCodePoint(0xF0403)
+                label: Tr.t("Плашка в углу")
+                hint: Tr.t("Время, ЦП, память и температура строкой в левом верхнем углу поверх всего; мышь проходит сквозь неё")
+                checked: Prefs.overlayPin
+                onToggled: Prefs.set("overlayPin", !Prefs.overlayPin)
+            }
+        }
         // ---- обновления из git (Updates.qml, tools/glide-update.py) ----
         Header { text: Tr.t("ОБНОВЛЕНИЯ") }
         ToggleRow {
