@@ -1060,7 +1060,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v1.8 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v1.9 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -1169,6 +1169,13 @@ ShellRoot {
         function notifClear(app: string): int { return Notifs.removeApp(app) }  // убрать уведомления приложения из истории   // меню значка трея; без ID — список
         // запись экрана: record [""|system|mic] — начать или остановить (для хоткея)
         function record(audio: string): void { Recorder.toggle(audio) }
+        // одно окно по id niri (пусто — активное): запись идёт, пока не остановят (record) или окно не закроют
+        function recordWindow(id: string, audio: string): string {
+            if (Recorder.recording) { Recorder.stop(); return "stopped" }
+            var w = id ? Number(id) : (Niri.focusedWindow ? Niri.focusedWindow.id : null)
+            if (w === null || !Recorder.hasWindow) return Recorder.hasWindow ? "no window" : "no GStreamer: " + Recorder.windowMissing
+            Recorder.startWindow(audio, w); return "ok"
+        }
         function recordArea(audio: string): void { if (Recorder.recording) Recorder.stop(); else Recorder.start(audio, true) }
         function recordStatus(): string {
             return JSON.stringify({ recording: Recorder.recording, wfRecorder: Recorder.hasRecorder, slurp: Recorder.hasSlurp,

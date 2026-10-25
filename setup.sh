@@ -77,7 +77,7 @@ echo "  Оболочка рабочего стола для niri: бар с ос
 # ---------------------------------------------------------------- 1. зависимости
 bold "1. Зависимости"
 need="quickshell niri python python-gobject wl-clipboard libnotify libpulse networkmanager curl ttf-jetbrains-mono-nerd inter-font util-linux glib2 xdg-utils"
-want="python-pillow ffmpeg bluez-utils upower power-profiles-daemon wf-recorder slurp kdeconnect"
+want="python-pillow ffmpeg bluez-utils upower power-profiles-daemon wf-recorder slurp kdeconnect gst-plugin-pipewire gst-plugins-good gst-plugins-bad gst-plugin-va"
 # команда или файл, по которым видно, что пакет есть (без pacman — например, на другом дистрибутиве)
 probe() {
     case $1 in
@@ -86,6 +86,8 @@ probe() {
         networkmanager) command -v nmcli ;; ttf-jetbrains-mono-nerd) fc-list | grep -qi "JetBrainsMono Nerd" ;;
         inter-font) fc-list | grep -qi "Inter" ;; util-linux) command -v setpriv ;; glib2) command -v gdbus ;;
         xdg-utils) command -v xdg-open ;; python-pillow) python3 -c "import PIL" ;; bluez-utils) command -v bluetoothctl ;;
+        gst-plugin-pipewire) gst-inspect-1.0 --exists pipewiresrc ;; gst-plugins-good) gst-inspect-1.0 --exists matroskamux ;;
+        gst-plugins-bad) gst-inspect-1.0 --exists h264parse ;; gst-plugin-va) gst-inspect-1.0 --exists vah264enc ;;
         upower) command -v upower ;; power-profiles-daemon) command -v powerprofilesctl ;; kdeconnect) command -v kdeconnect-cli ;;
         *) command -v "$1" ;;
     esac >/dev/null 2>&1

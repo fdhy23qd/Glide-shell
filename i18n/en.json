@@ -1220,5 +1220,7 @@
  "Ничего не играет": "Nothing playing",
  "Остановить запись": "Stop recording",
  "Нет уведомлений": "No notifications",
- "ОЗУ ": "RAM "
+ "ОЗУ ": "RAM ",
+ "Запись одного окна: нужны sudo pacman -S gst-plugin-pipewire gst-plugins-good gst-plugins-bad gst-plugin-va (не хватает: ": "Recording a single window needs sudo pacman -S gst-plugin-pipewire gst-plugins-good gst-plugins-bad gst-plugin-va (missing: ",
+ "активное": "active"
 }

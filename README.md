@@ -60,7 +60,8 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
 - **Island and panel.** The island shows the clock and, as rows below it, whatever is going on: volume and
   brightness OSD, notifications (with inline reply), music with controls, timers, screen recording, short
   confirmations. Click it or hover over it and it springs open into the panel; closing it shrinks back into the island.
-- **Panel categories:** quick tools (notes, timer, calculator, colour picker, screenshot, screen recording),
+- **Panel categories:** quick tools (notes, timer, calculator, colour picker, screenshot, screen recording of the
+  whole screen, an area or a single window),
   control centre (Wi-Fi, Bluetooth, sound, per-app mixer, brightness, power profiles, night light), today
   (calendar with Russian public holidays, weather from Open-Meteo), media, clipboard history with images,
   notifications, phone (KDE Connect), task manager, network and developer tools, text tools, an AI chat (Claude)

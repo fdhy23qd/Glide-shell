@@ -109,7 +109,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v1.8`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v1.9`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -141,7 +141,8 @@ binds {
 категорий, Alt+, — настройки.
 Зависимости (setup.sh проверяет и ставит сам): `quickshell`, `niri`, `python3`, `wl-clipboard`, `libnotify`,
 шрифты JetBrainsMono Nerd Font (значки) и Inter; по желанию — NetworkManager (Wi-Fi), BlueZ, UPower и
-power-profiles-daemon, KDE Connect, `wlsunset` (ночной свет), `wf-recorder` + `slurp` (запись экрана), greetd (экран входа).
+power-profiles-daemon, KDE Connect, `wlsunset` (ночной свет), `wf-recorder` + `slurp` (запись экрана), GStreamer
+(`gst-plugin-pipewire`, `gst-plugins-good`, `gst-plugins-bad`, `gst-plugin-va` — запись одного окна), greetd (экран входа).
 
 ## <a id="ostrov"></a>Остров
 По умолчанию панель — чёрный остров сверху по центру: со своим баром — его центр, без него —
@@ -330,7 +331,12 @@ qs -c glide-shell ipc call lock status    # lock | test | preview | unlocked
   **запись экрана** — весь экран или область, без звука / со звуком системы / с микрофоном; идёт и с закрытой
   панелью: строка в острове с таймером, клик — стоп; видео в `~/Видео/Записи экрана`. Нужны `wf-recorder`
   (и `slurp` для области): `sudo pacman -S wf-recorder slurp`. Хоткей: `qs -c glide-shell ipc call panel record`
-  (с аргументом `system` или `mic` — со звуком) — начать или остановить.
+  (с аргументом `system` или `mic` — со звуком) — начать или остановить. **Одно окно** («Окно» → выбрать из списка,
+  `ipc call panel recordWindow ID_ОКНА ""`, пустой id — активное): поток отдаёт сам niri (D-Bus
+  `org.gnome.Mutter.ScreenCast`, без диалога портала), пишет GStreamer — на видеокарте (VA), без неё — openh264
+  (`tools/glide-wincast.py`); закрыли окно — запись заканчивается сама. Сначала пишется MKV (переживает обрыв),
+  в конце ffmpeg перепаковывает его в MP4 без перекодирования. Нужны `sudo pacman -S gst-plugin-pipewire
+  gst-plugins-good gst-plugins-bad gst-plugin-va` — без них кнопки «Окно» нет, вместо неё подсказка.
 - **Управление:** центр управления (см. «Верхний бар»); **Wi-Fi** — сети рядом (сканирует, пока панель
   открыта; 5 лучших, остальные по «Ещё»), клик по сети — подключить, ввести пароль, отключить, забыть.
   Пароль уходит прямо в NetworkManager. **Bluetooth** — «Мои устройства» (подключить, отключить, забыть,

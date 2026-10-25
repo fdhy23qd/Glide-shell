@@ -257,6 +257,17 @@ class PluginArchive(Sandbox):
         self.assertTrue(self.call("inspect", self.tmp / "w.glideplugin")["ok"])
 
 
+class WinCast(unittest.TestCase):
+    """Запись окна (tools/glide-wincast.py --check): отвечает JSON-ом и называет, чего не хватает (без записи)."""
+
+    def test_check(self):
+        r = subprocess.run([sys.executable, "-I", str(TOOLS / "glide-wincast.py"), "--check"], capture_output=True,
+                           text=True, stdin=subprocess.DEVNULL, timeout=60)
+        d = json.loads(r.stdout)
+        self.assertEqual(set(d), {"ok", "video", "audio", "missing"})
+        self.assertEqual(d["ok"], not d["missing"])
+
+
 class Procs(unittest.TestCase):
     """«Процессы» (tools/glide-procs.py): понятные имена помощников и отказ завершать чужое."""
 

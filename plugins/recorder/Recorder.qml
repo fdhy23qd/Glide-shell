@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Widgets
 import qs
 
 // Запись экрана (ядро — api.recorder, Recorder.qml): выбрать звук и что записывать; во время записи —
@@ -14,12 +15,22 @@ ColumnLayout {
     readonly property string iconFont: api && api.iconFont ? api.iconFont : "JetBrainsMono Nerd Font"
     readonly property bool shown: api ? api.shown : false
     property string audio: ""   // "" | system | mic
+    property bool picking: false   // выбирают окно для записи
+    // окна: активное — первым, дальше по рабочим столам
+    readonly property var windows: {
+        var n = rv.api && rv.api.niri ? rv.api.niri : null
+        if (!n) return []
+        var ws = {}
+        for (var w of n.workspaces) ws[w.id] = w.idx
+        var f = n.focusedWindow ? n.focusedWindow.id : -1
+        return Object.values(n.windows).sort((a, b) => (b.id === f) - (a.id === f) || (ws[a.workspace_id] || 0) - (ws[b.workspace_id] || 0) || a.id - b.id)
+    }
     // выбранный монитор, пока он подключён; иначе — тот, где фокус
     readonly property string output: Quickshell.screens.some(sc => sc.name === Prefs.recOutput) ? Prefs.recOutput : ""
     spacing: 8
 
     function nf(code) { return String.fromCodePoint(code) }
-    onShownChanged: if (shown && rec) rec.check()
+    onShownChanged: { if (shown && rec) rec.check(); if (!shown) picking = false }
 
     Text {   // нечем записывать
         visible: !!rv.rec && !rv.rec.hasRecorder
@@ -85,6 +96,54 @@ ColumnLayout {
                 visible: rv.rec && rv.rec.hasSlurp
                 label: Tr.t("Область")
                 onClicked: { rv.api.close(); rv.rec.start(rv.audio, true) }
+            }
+            Btn {
+                Layout.fillWidth: true
+                visible: !!rv.rec && rv.rec.hasWindow
+                label: rv.picking ? Tr.t("Отмена") : Tr.t("Окно")
+                onClicked: rv.picking = !rv.picking
+            }
+        }
+        Text {   // запись окна недоступна — чего не хватает
+            visible: !!rv.rec && !rv.rec.hasWindow && rv.rec.windowMissing !== ""
+            Layout.fillWidth: true
+            text: Tr.t("Запись одного окна: нужны sudo pacman -S gst-plugin-pipewire gst-plugins-good gst-plugins-bad gst-plugin-va (не хватает: ") + (rv.rec ? rv.rec.windowMissing : "") + ")"
+            color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+        }
+        ColumnLayout {   // какое окно записать: щелчок — панель закрывается, запись идёт
+            visible: rv.picking
+            Layout.fillWidth: true
+            spacing: 4
+            Repeater {
+                model: rv.windows
+                delegate: Rectangle {
+                    id: wrow
+                    required property var modelData
+                    readonly property bool focused: rv.api.niri.focusedWindow && rv.api.niri.focusedWindow.id === modelData.id
+                    Layout.fillWidth: true
+                    implicitHeight: 36
+                    radius: Theme.r(10)
+                    color: wm.pressed ? Theme.surfacePressed : wm.containsMouse ? Theme.surfaceHigher : Theme.surface
+                    scale: wm.pressed ? 0.97 : 1
+                    Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+                    Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+                    RowLayout {
+                        anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10
+                        spacing: 8
+                        IconImage { implicitSize: 20; source: Niri.iconFor(wrow.modelData.app_id) }
+                        Text {
+                            Layout.fillWidth: true
+                            text: Niri.titleFor(wrow.modelData) || wrow.modelData.app_id
+                            color: Theme.text; font.pixelSize: Theme.fs(12); elide: Text.ElideRight
+                        }
+                        Text { visible: wrow.focused; text: Tr.t("активное"); color: Theme.textMuted; font.pixelSize: Theme.fs(11) }
+                    }
+                    MouseArea {
+                        id: wm
+                        anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: { rv.picking = false; rv.api.close(); rv.rec.startWindow(rv.audio, wrow.modelData.id) }
+                    }
+                }
             }
         }
         Text {
