@@ -10,6 +10,7 @@
     glide-shell theme                       — тема JSON (акцент, светлая ли, цвета, скругления)
     glide-shell plugins                     — плагины JSON: id, имя, включён, версия API, разрешения (что выдано)
     glide-shell settings [РАЗДЕЛ]           — открыть настройки (plugins, look, bar…)
+    glide-shell install-plugin АРХИВ        — карточка установки плагина в «Настройки» → «Плагины» (ставит человек)
     glide-shell version | api               — версия оболочки | версия API плагинов
     glide-shell watch                       — печатать события (тема, щелчки по активностям) строками JSON
 
@@ -270,6 +271,13 @@ def cli(a):
         print(call("GetApiVersion", reply=True)[0])
     elif cmd == "plugins":
         print(json.dumps(call("ListPlugins", reply=True)[0], ensure_ascii=False, indent=1))
+    elif cmd == "install-plugin" and len(a) > 1:   # прямо через IPC оболочки: qs ipc режет аргументы по запятым
+        path = os.path.abspath(os.path.expanduser(a[1]))
+        if not os.path.isfile(path):
+            sys.exit(f"нет файла: {path}")
+        if "," in path:
+            sys.exit("в пути есть запятая — qs ipc разрежет его; переименуй файл")
+        subprocess.run(["qs", "-c", "glide-shell", "ipc", "call", "panel", "pluginInstall", path], stdin=subprocess.DEVNULL)
     elif cmd == "settings":
         call("OpenSettings", "(s)", (a[1] if len(a) > 1 else "",))
     elif cmd == "watch":

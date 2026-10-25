@@ -2882,6 +2882,142 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: 14
         PermAsk { visible: !!Permissions.pending && Permissions.pending.fromPlugin === true }   // попросил сам плагин
+
+        // ---- установить из архива (tools/glide-plugin.py find/inspect/install): сначала карточка, потом установка ----
+        ColumnLayout {
+            id: inst
+            Layout.fillWidth: true
+            spacing: 8
+            property var found: []
+            property var info: null            // что внутри выбранного архива (inspect)
+            property string error: ""
+            readonly property string tool: Quickshell.shellDir + "/tools/glide-plugin.py"
+            function run(args) { instProc.command = ["python3", "-I", tool].concat(args); instProc.running = true }
+            function look(path) { if (path) { error = ""; info = null; run(["inspect", path]) } }
+            Component.onCompleted: {
+                findProc.running = true
+                if (sv.panel && sv.panel.pluginArchive) { look(sv.panel.pluginArchive); sv.panel.pluginArchive = "" }
+            }
+            Connections { target: sv; function onPageChanged() { if (sv.page === "plugins") findProc.running = true } }
+            Connections {   // IPC panel pluginInstall ПУТЬ / glide-shell install-plugin — карточка сразу
+                target: sv.panel; ignoreUnknownSignals: true
+                function onPluginArchiveChanged() { if (sv.panel.pluginArchive) { inst.look(sv.panel.pluginArchive); sv.panel.pluginArchive = "" } }
+            }
+            Process {
+                id: findProc
+                command: ["python3", "-I", inst.tool, "find"]
+                stdout: StdioCollector { onStreamFinished: { try { inst.found = JSON.parse(text) } catch (e) { inst.found = [] } } }
+            }
+            Process {
+                id: instProc
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        var r = {}
+                        try { r = JSON.parse(text) } catch (e) { r = { ok: false, error: text.trim() || Tr.t("не удалось") } }
+                        if (instProc.command.indexOf("install") >= 0) {
+                            if (!r.ok) { inst.error = r.error; return }
+                            // защита плагинов паролем: новый ставится выключенным — включить можно только с паролем
+                            if (Prefs.pluginLock && !inst.info.installed) sv.panel.togglePlugin(r.id)
+                            sv.panel.flash("✓", Tr.t("Плагин установлен: ") + r.name, Prefs.accent)
+                            inst.info = null
+                            findProc.running = true
+                            sv.panel.rediscover()
+                        } else {
+                            inst.info = r.ok ? r : null
+                            inst.error = r.ok ? "" : r.error
+                        }
+                    }
+                }
+            }
+            Header { text: Tr.t("УСТАНОВИТЬ ИЗ АРХИВА") }
+            TextRow {
+                label: Tr.t("Путь к архиву (.zip, .glideplugin, .tar.gz) — Enter")
+                placeholder: "~/Загрузки/plugin.glideplugin"
+                onSubmitted: (v) => inst.look(v.replace(/^~(?=\/)/, Quickshell.env("HOME")))
+            }
+            Text {
+                visible: inst.found.length > 0
+                text: Tr.t("Нашлись в «Загрузках»:")
+                color: Theme.textSecondary; font.pixelSize: Theme.fs(12)
+            }
+            Flow {
+                visible: inst.found.length > 0
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: inst.found
+                    delegate: ActionBtn {
+                        required property var modelData
+                        glyph: String.fromCodePoint(0xF0AB4)
+                        text: modelData.name
+                        onClicked: inst.look(modelData.file)
+                    }
+                }
+            }
+            Text {
+                visible: inst.error !== ""
+                Layout.fillWidth: true
+                text: inst.error
+                color: Theme.error; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+            }
+            Rectangle {   // карточка: что ставится и что оно просит
+                visible: !!inst.info
+                Layout.fillWidth: true
+                implicitHeight: instCard.implicitHeight + 24
+                radius: Theme.radiusMd
+                color: Theme.surface
+                border.color: inst.info && inst.info.audit.length ? Theme.warning : Prefs.accent
+                ColumnLayout {
+                    id: instCard
+                    x: 12; y: 12
+                    width: parent.width - 24
+                    spacing: 6
+                    Text {
+                        Layout.fillWidth: true
+                        text: inst.info ? inst.info.name + "  ·  " + inst.info.id + (inst.info.version ? " " + inst.info.version : "") : ""
+                        color: Theme.text; font.pixelSize: Theme.fs(14); font.bold: true; elide: Text.ElideRight
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        visible: text !== ""
+                        text: inst.info ? [inst.info.author ? Tr.t("Автор: ") + inst.info.author : "", inst.info.description].filter(x => x).join("\n") : ""
+                        color: Theme.textSecondary; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: !inst.info ? "" : (inst.info.permissions.length
+                              ? Tr.t("Попросит разрешения (выдаёшь ты, после установки): ") + inst.info.permissions.map(p => Permissions.title(p)).join(", ")
+                              : Tr.t("Разрешений не просит."))
+                              + (inst.info.api === 1 ? "\n" + Tr.t("Старый формат (API 1): просит всё сразу.") : "")
+                              + (inst.info.daemon ? "\n" + Tr.t("Запускает свою фоновую программу (daemon) — только с разрешением «Запуск программ».") : "")
+                        color: Theme.text; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        visible: !!inst.info && inst.info.audit.length > 0
+                        text: inst.info ? Tr.t("⚠ Код обходит разрешения: ") + inst.info.audit.join(", ") + Tr.t(" — такой плагин может всё, что можешь ты.") : ""
+                        color: Theme.warning; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: inst.info ? Tr.t("Файлов: ") + inst.info.fileCount + (inst.info.installed ? "  ·  " + Tr.t("уже установлен — прежняя версия уйдёт в копию") : "")
+                              + (Prefs.pluginLock && !inst.info.installed ? "  ·  " + Tr.t("встанет выключенным: включить — по паролю") : "") : ""
+                        color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+                    }
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        ActionBtn {
+                            glyph: String.fromCodePoint(0xF01DA)
+                            text: inst.info && inst.info.installed ? Tr.t("Заменить") : Tr.t("Установить")
+                            enabled: !instProc.running
+                            onClicked: inst.run(["install", inst.info.file].concat(inst.info.installed ? ["--replace"] : []))
+                        }
+                        ActionBtn { glyph: "✕"; text: Tr.t("Отмена"); onClicked: { inst.info = null; inst.error = "" } }
+                    }
+                }
+            }
+        }
         // ---- категории ----
         Header { text: Tr.t("ПОРЯДОК КАТЕГОРИЙ") }
         Repeater {
@@ -2913,6 +3049,7 @@ ColumnLayout {
             text: Tr.t("⚠ Песочницы нет: разрешения сдерживают только плагин, который пользуется api. Жёлтая пометка под плагином — код обходит их и может всё, что можешь ты. Ставь только плагины, которые прочитал или автору которых доверяешь.")
             color: Theme.warning; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
         }
+
         Rectangle {   // пароль для изменения плагинов (тот же PAM, что у экрана блокировки)
             id: guardCard
             visible: sv.guardFor !== ""

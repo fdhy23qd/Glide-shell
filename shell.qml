@@ -935,6 +935,8 @@ ShellRoot {
 
     // ---------- настройки ----------
     function togglePlugin(id) { Prefs.run(["toggle-disabled", id]) }
+    function rediscover() { discover.running = true }                 // список плагинов заново (после установки)
+    property string pluginArchive: ""                                 // архив для карточки установки (IPC pluginInstall)
     // безопасный режим (с замка, после пароля): выключить все сторонние плагины — встроенные остаются
     readonly property var userPluginsOn: allPlugins.filter(p => p.user && !p.disabled && !p.problem)
     function safeMode() {
@@ -1058,7 +1060,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v1.6 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v1.7 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -1080,6 +1082,8 @@ ShellRoot {
             else if (arg !== "") wallpaper.show(arg)
             return wallpaper.current
         }
+        // карточка установки плагина из архива в «Настройки» → «Плагины» (ставит человек кнопкой)
+        function pluginInstall(path: string): void { root.settingsPage = "plugins"; root.settingsOpen = true; if (!root.shown) root.open(); root.pluginArchive = path }
         function settingsPage(id: string): void { root.settingsPage = id; root.settingsOpen = true; if (!root.shown) root.open() }
         function flash(text: string): void { root.flash("•", text, Prefs.accent) }
         function brightnessOsd(pct: int): void { root.brightnessOsd(pct) }

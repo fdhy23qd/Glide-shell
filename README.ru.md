@@ -109,7 +109,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v1.6`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v1.7`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -286,6 +286,10 @@ qs -c glide-shell ipc call lock status    # lock | test | preview | unlocked
   URL → открыть/заголовки/SSL и т.д.
 - **Категории** с вкладками в острове (или рейкой у края), хоткей на каждую, Alt+1…9.
 - **Профили:** `qs -c glide-shell ipc call panel profile study` (`default` — сбросить).
+- **Установка плагина из архива** («Настройки» → «Плагины» → «Установить из архива», `glide-shell install-plugin
+  ФАЙЛ`): `.zip`, `.tar.gz` или `.glideplugin` (тот же zip) — из «Загрузок» одним нажатием. Перед установкой —
+  карточка: имя, автор, какие разрешения попросит, пометки аудита. Собрать архив — `tools/glide-plugin.py pack ПАПКА`.
+  Подробно — docs/API.ru.md, раздел 6.
 - **Процессы** («Настройки» → «Процессы», `ProcsView.qml` + `tools/glide-procs.py`): сколько оболочка работает,
   ЦП и память (PSS) её и каждого помощника, «сироты» от прежнего запуска (их можно завершить), по каждому плагину
   и виджету — живые части, таймеры, запуски программ и запросы в сеть (`api.usage`), его процессы `daemon`.

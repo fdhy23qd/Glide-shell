@@ -276,6 +276,7 @@ QtObject {
     // ---------- сколько эта часть плагина делает — для «Настройки» → «Процессы» (только показ, права от этого не зависят) ----------
     readonly property QtObject usage: QtObject {
         property int timers: 0              // живых таймеров setTimeout/setInterval
+        property int fast: 0                // из них повторяющихся чаще раза в секунду (нагрузка — «Процессы» предупредят)
         property int exec: 0                // запусков api.exec и api.run с начала
         property int http: 0                // запросов api.http с начала
         readonly property double since: Date.now()
@@ -284,8 +285,9 @@ QtObject {
     // ---------- таймеры: в QML нет setTimeout; таймеры живут не дольше этой части плагина ----------
     property Component timerComp: Component {
         Timer {
-            Component.onCompleted: api.usage.timers++
-            Component.onDestruction: api.usage.timers--
+            property bool fast: false
+            Component.onCompleted: { api.usage.timers++; if (repeat && interval < 1000) { fast = true; api.usage.fast++ } }
+            Component.onDestruction: { api.usage.timers--; if (fast) api.usage.fast-- }
             property var fn: null
             property bool dead: false          // уже уничтожается: повторный clearTimer — без ошибки
             onTriggered: {

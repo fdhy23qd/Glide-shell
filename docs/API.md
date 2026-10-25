@@ -65,6 +65,7 @@ creates a working plugin that uses all of the API below: a panel section, a bar 
   - [Performance](#performance)
 - [5. Bar item (bar)](#5-bar-item-bar)
 - [6. Debugging](#6-debugging)
+  - [Sharing a plugin](#sharing-a-plugin)
 - [7. Other apps: D-Bus `org.glide.Shell` and the `glide-shell` command](#7-other-apps-d-bus-orgglideshell-and-the-glide-shell-command)
 - [8. Dock badges and progress (Unity LauncherEntry)](#8-dock-badges-and-progress-unity-launcherentry)
 - [9. Theme tokens](#9-theme-tokens)
@@ -719,6 +720,25 @@ readonly property var tip: ({ title: "Water today", rows: [{ name: "Glasses", va
   `ShellRoot { Component.onCompleted: console.warn(Qt.createComponent("Main.qml").errorString()) }`.
 - Desktop widgets reload when their file changes. Plugins (`plugin.json`, the section and the bar item) are re-read
   every time the panel opens, so an edit shows up after closing and opening the panel; no restart is needed.
+- Your plugin's errors without the log: Settings → Processes → "errors N" next to the plugin (QML warnings since the
+  shell started, with a Copy button). It also warns about timers that fire more than once a second.
+
+### Sharing a plugin
+
+There is no special format: a plugin travels as a plain archive, `.zip`, `.tar.gz` or `.glideplugin` (the same zip).
+`plugin.json` sits at the root of the archive or in its only folder.
+
+```sh
+tools/glide-plugin.py pack ~/.config/glide-shell/plugins/water      # → water.glideplugin (hidden files are skipped)
+glide-shell install-plugin ~/Downloads/water.glideplugin            # opens the install card in Plugins
+```
+
+`pack` runs the same checks as installing. You can also install from Settings → Plugins → "Install from an archive",
+which lists archives found in Downloads. Before installing you see a card: name, author, `description`, `version`,
+the permissions the plugin will ask for, and audit marks. Archives are refused if they contain paths that leave the
+folder (`../`), links or special files, use a built-in plugin's id, or exceed 50 MB or 2000 files. File modes from
+the archive are not kept. When you replace a plugin, the old version goes to `~/.local/state/glide-shell/plugin-backups`.
+With plugin password protection on, a new plugin is installed turned off. Permissions are still granted by a person.
 
 [↑ Contents](#contents)
 

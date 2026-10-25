@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -196,6 +197,66 @@ class Discover(Sandbox):
 
 
 # ---------------------------------------------------------------- расписание СыктГУ
+class PluginArchive(Sandbox):
+    """Установка плагина из архива (tools/glide-plugin.py): ничего не пишет мимо своей папки, не ставит чужое."""
+    TOOL = TOOLS / "glide-plugin.py"
+    GOOD = {"water/plugin.json": json.dumps({"id": "water2", "name": "Вода", "api": 2, "permissions": ["network"], "qml": "Main.qml"}),
+            "water/Main.qml": "import QtQuick\nItem {}\n"}
+
+    def zip(self, files, links=()):
+        p = self.tmp / "p.zip"
+        with zipfile.ZipFile(p, "w") as z:
+            for n, t in files.items():
+                z.writestr(n, t)
+            for n, target in links:                     # символическая ссылка внутри zip
+                i = zipfile.ZipInfo(n)
+                i.external_attr = (0o120777 << 16)
+                z.writestr(i, target)
+        return p
+
+    def call(self, *args):
+        r = self.run_py(self.TOOL, *map(str, args))
+        return json.loads(r.stdout)
+
+    def test_install_and_replace(self):
+        r = self.call("install", self.zip(self.GOOD))
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["permissions"], ["network"])
+        self.assertTrue((self.cfg / "glide-shell/plugins/water2/Main.qml").is_file())
+        self.assertFalse(self.call("install", self.zip(self.GOOD))["ok"])            # уже есть — только с --replace
+        self.assertTrue(self.call("install", self.zip(self.GOOD), "--replace")["ok"])
+        self.assertEqual(len(list((self.state / "glide-shell/plugin-backups").iterdir())), 1)
+
+    def test_rejects_bad(self):
+        cases = {
+            "путь наружу": self.zip(dict(self.GOOD, **{"../evil.txt": "x"})),
+            "ссылка": self.zip(self.GOOD, links=[("water/link", "/etc/passwd")]),
+            "встроенный id": self.zip({"plugin.json": json.dumps({"id": "clipboard", "name": "x"})}),
+            "нет plugin.json": self.zip({"a/Main.qml": "x"}),
+            "плохой id": self.zip({"plugin.json": json.dumps({"id": "../x", "name": "x"})}),
+        }
+        for why, path in cases.items():
+            with self.subTest(why):
+                self.assertFalse(self.call("install", path)["ok"])
+        self.assertFalse((self.tmp / "evil.txt").exists())
+        left = list((self.cfg / "glide-shell/plugins").iterdir()) if (self.cfg / "glide-shell/plugins").exists() else []
+        self.assertEqual(left, [])                       # ни плагина, ни временной папки
+
+    def test_pack_roundtrip(self):
+        src = self.tmp / "src"
+        src.mkdir()
+        (src / "plugin.json").write_text(self.GOOD["water/plugin.json"])
+        (src / "Main.qml").write_text("Item {}")
+        (src / ".git").mkdir()
+        (src / ".git/config").write_text("secret")
+        r = self.run_py(self.TOOL, "pack", str(src), str(self.tmp / "w.glideplugin"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        names = zipfile.ZipFile(self.tmp / "w.glideplugin").namelist()
+        self.assertIn("water2/Main.qml", names)
+        self.assertFalse([n for n in names if ".git" in n])   # скрытое не упаковывается
+        self.assertTrue(self.call("inspect", self.tmp / "w.glideplugin")["ok"])
+
+
 class Procs(unittest.TestCase):
     """«Процессы» (tools/glide-procs.py): понятные имена помощников и отказ завершать чужое."""
 

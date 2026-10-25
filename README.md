@@ -100,6 +100,9 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
   counts and download progress from apps that use the Unity LauncherEntry standard (Telegram, browsers, Steam).
 - **Updates:** checks the git folder it was installed from every 6 hours and shows what's new; one click runs
   `git pull` and `install.sh` (the Glide apps too, if they were installed from git).
+- **Installing plugins from an archive:** a `.zip`, `.tar.gz` or `.glideplugin` (the same zip) from Downloads or
+  `glide-shell install-plugin FILE`. You see the name, author, requested permissions and audit marks before
+  installing; `tools/glide-plugin.py pack` builds such an archive.
 - **Processes:** Settings → Processes shows what the shell runs: uptime, CPU and memory (PSS) of the shell and each
   helper, leftovers from a previous run (which you can end), and for each plugin its live parts, timers, program
   runs and network requests. One click restarts the shell or opens its log.

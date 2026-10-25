@@ -36,6 +36,15 @@ ColumnLayout {
     }
     Timer { running: pv.visible; repeat: true; triggeredOnStart: true; interval: 3000; onTriggered: if (!probe.running) probe.running = true }
     Process { id: killer; onExited: probe.running = true }
+    // ошибки и предупреждения QML плагинов из журнала (нынешний запуск) — реже: journalctl дороже замера
+    property var errors: ({})
+    Process {
+        id: errProbe
+        command: ["python3", "-I", pv.tool, "errors"]
+        stdout: StdioCollector { onStreamFinished: { try { pv.errors = JSON.parse(text) } catch (e) {} } }
+    }
+    Timer { running: pv.visible; repeat: true; triggeredOnStart: true; interval: 15000; onTriggered: if (!errProbe.running) errProbe.running = true }
+    property string openErr: ""
 
     // плагины и виджеты: живые части из реестра, по владельцу
     property int regTick: 0
@@ -44,14 +53,18 @@ ColumnLayout {
         regTick
         var m = {}
         for (var r of Permissions.registry) {
-            var o = m[r.owner] || (m[r.owner] = { owner: r.owner, name: r.name, parts: 0, timers: 0, exec: 0, http: 0, trusted: r.spec.trusted })
+            var o = m[r.owner] || (m[r.owner] = { owner: r.owner, name: r.name, parts: 0, timers: 0, fast: 0, exec: 0, http: 0, trusted: r.spec.trusted })
             o.parts++
             var u = r.obj && r.obj.usage
-            if (u) { o.timers += u.timers; o.exec += u.exec; o.http += u.http }
+            if (u) { o.timers += u.timers; o.fast += u.fast || 0; o.exec += u.exec; o.http += u.http }
         }
         for (var p of data_.procs) if (p.owner) {
             var x = m[p.owner] || (m[p.owner] = { owner: p.owner, name: p.owner, parts: 0, timers: 0, exec: 0, http: 0, trusted: false })
             x.procs = (x.procs || 0) + 1; x.cpu = (x.cpu || 0) + p.cpu; x.pss = (x.pss || 0) + p.pss
+        }
+        for (var id in errors) {
+            var y = m[id] || (m[id] = { owner: id, name: id, parts: 0, timers: 0, exec: 0, http: 0, trusted: false })
+            y.errors = errors[id]
         }
         return Object.values(m).sort((a, b) => (a.trusted - b.trusted) || String(a.name).localeCompare(String(b.name)))
     }
@@ -145,31 +158,82 @@ ColumnLayout {
     SettingsView.Header { text: Tr.t("ПЛАГИНЫ И ВИДЖЕТЫ") }
     Text {
         Layout.fillWidth: true
-        text: Tr.t("Живые части (раздел, элемент бара, служба, виджет), их таймеры, запуски программ и запросы в сеть с момента создания части. Свои процессы плагина (daemon) — с нагрузкой.")
+        text: Tr.t("Живые части (раздел, элемент бара, служба, виджет), их таймеры, запуски программ и запросы в сеть с момента создания части, свои процессы плагина (daemon) — с нагрузкой, ошибки QML этого запуска оболочки.")
         color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
     }
     Repeater {
         model: pv.owners
-        delegate: RowLayout {
+        delegate: ColumnLayout {
             id: orow
             required property var modelData
             readonly property var o: modelData
+            readonly property bool open: pv.openErr === o.owner
             Layout.fillWidth: true
-            spacing: 8
-            Text {
+            spacing: 4
+            RowLayout {
                 Layout.fillWidth: true
-                text: orow.o.name + (orow.o.trusted ? "" : "  ·  " + Tr.t("сторонний"))
-                color: Theme.text; font.pixelSize: Theme.fs(12)
-                elide: Text.ElideRight
+                spacing: 8
+                Text {
+                    Layout.fillWidth: true
+                    text: orow.o.name + (orow.o.trusted ? "" : "  ·  " + Tr.t("сторонний"))
+                    color: Theme.text; font.pixelSize: Theme.fs(12)
+                    elide: Text.ElideRight
+                }
+                Text {
+                    text: [orow.o.parts ? Tr.t("частей ") + orow.o.parts : "",
+                           orow.o.timers ? Tr.t("таймеров ") + orow.o.timers : "",
+                           orow.o.exec ? Tr.t("программ ") + orow.o.exec : "",
+                           orow.o.http ? Tr.t("запросов ") + orow.o.http : "",
+                           orow.o.procs ? Tr.t("процессов ") + orow.o.procs + " (" + Tr.num(orow.o.cpu, 1) + "%, " + pv.mb(orow.o.pss) + ")" : ""]
+                          .filter(x => x).join("  ·  ")
+                    color: Theme.textSecondary; font.pixelSize: Theme.fs(11)
+                }
+                Rectangle {   // ошибки: щелчок — последние сообщения
+                    visible: !!orow.o.errors
+                    implicitWidth: errText.implicitWidth + 16; implicitHeight: 22; radius: height / 2
+                    color: errMa.pressed ? Theme.surfacePressed : errMa.containsMouse ? Qt.rgba(Theme.error.r, Theme.error.g, Theme.error.b, 0.25)
+                                                                   : Qt.rgba(Theme.error.r, Theme.error.g, Theme.error.b, 0.15)
+                    scale: errMa.pressed ? 0.95 : 1
+                    Behavior on color { ColorAnimation { duration: Prefs.ms(120) } }
+                    Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
+                    Text { id: errText; anchors.centerIn: parent; text: Tr.t("ошибок ") + (orow.o.errors ? orow.o.errors.count : 0); color: Theme.error; font.pixelSize: Theme.fs(11) }
+                    MouseArea { id: errMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onClicked: pv.openErr = orow.open ? "" : orow.o.owner }
+                }
             }
-            Text {
-                text: [orow.o.parts ? Tr.t("частей ") + orow.o.parts : "",
-                       orow.o.timers ? Tr.t("таймеров ") + orow.o.timers : "",
-                       orow.o.exec ? Tr.t("программ ") + orow.o.exec : "",
-                       orow.o.http ? Tr.t("запросов ") + orow.o.http : "",
-                       orow.o.procs ? Tr.t("процессов ") + orow.o.procs + " (" + Tr.num(orow.o.cpu, 1) + "%, " + pv.mb(orow.o.pss) + ")" : ""]
-                      .filter(x => x).join("  ·  ")
-                color: Theme.textSecondary; font.pixelSize: Theme.fs(11)
+            Text {   // частые таймеры: то, что съедало ЦП у devhub
+                visible: (orow.o.fast || 0) > 0
+                Layout.fillWidth: true
+                text: Tr.t("⚠ Таймеров чаще раза в секунду: ") + orow.o.fast + Tr.t(" — плагин всё время нагружает оболочку (docs/API.md, «Производительность»)")
+                color: Theme.warning; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+            }
+            Rectangle {
+                visible: orow.open && !!orow.o.errors
+                Layout.fillWidth: true
+                implicitHeight: errCol.implicitHeight + 16
+                radius: Theme.radiusSm
+                color: Theme.surface
+                ColumnLayout {
+                    id: errCol
+                    x: 8; y: 8
+                    width: parent.width - 16
+                    spacing: 4
+                    Repeater {
+                        model: orow.o.errors ? orow.o.errors.last : []
+                        delegate: Text {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            text: Qt.formatTime(new Date(modelData.time), "HH:mm:ss") + "  " + modelData.text
+                            color: Theme.textSecondary; font.pixelSize: Theme.fs(10); font.family: "monospace"
+                            wrapMode: Text.WrapAnywhere
+                        }
+                    }
+                    SettingsView.ActionBtn {
+                        glyph: pv.nf(0xF018F)
+                        text: Tr.t("Скопировать")
+                        onClicked: Quickshell.execDetached(["wl-copy", "--", orow.o.errors.last.map(e => Qt.formatTime(new Date(e.time), "HH:mm:ss") + "  " + e.text).join("\n")])
+                    }
+                }
             }
         }
     }

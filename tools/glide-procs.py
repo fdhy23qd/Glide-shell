@@ -3,6 +3,8 @@
 
     glide-procs.py          — JSON: {main: {...}, procs: [...], total: {cpu, pss}}
     glide-procs.py kill PID — завершить процесс службы (только из её cgroup и не саму оболочку)
+    glide-procs.py errors   — JSON: предупреждения и ошибки QML нынешнего запуска оболочки по плагинам и виджетам
+                              {id: {count, last: [{time, text}]}} (по пути файла или «glide-shell: id: …»)
 
 ЦП — доля одного ядра за полсекунды замера, память — PSS (общие библиотеки поделены между процессами; RSS раздут
 шрифтами). «Сирота» — процесс в группе службы, который не происходит от нынешней оболочки: остался от прежнего
@@ -133,6 +135,46 @@ def collect(interval=0.5):
     return {"main": main, "uptime": round(mono - started) if started else 0, "procs": procs, "total": total}
 
 
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+FILE_OWNER = re.compile(r"/(plugins|widgets)/([\w.-]+)/")
+LOG_OWNER = re.compile(r"glide-shell: ([a-z0-9][a-z0-9_.-]*): ")
+
+
+def errors(limit=3000):
+    main, _ = main_pid()
+    if not main:
+        return {}
+    r = subprocess.run(["journalctl", "--user", f"_PID={main}", "-n", str(limit), "-o", "json", "--no-pager",
+                        "--output-fields=MESSAGE,__REALTIME_TIMESTAMP"], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    out = {}
+    for line in r.stdout.splitlines():
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue
+        msg = e.get("MESSAGE")
+        if isinstance(msg, list):          # с цветовыми кодами journald отдаёт сообщение массивом байтов
+            msg = bytes(msg).decode(errors="replace")
+        if not isinstance(msg, str):
+            continue
+        msg = ANSI.sub("", msg).strip()
+        if not re.match(r"(WARN|ERROR|CRIT)", msg):
+            continue
+        m = FILE_OWNER.search(msg)
+        owner = ("widget-" if m.group(1) == "widgets" else "") + m.group(2) if m else None
+        if not owner:
+            m = LOG_OWNER.search(msg)
+            owner = m.group(1) if m else None
+        if not owner or owner.startswith("api."):   # «glide-shell: api.exec: …» — ошибка внутри обратного вызова, без имени
+            continue
+        text = re.sub(r"^(WARN|ERROR|CRIT)\s+(scene|qml)?:?\s*", "", msg)
+        text = re.sub(r"file://\S*?/((?:plugins|widgets)/[^?\s]+)(\?v=\d+)?", r"\1", text)[:300]
+        o = out.setdefault(owner, {"count": 0, "last": []})
+        o["count"] += 1
+        o["last"] = (o["last"] + [{"time": int(e.get("__REALTIME_TIMESTAMP", 0)) // 1000, "text": text}])[-5:]
+    return out
+
+
 def kill(pid):
     main, _ = main_pid()
     if pid == main or pid not in cgroup_procs():
@@ -145,7 +187,9 @@ def kill(pid):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 2 and sys.argv[1] == "kill":
+    if len(sys.argv) > 1 and sys.argv[1] == "errors":
+        print(json.dumps(errors(), ensure_ascii=False))
+    elif len(sys.argv) > 2 and sys.argv[1] == "kill":
         print(json.dumps(kill(int(sys.argv[2])), ensure_ascii=False))
     else:
         print(json.dumps(collect(), ensure_ascii=False))
