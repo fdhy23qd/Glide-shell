@@ -6,6 +6,9 @@
 
 В справочниках API перед каждой чертой «---» после оглавления ставится ссылка «↑ к оглавлению» — длинный документ
 листается назад одним щелчком. Якоря — как у GitHub: строчные буквы, пробел → «-», знаки препинания убираются.
+В русских файлах (ASCII_IDS) у каждого заголовка свой латинский якорь прямо в строке: `## <a id="ustanovka"></a>Установка`
+— кириллические якоря GitHub понимает, а мобильное приложение и многие просмотрщики нет. Ссылки на прежние
+кириллические якоря внутри документа переписываются на латинские.
 """
 import re
 import sys
@@ -15,7 +18,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FILES = ["docs/API.md", "docs/API.ru.md", "README.md", "README.ru.md"]
 START, END = "<!-- toc -->", "<!-- /toc -->"
-BACK = {"Contents": "[↑ Contents](#contents)", "Оглавление": "[↑ К оглавлению](#оглавление)"}
+ASCII_IDS = {"docs/API.ru.md", "README.ru.md"}
+BACK = {"Contents": "[↑ Contents](#contents)", "Оглавление": "[↑ К оглавлению](#oglavlenie)"}
+TAG = re.compile(r'^<a id="([^"]+)"></a>')
+TR = dict(zip("абвгдеёзийклмнопрстуфхцыэ", "abvgdeeziyklmnoprstufhcye"))
+TR.update({"ж": "zh", "ч": "ch", "ш": "sh", "щ": "sch", "ю": "yu", "я": "ya", "ъ": "", "ь": ""})
+
+
+def translit(anchor):
+    return "".join(TR.get(ch, ch) for ch in anchor)
 
 
 def slug(title):
@@ -37,11 +48,41 @@ def headings(text):
         m = None if code else re.match(r"(#{1,6})\s+(.*?)\s*#*\s*$", line)
         if not m:
             continue
-        base = slug(m.group(2))
+        title = m.group(2)
+        tag = TAG.match(title)
+        if tag:   # свой якорь в заголовке: он и есть адрес, заголовок — без тега
+            title = title[tag.end():]
+        base = slug(title)
         n = seen.get(base, 0)
         seen[base] = n + 1
-        out.append((len(m.group(1)), m.group(2), base if n == 0 else f"{base}-{n}"))
+        out.append((len(m.group(1)), title, tag.group(1) if tag else base if n == 0 else f"{base}-{n}"))
     return out
+
+
+def ascii_ids(text):
+    """Каждому заголовку — латинский якорь в строке; ссылки на прежние кириллические якоря — на новые."""
+    old = {}
+    lines, code, seen = text.split("\n"), False, {}
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith("```"):
+            code = not code
+            continue
+        m = None if code else re.match(r"(#{1,6})\s+(.*?)\s*#*\s*$", line)
+        if not m or len(m.group(1)) == 1:
+            continue
+        title = m.group(2)
+        tag = TAG.match(title)
+        if tag:
+            title = title[tag.end():]
+        base = slug(title)
+        n = seen.get(base, 0)
+        seen[base] = n + 1
+        gh = base if n == 0 else f"{base}-{n}"
+        new = translit(gh)
+        old[gh] = new
+        lines[i] = f'{m.group(1)} <a id="{new}"></a>{title}'
+    text = "\n".join(lines)
+    return re.sub(r"\]\(#([^)\s]+)\)", lambda mm: "](#" + old.get(mm.group(1), mm.group(1)) + ")", text)
 
 
 def build(text, back_links):
@@ -82,7 +123,7 @@ def main(argv):
     for name in FILES:
         f = ROOT / name
         text = f.read_text()
-        new = build(text, name.startswith("docs/"))
+        new = build(ascii_ids(text) if name in ASCII_IDS else text, name.startswith("docs/"))
         broken = links_ok(new)
         if broken:
             stale.append(f"{name}: ссылки на несуществующие заголовки: {', '.join(broken)}")
