@@ -68,7 +68,7 @@ QtObject {
     // защиту плагинов паролем плагин снять не может (иначе выключил бы её сам себе)
     function setPref(key, value) { if (key !== "pluginLock" && need("system", "setPref")) Prefs.set(key, value) }
     function setAwake(on) { if (need("system", "setAwake")) Core.root.setAwake(on) }
-    function run(argv, text) { if (need("exec", "run")) Core.root.runRaw(argv, text || "", dir) }
+    function run(argv, text) { if (need("exec", "run")) { usage.exec++; Core.root.runRaw(argv, text || "", dir) } }
     function close() { Core.root.close() }
     function openCategory(id) { Core.root.openCategory(id) }
     function openSettings() { Core.root.showSettings("plugins") }
@@ -155,6 +155,7 @@ QtObject {
             if (fn) Qt.callLater(() => { try { fn(-1, "", "glide-shell: no permission: exec") } catch (e) { console.warn("glide-shell: api.exec: " + e) } })
             return { running: false, cancel: function () {} }
         }
+        usage.exec++
         return spawn(argv, opts, cb)
     }
     function spawn(argv, opts, cb) {   // внутреннее: exec без проверки (api.files)
@@ -272,9 +273,19 @@ QtObject {
     function log() { console.log(fmt(arguments)) }
     function warn() { console.warn(fmt(arguments)) }
 
+    // ---------- сколько эта часть плагина делает — для «Настройки» → «Процессы» (только показ, права от этого не зависят) ----------
+    readonly property QtObject usage: QtObject {
+        property int timers: 0              // живых таймеров setTimeout/setInterval
+        property int exec: 0                // запусков api.exec и api.run с начала
+        property int http: 0                // запросов api.http с начала
+        readonly property double since: Date.now()
+    }
+
     // ---------- таймеры: в QML нет setTimeout; таймеры живут не дольше этой части плагина ----------
     property Component timerComp: Component {
         Timer {
+            Component.onCompleted: api.usage.timers++
+            Component.onDestruction: api.usage.timers--
             property var fn: null
             property bool dead: false          // уже уничтожается: повторный clearTimer — без ошибки
             onTriggered: {
@@ -320,6 +331,7 @@ QtObject {
             try { if (cb) cb(status, text, headers || {}) } catch (e) { console.warn("glide-shell: api.http: " + e) }
         }
         if (!need("network", "http") || !/^https?:\/\//i.test(String(url))) { Qt.callLater(() => finish(0, "", {})); return { abort: function () {} } }
+        usage.http++
         var x = new XMLHttpRequest()
         var timer = api.setTimeout(() => { x.abort(); finish(0, "", {}) }, opts.timeout || 30000)
         x.onreadystatechange = function () {

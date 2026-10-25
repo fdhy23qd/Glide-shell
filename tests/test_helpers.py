@@ -196,6 +196,26 @@ class Discover(Sandbox):
 
 
 # ---------------------------------------------------------------- расписание СыктГУ
+class Procs(unittest.TestCase):
+    """«Процессы» (tools/glide-procs.py): понятные имена помощников и отказ завершать чужое."""
+
+    def setUp(self):
+        self.m = load_module("glide_procs", TOOLS / "glide-procs.py")
+
+    def test_names(self):
+        n = self.m.name_of
+        self.assertEqual(n("wl-paste --watch python3 /x/plugins/clipboard/clip.py store")[0], "История буфера обмена")
+        self.assertEqual(n("python3 /home/u/.config/glide-shell/plugins/devhub/d.py"), ("Плагин devhub", "devhub"))
+        self.assertEqual(n("/usr/bin/qs -c glide-shell")[0], "Оболочка")
+        self.assertEqual(n("/usr/bin/something --flag")[0], "something")
+
+    def test_kill_refuses_foreign(self):
+        self.m.cgroup_procs = lambda: [111, 222]
+        self.m.main_pid = lambda: (111, 0)
+        self.assertFalse(self.m.kill(111)["ok"])          # саму оболочку — нет
+        self.assertFalse(self.m.kill(os.getpid())["ok"])  # не из группы службы — нет
+
+
 class Schedule(unittest.TestCase):
     mod = load_module("glide_schedule", TOOLS / "glide-schedule.py")
 

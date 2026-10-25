@@ -516,6 +516,7 @@ right now (`[{owner, color}]`).
 | `send(to, name, data)` | `bool`: sent | — | `data`: anything `JSON.stringify` accepts. Another plugin's id needs `messages` |
 | `island.tint(color)`, `island.clear()` | `bool` / nothing | — | Permission `island`. Color: `#rgb`, `#rrggbb`, `#aarrggbb` or a name |
 | `island.colors` | list of `{owner, color}` | yes | |
+| `usage.timers`, `usage.exec`, `usage.http` | `num` | yes | Since Glide Shell 1.6: this part's live timers, program runs and network requests since it was created. Shown in Settings → Processes |
 | Signals `permissionsUpdated`, `message(from, name, data)` | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ Contents](#contents)

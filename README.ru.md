@@ -109,7 +109,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v1.5`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v1.6`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -286,6 +286,10 @@ qs -c glide-shell ipc call lock status    # lock | test | preview | unlocked
   URL → открыть/заголовки/SSL и т.д.
 - **Категории** с вкладками в острове (или рейкой у края), хоткей на каждую, Alt+1…9.
 - **Профили:** `qs -c glide-shell ipc call panel profile study` (`default` — сбросить).
+- **Процессы** («Настройки» → «Процессы», `ProcsView.qml` + `tools/glide-procs.py`): сколько оболочка работает,
+  ЦП и память (PSS) её и каждого помощника, «сироты» от прежнего запуска (их можно завершить), по каждому плагину
+  и виджету — живые части, таймеры, запуски программ и запросы в сеть (`api.usage`), его процессы `daemon`.
+  Кнопки «Перезапустить оболочку» и «Журнал». Замер идёт, только пока вкладка открыта.
 - **Автоматизация** («Настройки» → «Автоматизация», `Automation.qml`): правила «когда → если → сделать».
   Когда: открыто, закрыто или стало активным приложение; время и дни недели; телефон подключился или отключился
   (KDE Connect); зарядка подключена или работа от батареи; заряд ниже N %; экран заблокирован или разблокирован;

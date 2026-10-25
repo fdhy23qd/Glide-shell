@@ -100,6 +100,9 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
   counts and download progress from apps that use the Unity LauncherEntry standard (Telegram, browsers, Steam).
 - **Updates:** checks the git folder it was installed from every 6 hours and shows what's new; one click runs
   `git pull` and `install.sh` (the Glide apps too, if they were installed from git).
+- **Processes:** Settings → Processes shows what the shell runs: uptime, CPU and memory (PSS) of the shell and each
+  helper, leftovers from a previous run (which you can end), and for each plugin its live parts, timers, program
+  runs and network requests. One click restarts the shell or opens its log.
 - **Reliability:** runs as a systemd user service and restarts itself after a crash. If it keeps crashing, it falls
   back to DMS when DMS is installed. Apps are launched in their own scopes, so they survive shell restarts.
 

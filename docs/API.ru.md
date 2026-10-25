@@ -512,6 +512,7 @@ api.island.clear()           // убрать свой цвет
 | `send(to, name, data)` | `bool`: ушло | — | `data` — то, что принимает `JSON.stringify`. Чужому id — разрешение `messages` |
 | `island.tint(color)`, `island.clear()` | `bool` / ничего | — | Разрешение `island`. Цвет — `#rgb`, `#rrggbb`, `#aarrggbb` или имя |
 | `island.colors` | список `{owner, color}` | да | |
+| `usage.timers`, `usage.exec`, `usage.http` | `num` | да | С Glide Shell 1.6: живые таймеры этой части, запуски программ и запросы в сеть с её создания. Их показывает «Настройки» → «Процессы» |
 | Сигналы `permissionsUpdated`, `message(from, name, data)` | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ К оглавлению](#oglavlenie)

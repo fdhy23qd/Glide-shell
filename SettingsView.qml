@@ -742,7 +742,7 @@ ColumnLayout {
         { id: "notify", label: Tr.t("Уведомления"), icon: 0xF009A }, { id: "lock", label: Tr.t("Блокировка"), icon: 0xF033E },
         { id: "wall", label: Tr.t("Обои"), icon: 0xF024F }, { id: "widgets", label: Tr.t("Виджеты"), icon: 0xF0954 },
         { id: "weather", label: Tr.t("Погода"), icon: 0xF0595 }, { id: "behavior", label: Tr.t("Поведение"), icon: 0xF0493 },
-        { id: "auto", label: Tr.t("Автоматизация"), icon: 0xF140B },
+        { id: "auto", label: Tr.t("Автоматизация"), icon: 0xF140B }, { id: "procs", label: Tr.t("Процессы"), icon: 0xF035B },
         { id: "niri", label: Tr.t("Устройства"), icon: 0xF0379 }, { id: "plugins", label: Tr.t("Плагины"), icon: 0xF0431 }
     ]
     Flow {
@@ -1916,6 +1916,13 @@ ColumnLayout {
             }
         }
 
+    }
+    Loader {   // раздел «procs» — что запущено оболочкой и плагинами (ProcsView.qml)
+        active: sv.page === "procs"
+        visible: active
+        Layout.fillWidth: true
+        source: "ProcsView.qml"
+        onLoaded: item.panel = Qt.binding(() => sv.panel)
     }
     Loader {   // раздел «auto» — свой файл (AutomationView.qml), грузится, только пока открыт
         active: sv.page === "auto"
