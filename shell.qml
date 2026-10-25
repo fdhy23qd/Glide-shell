@@ -1058,7 +1058,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v1.4 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v1.5 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -1124,6 +1124,15 @@ ShellRoot {
         }
         function peek(on: string): string { root.islandHover = on === "on"; return String(root.islandPeek) }   // раскрыть остров, как наведением
         // «живая активность» из скрипта: title "" — убрать; progress 0…1, меньше 0 — без прогресса
+        // автоматизация: list — правила и журнал; test ID — выполнить действия правила; resume — снять паузу;
+        // emit ТИП APP — событие для проверки (appOpen org.telegram.desktop и т. п.)
+        function automation(cmd: string, arg: string, arg2: string): string {
+            if (cmd === "list") return JSON.stringify({ paused: automationEngine.paused, rules: automationEngine.rules, log: automationEngine.log })
+            if (cmd === "test") { automationEngine.test(arg); return "ok" }
+            if (cmd === "resume") { automationEngine.resume(); return "ok" }
+            if (cmd === "emit") { automationEngine.emit(arg, { app: arg2 }); return "ok" }
+            return "list | test ID | resume | emit TYPE APP"
+        }
         function activity(id: string, title: string, progress: real): string {
             if (title === "") { Activities.end(id); return "ended" }
             Activities.update(id, { title: title, progress: progress, owner: "ipc" })
@@ -1173,6 +1182,9 @@ ShellRoot {
         model: Prefs.dockAllScreens ? Quickshell.screens : [root.panelScreen].filter(s => !!s)
         Dock { required property var modelData; screen: modelData; panel: root }
     }
+    // автоматизация: правила «когда → если → сделать» (Prefs.automations, вкладка «Автоматизация»)
+    readonly property var automation: automationEngine   // для настроек
+    Automation { id: automationEngine; root: root; locked: lockScreen.locked; lockScreen: lockScreen }
     LockScreen {
         id: lockScreen; panel: root
         onResumed: {   // после сна: часы острова сразу, погода — свежая (таймер Weather во сне стоял)

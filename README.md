@@ -74,7 +74,13 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
   Bluetooth, night light, weather, power profile, screenshot and more), and which icons appear next to the island clock.
 - **Dock:** pinned and running apps, with smart, autohide and always-visible modes.
 - **Notification server and polkit agent** (optional), with do-not-disturb on a schedule or while screen sharing,
-  and history that survives restarts.
+  and history that survives restarts. Privacy: show everything, only the title or only the app; while the screen
+  is recorded or shared, notifications hide their text, and windows of chosen apps are blacked out by niri.
+- **Automation:** "when → if → do" rules in Settings → Automation. Triggers: an app opened, closed or focused, a time
+  and days, phone connected or disconnected (KDE Connect), charger, battery below N%, lock and unlock, screen
+  recording or sharing, VPN, shell start. Conditions: time of day, on AC or battery. Actions: do not disturb, launch
+  or close an app, stay awake, night light, volume, mute, a notification, an island flash, a command, a niri action,
+  wait. Rules that keep triggering each other are paused.
 - **Lock screen** (PAM): locks on `loginctl lock-session`, before sleep and when idle; shows what is playing
   and unread notifications. A crash never unlocks the session.
 - **Login screen** for greetd, in the same style (`greeter/`, optional).
