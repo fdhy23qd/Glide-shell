@@ -103,6 +103,8 @@ ShellRoot {
             t.ok("10 kg to lb", near(u("10 kg to lb").value, 22.0462))
             t.ok("разные величины — нет", u("5 км в кг") === null && u("5 км в км") === null && u("привет в мир") === null)
             t.ok("смайлик: огонь", E.find("огонь")[0][0] === "🔥" && E.find("fire")[0][0] === "🔥")
+            var sym = sp.clean({ owner: "s", scope: s }, { title: "x", glyph: "🔥" })
+            t.ok("glyph-строка — символ обычным шрифтом", sym.symbol === "🔥" && sym.glyph === "")
             t.ok("смайлик: точное слово", E.exact("огонь").some(e => e[0] === "🔥") && E.exact("ог").length === 0)
             t.done()
         })
