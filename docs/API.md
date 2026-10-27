@@ -54,6 +54,7 @@ creates a working plugin that uses all of the API below: a panel section, a bar 
   - [Network](#network)
   - [Messages between plugins](#messages-between-plugins)
   - [Island color](#island-color)
+  - [Search](#search)
   - [Version 2 reference](#version-2-reference)
 - [3b. Permissions](#3b-permissions)
   - [How to ask](#how-to-ask)
@@ -181,7 +182,7 @@ Item {
 | Field | Meaning |
 |---|---|
 | `api` | API version: `1` or `2`. No field means `1`. Newer than the shell knows: the plugin is not loaded. |
-| `permissions` | API 2 only: the permissions the plugin needs: `exec`, `network`, `clipboard`, `notifications`, `windows`, `phone`, `system`, `messages`, `island` (section 3b). A person grants them; no field means none. An API 1 plugin asks for all of them (this field is ignored) and gets them only when you allow it. |
+| `permissions` | API 2 only: the permissions the plugin needs: `exec`, `network`, `clipboard`, `notifications`, `windows`, `phone`, `system`, `messages`, `island`, `search` (section 3b). A person grants them; no field means none. An API 1 plugin asks for all of them (this field is ignored) and gets them only when you allow it. |
 | `id`, `name`, `icon` | Required: `id` and `name`. A plugin with the same `id` as a built-in one replaces it. `icon`: the character itself (`"󰖌"`, a Nerd Font glyph) or its hex code (`"F058C"`); both work here and in `widget.json`. |
 | `category` | Panel category: `power`, `control`, `media`, `clipboard`, `apps`, `quick`, `today`, `phone`, `ai`, `dev`, `text`, `system`, `net`, `notify` or your own id. A new id makes a new category (`categoryName`, `categoryIcon`). |
 | `priority` | Order inside the category: higher comes first. |
@@ -491,6 +492,42 @@ dropped. The color goes away by itself when the part that set it is destroyed, a
 permission, so set a long-lived color from the service. `api.island.colors` is what plugins have put on the island
 right now (`[{owner, color}]`).
 
+### Search
+
+Since Glide Shell 2.5, `search` permission. A plugin adds its own results to the panel's search — an answer right in
+the list: calculator, unit conversion, emoji, notes, bookmarks. Set the provider from a **service** (`service`): it lives
+all the time, while the section lives only while open.
+
+```qml
+// Service.qml
+Component.onCompleted: api.search.provide((q, done) => {
+    if (q.indexOf("todo ") !== 0) return []                          // not ours — empty, fast
+    return [{ id: "add", title: "Add task: " + q.slice(5), glyph: 0xF0415 }]   // right away — an array
+    // or later: api.http(…, (st, text) => done([…])) and return undefined
+})
+Connections { target: api; ignoreUnknownSignals: true
+              function onSearchActivated(id) { if (id === "add") … } }
+```
+
+The provider is called after each pause in typing (80 ms) with the query. Answer with an array right away or with
+`done(array)` later; an answer to an outdated query is dropped. At most 5 results per plugin. Result fields:
+
+| Field | What it is |
+|---|---|
+| `title` | Required. The main line (up to 200 characters) |
+| `sub` | Small caption on the right |
+| `glyph` | Icon: a number is a Nerd Font code (`0xF00EC`), a string is a character in the normal font (emoji, letter) |
+| `icon` | Or a theme icon by name (`"firefox"`) |
+| `copy` | When picked — this text goes to the clipboard, with a “Copied” flash |
+| `url` | When picked — open it (`http:`, `https:`, `mailto:`; other schemes are dropped) |
+| `id` | No `copy` and no `url` — when picked, the plugin gets `searchActivated(id)` |
+| `top` | `true` — above apps (an answer to the query: a calculation result), otherwise after plugin commands |
+
+The provider runs on the main thread: do long work (network, programs) through `done` — `api.http`, `api.exec` — not
+in a loop. An error in the provider is a log warning; the rest of the search keeps working. `api.search.stop()` removes
+your provider (it also goes away with the plugin part). The `search` permission sees everything typed into search, so,
+like the others, a person grants it.
+
 ### Version 2 reference
 
 | Member | Type / returns | Live | Errors and notes |
@@ -517,8 +554,9 @@ right now (`[{owner, color}]`).
 | `send(to, name, data)` | `bool`: sent | — | `data`: anything `JSON.stringify` accepts. Another plugin's id needs `messages` |
 | `island.tint(color)`, `island.clear()` | `bool` / nothing | — | Permission `island`. Color: `#rgb`, `#rrggbb`, `#aarrggbb` or a name |
 | `island.colors` | list of `{owner, color}` | yes | |
+| `search.provide(fn)`, `search.stop()` | `bool` / nothing | — | Since Glide Shell 2.5, `search` permission. `fn(q, done)` — an array or `done(array)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | yes | Since Glide Shell 1.6: this part's live timers, program runs and network requests since it was created. Shown in Settings → Processes |
-| Signals `permissionsUpdated`, `message(from, name, data)` | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
+| Signals `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)` | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ Contents](#contents)
 
@@ -541,6 +579,7 @@ Everything else needs a permission. **Only a person grants and changes them**; a
 | `system` | `api.setPref`, `api.setAwake`, `api.recorder`. **Almost full access**: shell settings can do a lot |
 | `messages` | `api.send` to other plugins and messages from them. Not needed between your plugin's own parts |
 | `island` | `api.island.tint`: the island's color |
+| `search` | `api.search`: see what is typed into the panel's search and add your own results there |
 
 Without the permission, functions do nothing (`exec` answers `code` = -1, `http` answers `status` = 0), properties are
 empty (`contextText` = `""`; `niri`, `notifs`, `kdeconnect`, `recorder` = `null`), and the log gets one warning.

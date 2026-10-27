@@ -66,7 +66,9 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
   (calendar with Russian public holidays, weather from Open-Meteo), media, clipboard history with images,
   notifications, phone (KDE Connect), task manager, network and developer tools, text tools, an AI chat (Claude)
   and an app launcher. Search across all of them with Ctrl+K or by just typing; the search also finds files
-  in your home folder (own lightweight index) and offers a web search as the last result.
+  in your home folder (own lightweight index) and offers a web search as the last result. It answers right in the
+  list: math (“2+2*3”, “sqrt(2)”), unit conversion (“5 km to mi”, “100 f to c”) and emoji (“:fire”) — Enter copies;
+  plugins can add their own answers (`api.search`).
 - **Context actions:** the panel remembers the selected text when it opens and offers matching actions
   (format JSON, decode a JWT, open a URL, translate…).
 - **Top bar:** workspaces with app icons, the focused window, keyboard layout, CPU and RAM, clipboard,

@@ -7,6 +7,13 @@ import Quickshell
 Singleton {
     property var root: null
 
+    // провайдеры поиска (api.search.provide): [{scope, owner, fn}] — у части плагина один; опрашивает SearchProviders.qml
+    property var searchProviders: []
+    function setSearch(scope, owner, fn) {
+        var rest = searchProviders.filter(x => x.scope !== scope)
+        searchProviders = typeof fn === "function" ? rest.concat([{ scope: scope, owner: owner, fn: fn }]) : rest
+    }
+
     // цвета плагинов для острова (api.island.tint): [{owner, color}] в порядке, в каком их задали; у плагина — один
     property var islandTints: []
     function setTint(owner, c) {

@@ -54,6 +54,7 @@
   - [Сеть](#set)
   - [Сообщения между плагинами](#soobscheniya-mezhdu-plaginami)
   - [Цвет острова](#cvet-ostrova)
+  - [Поиск](#poisk)
   - [Справочник версии 2](#spravochnik-versii-2)
 - [3б. Разрешения](#3b-razresheniya)
   - [Как попросить](#kak-poprosit)
@@ -181,7 +182,7 @@ Item {
 | Поле | Что это |
 |---|---|
 | `api` | Версия API: `1` или `2`. Нет поля — `1`. Новее, чем знает оболочка, — плагин не грузится. |
-| `permissions` | Только API 2: какие разрешения нужны — `exec`, `network`, `clipboard`, `notifications`, `windows`, `phone`, `system`, `messages`, `island` (раздел 3б). Выдаёт их человек; нет поля — никаких. Плагин API 1 просит все (поле не читается) и получает их, только когда ты разрешишь. |
+| `permissions` | Только API 2: какие разрешения нужны — `exec`, `network`, `clipboard`, `notifications`, `windows`, `phone`, `system`, `messages`, `island`, `search` (раздел 3б). Выдаёт их человек; нет поля — никаких. Плагин API 1 просит все (поле не читается) и получает их, только когда ты разрешишь. |
 | `id`, `name`, `icon` | Обязательны `id` и `name`. Плагин с `id` встроенного заменяет его. `icon` — сам символ (`"󰖌"`, значок Nerd Font) или его код (`"F058C"`); оба вида работают и здесь, и в `widget.json`. |
 | `category` | Категория панели: `power`, `control`, `media`, `clipboard`, `apps`, `quick`, `today`, `phone`, `ai`, `dev`, `text`, `system`, `net`, `notify` или своя. Новый id создаёт новую категорию (`categoryName`, `categoryIcon`). |
 | `priority` | Порядок внутри категории: больше — выше. |
@@ -487,6 +488,42 @@ api.island.clear()           // убрать свой цвет
 отбрасывается. Цвет снимается сам, когда уничтожается часть, которая его задала, и когда человек забирает разрешение;
 поэтому долгий цвет задавай из службы. `api.island.colors` — что сейчас у острова от плагинов (`[{owner, color}]`).
 
+### <a id="poisk"></a>Поиск
+
+С Glide Shell 2.5, разрешение `search`. Плагин добавляет свои результаты в общий поиск панели — ответ прямо в строке:
+калькулятор, перевод единиц, смайлики, заметки, закладки. Провайдер задают из **службы** (`service`): она живёт всё
+время, а раздел — только пока открыт.
+
+```qml
+// Service.qml
+Component.onCompleted: api.search.provide((q, done) => {
+    if (q.indexOf("todo ") !== 0) return []                          // не наше — пусто, быстро
+    return [{ id: "add", title: "Добавить задачу: " + q.slice(5), glyph: 0xF0415 }]   // сразу — массивом
+    // или позже: api.http(…, (st, text) => done([…])) и return undefined
+})
+Connections { target: api; ignoreUnknownSignals: true
+              function onSearchActivated(id) { if (id === "add") … } }
+```
+
+Провайдера зовут после каждой паузы в наборе (80 мс) с текстом запроса. Ответ — массив сразу или `done(массив)` позже;
+ответ на устаревший запрос отбрасывается. От плагина — не больше 5 результатов. Поля результата:
+
+| Поле | Что это |
+|---|---|
+| `title` | Обязательно. Главная строка (до 200 знаков) |
+| `sub` | Подпись справа, мелко |
+| `glyph` | Значок: число — код Nerd Font (`0xF00EC`), строка — символ обычным шрифтом (смайлик, буква) |
+| `icon` | Или значок темы по имени (`"firefox"`) |
+| `copy` | Выбрали — этот текст в буфер, вспышка «Скопировано» |
+| `url` | Выбрали — открыть (`http:`, `https:`, `mailto:`; другие схемы отбрасываются) |
+| `id` | Нет `copy` и `url` — выбрали, и плагину приходит `searchActivated(id)` |
+| `top` | `true` — над приложениями (ответ на запрос: результат вычисления), иначе — после команд плагинов |
+
+Провайдер вызывается в главном потоке: долгую работу (сеть, программы) делай через `done` — `api.http`, `api.exec`, —
+а не циклом. Ошибка в провайдере — предупреждение в журнале, остальной поиск работает. `api.search.stop()` — убрать
+свой провайдер (он убирается и сам вместе с частью плагина). Разрешение `search` видит всё, что набирают в поиске,
+поэтому его, как и остальные, выдаёт человек.
+
 ### <a id="spravochnik-versii-2"></a>Справочник версии 2
 
 | Член | Тип / что возвращает | Обновляется | Ошибки и замечания |
@@ -513,8 +550,9 @@ api.island.clear()           // убрать свой цвет
 | `send(to, name, data)` | `bool`: ушло | — | `data` — то, что принимает `JSON.stringify`. Чужому id — разрешение `messages` |
 | `island.tint(color)`, `island.clear()` | `bool` / ничего | — | Разрешение `island`. Цвет — `#rgb`, `#rrggbb`, `#aarrggbb` или имя |
 | `island.colors` | список `{owner, color}` | да | |
+| `search.provide(fn)`, `search.stop()` | `bool` / ничего | — | С Glide Shell 2.5, разрешение `search`. `fn(q, done)` — массив или `done(массив)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | да | С Glide Shell 1.6: живые таймеры этой части, запуски программ и запросы в сеть с её создания. Их показывает «Настройки» → «Процессы» |
-| Сигналы `permissionsUpdated`, `message(from, name, data)` | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
+| Сигналы `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)` | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ К оглавлению](#oglavlenie)
 
@@ -537,6 +575,7 @@ api.island.clear()           // убрать свой цвет
 | `system` | `api.setPref`, `api.setAwake`, `api.recorder`. **Почти полный доступ**: настройками оболочки можно многое |
 | `messages` | `api.send` другим плагинам и сообщения от них. Между частями своего плагина не нужно |
 | `island` | `api.island.tint`: цвет острова |
+| `search` | `api.search`: видеть, что набирают в поиске панели, и добавлять туда свои результаты |
 
 Без разрешения функции ничего не делают (`exec` отвечает `code` = -1, `http` — `status` = 0), свойства пустые
 (`contextText` = `""`, `niri`, `notifs`, `kdeconnect`, `recorder` = `null`), в журнале — одно предупреждение.

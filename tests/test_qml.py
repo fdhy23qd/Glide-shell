@@ -110,5 +110,13 @@ class Scenarios(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(hist.stat().st_mode), 0o600)
 
 
+    def test_search(self):
+        """Провайдеры поиска: по разрешению, устаревшее — прочь, поля проверены; калькулятор, единицы, смайлики."""
+        self.permissions({"s": {"api": 2, "granted": ["search"], "denied": []},
+                          "n": {"api": 2, "granted": [], "denied": []},
+                          "tmp": {"api": 2, "granted": ["search"], "denied": []},
+                          "r": {"api": 2, "granted": ["search"], "denied": []}})
+        self.scenario("search")
+
 if __name__ == "__main__":
     unittest.main()

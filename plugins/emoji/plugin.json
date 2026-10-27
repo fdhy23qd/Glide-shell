@@ -1,0 +1,8 @@
+{
+  "id": "emoji", "api": 1, "name": "Смайлики", "icon": "󰞅", "author": "glide-shell",
+  "category": "text",
+  "description": "Поиск смайликов по словам (по-русски и по-английски), щелчок — в буфер. В общем поиске — «:огонь»",
+  "keywords": ["смайлик", "смайлы", "эмодзи", "emoji"],
+  "qml": "Emoji.qml",
+  "service": "Search.qml"
+}

@@ -448,6 +448,21 @@ PanelWindow {
                                 implicitSize: 20
                                 source: visible ? Quickshell.iconPath(res.modelData.icon || "application-x-executable", "application-x-executable") : ""
                             }
+                            IconImage {   // результат плагина — значком темы
+                                visible: res.modelData.kind === "plugin" && !!res.modelData.icon && !res.modelData.glyph && !res.modelData.symbol
+                                x: 10; y: 8
+                                implicitSize: 20
+                                source: visible ? Quickshell.iconPath(res.modelData.icon, true) : ""
+                            }
+                            Text {   // результат плагина — значок Nerd Font или символ (смайлик — обычным шрифтом)
+                                visible: res.modelData.kind === "plugin" && (!!res.modelData.glyph || !!res.modelData.symbol)
+                                x: 8; width: 24; y: 0; height: 36; verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                text: res.modelData.glyph || res.modelData.symbol || ""
+                                color: res.modelData.top ? Prefs.accent : Theme.textVariant
+                                font.family: res.modelData.glyph ? Prefs.iconFont : Qt.application.font.family
+                                font.pixelSize: Theme.fs(res.modelData.glyph ? 16 : 18)
+                            }
                             Text {   // файл, папка, поиск в интернете — значком по типу
                                 visible: res.modelData.kind === "file" || res.modelData.kind === "web"
                                 x: 10; width: 20; y: 0; height: 36; verticalAlignment: Text.AlignVCenter
@@ -469,7 +484,8 @@ PanelWindow {
                                 return 0xF0214
                             }
                             Text {
-                                x: res.modelData.kind === "app" || res.modelData.kind === "file" || res.modelData.kind === "web" ? 38 : 10
+                                x: res.modelData.kind === "app" || res.modelData.kind === "file" || res.modelData.kind === "web"
+                                   || (res.modelData.kind === "plugin" && !!(res.modelData.icon || res.modelData.glyph || res.modelData.symbol)) ? 38 : 10
                                 y: 0; height: 36; verticalAlignment: Text.AlignVCenter
                                 width: parent.width - x - subText.width - 24 - (eye.visible ? 28 : 0)
                                 elide: Text.ElideRight

@@ -12,7 +12,7 @@ import Quickshell.Services.Pam
 Singleton {
     id: perms
 
-    readonly property var all: ["exec", "network", "clipboard", "notifications", "windows", "phone", "system", "messages", "island"]
+    readonly property var all: ["exec", "network", "clipboard", "notifications", "windows", "phone", "system", "messages", "island", "search"]
     readonly property var dangerous: ["exec", "system"]   // по сути полный доступ: выдаются с отдельным предупреждением
     readonly property var meta: ({
         exec:          { glyph: 0xF018D, title: Tr.t("Запуск программ"), hint: Tr.t("api.run, api.exec, а также daemon и команды кнопок. Полный доступ к системе от твоего имени.") },
@@ -23,7 +23,8 @@ Singleton {
         phone:         { glyph: 0xF011C, title: Tr.t("Телефон"), hint: Tr.t("api.kdeconnect — устройства, их уведомления и команды") },
         system:        { glyph: 0xF0493, title: Tr.t("Настройки оболочки"), hint: Tr.t("api.setPref, api.setAwake, api.recorder — менять настройки, «не засыпать», запись экрана") },
         messages:      { glyph: 0xF0369, title: Tr.t("Сообщения другим плагинам"), hint: Tr.t("api.send и onMessage с другими плагинами (между своими частями — без разрешения)") },
-        island:        { glyph: 0xF0266, title: Tr.t("Цвет острова"), hint: Tr.t("api.island.tint — окрашивать остров (камера, микрофон и демонстрация экрана всегда впереди)") }
+        island:        { glyph: 0xF0266, title: Tr.t("Цвет острова"), hint: Tr.t("api.island.tint — окрашивать остров (камера, микрофон и демонстрация экрана всегда впереди)") },
+        search:        { glyph: 0xF0349, title: Tr.t("Поиск"), hint: Tr.t("api.search — видеть, что ты набираешь в поиске панели, и добавлять туда свои результаты") }
     })
     function title(p) { return p === "*" ? Tr.t("все разрешения (плагин старого формата)") : meta[p] ? meta[p].title : p }
 

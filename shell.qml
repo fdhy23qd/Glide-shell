@@ -704,7 +704,7 @@ ShellRoot {
             for (var i = 0; i < words.length; i++) if (hay.indexOf(words[i]) < 0) return false
             return true
         }
-        var out = appResults(words, all)   // приложения — первыми
+        var out = providers.top.concat(appResults(words, all))   // ответы плагинов (top) — над приложениями
         for (var i = 0; i < ps.length; i++) {
             var p = ps[i]
             var pHay = (p.name + " " + (p.keywords || []).join(" ")).toLowerCase()
@@ -717,7 +717,7 @@ ShellRoot {
                     out.push({ kind: "run", label: it.label, sub: p.name, plugin: p, spec: it })
             }
         }
-        out = out.slice(0, 20)
+        out = out.concat(providers.rest).slice(0, 20)   // остальное от плагинов — после команд
         // файлы (ответ помощника на этот же запрос) и «искать в интернете» последним
         if (fileHits.q === q) for (var f of fileHits.items) out.push({ kind: "file", label: f.name, sub: f.dir, path: f.path, isdir: f.isdir })
         if (Prefs.webSearch !== "off" && q.trim().length >= 2)
@@ -729,6 +729,7 @@ ShellRoot {
     readonly property var webUrls: ({ duckduckgo: "https://duckduckgo.com/?q=", google: "https://www.google.com/search?q=",
                                       yandex: "https://yandex.ru/search/?text=", bing: "https://www.bing.com/search?q=" })
     property var fileHits: ({ q: "", items: [] })
+    SearchProviders { id: providers; query: root.query }   // результаты плагинов (api.search, разрешение «search»)
     property bool filesWanted: false     // помощник жив: с первого поиска и 5 мин после закрытия панели
     // ---- мастер первого запуска ----
     property bool welcomeOpen: false
@@ -790,6 +791,7 @@ ShellRoot {
         if (r.kind === "app") launchApp(r.entry)
         else if (r.kind === "file") openPath(r.path)
         else if (r.kind === "web") openPath(webUrls[Prefs.webSearch] + encodeURIComponent(r.q))
+        else if (r.kind === "plugin") { providers.activate(r, root); close() }
         else if (r.kind === "run" && !r.spec.confirm) run(r.plugin, r.spec, "")
         else { category = r.plugin.categories[0]; clearSearch() }
     }
@@ -1066,7 +1068,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v2.4 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v2.5 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

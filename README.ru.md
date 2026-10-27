@@ -109,7 +109,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.4`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.5`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -278,7 +278,9 @@ qs -c glide-shell ipc call lock status    # lock | test | preview | unlocked
 
 ## <a id="vozmozhnosti-yadra"></a>Возможности ядра
 - **Поиск** (Ctrl+K или просто начни печатать): приложения (с иконками, часто запускаемые выше),
-  плагины и кнопки во всех категориях; ↑↓ выбирают результат, Enter запускает.
+  плагины и кнопки во всех категориях; ↑↓ выбирают результат, Enter запускает. Сразу ответ в строке:
+  выражение («2+2*3», «sqrt(2)», «10:4») и перевод единиц («5 км в милях», «100 f в c», «2 гб в мб») — Enter копирует;
+  «:огонь» — смайлики. Свои ответы в поиск добавляют и плагины (`api.search`, разрешение «Поиск»).
 - **Лаунчер** (Mod+D, `ipc call panel launcher`): категория «Приложения» — частые сверху, ниже все
   по алфавиту; число запусков хранится в `~/.local/state/glide-shell/apps.json`. Приложения с
   `Terminal=true` открываются в `$TERMINAL` (иначе alacritty).
@@ -355,6 +357,7 @@ qs -c glide-shell ipc call lock status    # lock | test | preview | unlocked
   системного пояса) или вручную: «сменить» под прогнозом. Температура видна у часов в острове.
 - **ИИ:** чат с Claude, см. ниже
 - **Медиа:** плеер (любой MPRIS)
+- **Текст:** смайлики — поиск по словам по-русски и по-английски, щелчок — в буфер
 - **Буфер:** история текста с поиском
 - **Разработка:** папка текущего окна, сниппеты, инструменты (UUID, пароль, JSON, XML, JWT, Base64, URL, хеши, RegEx, timestamp)
 - **Текст:** регистр, snake/camelCase, подсчёт, очистка, сортировка, QR (нужен `qrencode`)

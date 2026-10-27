@@ -213,6 +213,20 @@ QtObject {
         function end(id) { if (api.me) Activities.end(api.me + "/" + id) }
     }
 
+    // ---------- поиск (разрешение «search»): свои результаты в общем поиске панели ----------
+    // provide((query, done) => …): вернуть массив сразу или позже вызвать done(массив); устаревшие ответы отбрасываются.
+    // Результат: {id, title, sub, glyph (код Nerd Font или символ), icon (значок темы), copy (текст в буфер),
+    // url (http/https/mailto), top (над приложениями)}. Выбрали результат без copy/url — сигнал searchActivated(id).
+    signal searchActivated(string id)
+    readonly property QtObject search: QtObject {
+        function provide(fn) {
+            if (typeof fn !== "function" || !api.me || !api.need("search", "search.provide")) return false
+            Core.setSearch(api, api.me, fn)
+            return true
+        }
+        function stop() { Core.setSearch(api, api.me, null) }
+    }
+
     // ---------- цвет острова (разрешение «island»): камера, микрофон и демонстрация экрана всегда впереди ----------
     // цвет живёт, пока жива часть плагина, которая его задала: надолго — из службы (service)
     property bool tinted: false
@@ -404,5 +418,5 @@ QtObject {
             api.message(from, name, data)
         }
     }
-    Component.onDestruction: { island.clear(); Permissions.unregister(api) }
+    Component.onDestruction: { island.clear(); Core.setSearch(api, me, null); Permissions.unregister(api) }
 }

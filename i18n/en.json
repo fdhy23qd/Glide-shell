@@ -1207,5 +1207,13 @@
  "Нет прав на процесс ": "No permission for process ",
  "Не удалось завершить процесс ": "Could not stop process ",
  "Новая версия: снова выдай ": "New version: grant again ",
- "уже установлен — прежняя версия уйдёт в копию; «Запуск программ» и «Настройки оболочки» придётся выдать снова": "already installed — the old version goes to a backup; “Run programs” and “Shell settings” must be granted again"
+ "уже установлен — прежняя версия уйдёт в копию; «Запуск программ» и «Настройки оболочки» придётся выдать снова": "already installed — the old version goes to a backup; “Run programs” and “Shell settings” must be granted again",
+ "Найти смайлик: огонь, сердце, спасибо…": "Find an emoji: fire, heart, thanks…",
+ "api.search — видеть, что ты набираешь в поиске панели, и добавлять туда свои результаты": "api.search — see what you type into the panel's search and add its own results there",
+ "Поиск": "Search",
+ "Скопировано: ": "Copied: ",
+ "Смайлик — Enter, в буфер": "Emoji — Enter to copy",
+ "Смайлики": "Emoji",
+ "Поиск смайликов по словам (по-русски и по-английски), щелчок — в буфер. В общем поиске — «:огонь»": "Find emoji by words (Russian or English), click to copy. In the main search — “:fire”",
+ "+ - * / // % ^ (степень), sqrt sin cos tan log exp round min max, pi, e. Результат копируется. В общем поиске — сразу ответ: «2+2*3», «sqrt(2)», «5 км в милях», «100 f в c»": "+ - * / // % ^ (power), sqrt sin cos tan log exp round min max, pi, e. The result is copied. In the main search — an instant answer: “2+2*3”, “sqrt(2)”, “5 km to mi”, “100 f to c”"
 }
