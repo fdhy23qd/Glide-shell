@@ -109,7 +109,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.5`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.6`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -141,7 +141,7 @@ binds {
 категорий, Alt+, — настройки.
 Зависимости (setup.sh проверяет и ставит сам): `quickshell`, `niri`, `python3`, `wl-clipboard`, `libnotify`,
 шрифты JetBrainsMono Nerd Font (значки) и Inter; по желанию — NetworkManager (Wi-Fi), BlueZ, UPower и
-power-profiles-daemon, KDE Connect, `wlsunset` (ночной свет), `wf-recorder` + `slurp` (запись экрана), GStreamer
+power-profiles-daemon, udisks2 (флешки), KDE Connect, `wlsunset` (ночной свет), `wf-recorder` + `slurp` (запись экрана), GStreamer
 (`gst-plugin-pipewire`, `gst-plugins-good`, `gst-plugins-bad`, `gst-plugin-va` — запись одного окна), greetd (экран входа).
 
 ## <a id="ostrov"></a>Остров
@@ -350,6 +350,11 @@ qs -c glide-shell ipc call lock status    # lock | test | preview | unlocked
 - **Телефон** (KDE Connect, `tools/glide-kdeconnect.py`): карточка устройства и действия — найти, пинг, буфер,
   файлы на телефон (выбор — zenity), файлы телефона (SFTP), SMS (kdeconnect-sms), текст или ссылка; заряд в баре.
   Уведомления телефона приходят в общий центр сами. Выключается в «Поведение».
+- **Диски** (udisks2, `Drives.qml`, `tools/glide-drives.py`): вставил флешку или карту — она подключается сама
+  (можно выключить) и приходит уведомление «Открыть / Извлечь»; в «Управлении» — раздел с кнопками «Открыть»,
+  «Подключить», «Отключить», «Извлечь» (отмонтировать все разделы и выключить питание устройства); в баре — значок,
+  пока что-то подключено. Образы, подключённые самим пользователем (`udisksctl loop-setup`), — тоже. Зашифрованные
+  (LUKS) — только уведомлением: пароль — в файловом менеджере. Выключается в «Поведение».
 - **Уведомления:** история, «не беспокоить», очистка (см. «Уведомления и окно пароля»)
 - **Сегодня** (клик по часам в острове): календарь (неделя с понедельника, номера недель, ‹ › и колесо
   листают месяцы) и погода — сейчас, по часам, на 5 дней, восход/закат. Погода — Open-Meteo без ключа,

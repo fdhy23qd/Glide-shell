@@ -1058,6 +1058,21 @@ ColumnLayout {
             checked: Prefs.kdeconnect
             onToggled: Prefs.set("kdeconnect", !Prefs.kdeconnect)
         }
+        ToggleRow {
+            icon: String.fromCodePoint(0xF0553)
+            label: Tr.t("Съёмные диски")
+            hint: Prefs.drives ? Tr.t("Флешки и карты: уведомление «Открыть / Извлечь», раздел в «Управлении», значок в баре") : Tr.t("Выключено")
+            checked: Prefs.drives
+            onToggled: Prefs.set("drives", !Prefs.drives)
+        }
+        ToggleRow {
+            visible: Prefs.drives
+            icon: String.fromCodePoint(0xF02CA)
+            label: Tr.t("Подключать сами")
+            hint: Prefs.drivesAutomount ? Tr.t("Вставленная флешка подключается сразу (как в файловом менеджере)") : Tr.t("Подключить — кнопкой в уведомлении или разделе")
+            checked: Prefs.drivesAutomount
+            onToggled: Prefs.set("drivesAutomount", !Prefs.drivesAutomount)
+        }
         ChoiceRow {
             label: Tr.t("Вид панели")
             options: [{ label: Tr.t("остров сверху"), value: "island" }, { label: Tr.t("рейка у края"), value: "edge" }]

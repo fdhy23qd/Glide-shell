@@ -1,0 +1,8 @@
+{
+  "id": "drives", "api": 1, "name": "Диски", "icon": "󰕓", "author": "glide-shell",
+  "category": "control", "priority": -10,
+  "description": "Флешки, карты памяти и свои образы: подключить, открыть, отключить, безопасно извлечь (udisks2)",
+  "keywords": ["флешка", "usb", "диск", "извлечь", "монтировать", "карта памяти", "drive", "eject", "mount"],
+  "qml": "Drives.qml",
+  "bar": "Bar.qml"
+}

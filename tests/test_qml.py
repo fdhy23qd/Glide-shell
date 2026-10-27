@@ -68,7 +68,7 @@ class Scenarios(unittest.TestCase):
         env = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}", NIRI_LOG=str(self.niri_log),
                    XDG_CONFIG_HOME=str(self.cfg), XDG_STATE_HOME=str(self.state), XDG_CACHE_HOME=str(self.cache),
                    XDG_DATA_HOME=str(self.data), XDG_DATA_DIRS=str(self.data), XDG_RUNTIME_DIR=str(self.run_dir),
-                   QT_QPA_PLATFORM="offscreen", QS_ICON_THEME="hicolor")
+                   QT_QPA_PLATFORM="offscreen", QS_ICON_THEME="hicolor", **getattr(self, "env_extra", {}))
         env.pop("WAYLAND_DISPLAY", None)
         r = subprocess.run(["qs", "-p", str(self.shell)], env=env, stdin=subprocess.DEVNULL,
                            capture_output=True, text=True, timeout=timeout)
@@ -117,6 +117,47 @@ class Scenarios(unittest.TestCase):
                           "tmp": {"api": 2, "granted": ["search"], "denied": []},
                           "r": {"api": 2, "granted": ["search"], "denied": []}})
         self.scenario("search")
+
+    def test_drives(self):
+        """Съёмные диски: о вставленном до запуска — молчим, новое — подключить и сообщить, кнопки уведомления работают."""
+        log = self.tmp / "drives.log"
+        tool = self.tmp / "fake-drives.py"
+        drive = lambda i, **k: dict({"id": i, "label": i, "device": "/dev/" + i, "fs": "vfat", "size": 1 << 30, "mounted": False,
+                                     "mountPoint": "", "drive": "", "driveName": "", "ejectable": False, "canPowerOff": True,
+                                     "encrypted": False, "image": False}, **k)
+        steps = [[drive("A", mounted=True, mountPoint="/run/media/u/A")],
+                 [drive("A", mounted=True, mountPoint="/run/media/u/A"), drive("B"), drive("C", fs="crypto_LUKS", encrypted=True)],
+                 [drive("A", mounted=True, mountPoint="/run/media/u/A"), drive("B"), drive("C", encrypted=True), drive("D")]]
+        tool.write_text(f"""import json, sys, time
+log = open({str(log)!r}, "a")
+a = sys.argv[1:]
+log.write(" ".join(a) + "\\n"); log.flush()
+if a[0] == "watch":
+    for i, s in enumerate({json.dumps(steps)!r} and {steps!r}):
+        print(json.dumps(s), flush=True); time.sleep(2.2)
+    sys.stdin.read()
+elif a[0] == "mount":
+    print(json.dumps({{"ok": True, "mountPoint": "/run/media/u/" + a[1]}}))
+elif a[1] == "busy":
+    print(json.dumps({{"ok": False, "error": "занято"}}))
+else:
+    print(json.dumps({{"ok": True}}))
+""")
+        notify = self.bin / "notify-send"   # «нажимает»: после подключения — «Открыть», без подключения — «Подключить»
+        notify.write_text(f'#!/bin/sh\necho "notify $*" >> {log}\ncase "$*" in *mount=*) echo mount ;; *open=*) echo open ;; esac\n')
+        self.env_extra = {"GLIDE_DRIVES_TOOL": str(tool)}
+        self.scenario("drives")
+        lines = log.read_text().splitlines()
+        notes = [l for l in lines if l.startswith("notify")]
+        self.assertFalse(any(" A " in n or "Подключено: A" in n for n in notes), "о вставленном до запуска не сообщаем")
+        self.assertIn("mount B", lines, "новое — подключить само")
+        self.assertTrue(any("Подключено: B" in n and "open=" in n and "eject=" in n for n in notes), notes)
+        self.assertIn("xdg-open /run/media/u/B", self.niri_log.read_text(), "«Открыть» в уведомлении — открыть папку")
+        self.assertNotIn("mount C", lines, "зашифрованное не подключаем")
+        self.assertTrue(any("Зашифрованный диск" in n for n in notes))
+        self.assertTrue(any("Вставлен диск: D" in n and "mount=" in n for n in notes), "без «подключать сами» — кнопка «Подключить»")
+        self.assertIn("mount D", lines, "кнопка «Подключить» в уведомлении — подключить")
+        self.assertIn("eject A", lines)
 
 if __name__ == "__main__":
     unittest.main()

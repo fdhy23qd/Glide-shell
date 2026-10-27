@@ -477,6 +477,35 @@ class Backup(Sandbox):
         self.assertFalse((self.bin / "systemd-run.log").exists() or (self.bin / "systemctl.log").exists())
 
 
+class Drives(unittest.TestCase):
+    """Съёмные диски (glide-drives.py): из объектов udisks — только свои съёмные разделы."""
+
+    def test_filter(self):
+        m = load_module("glide_drives", TOOLS / "glide-drives.py")
+        UD = "org.freedesktop.UDisks2"
+        dev = lambda s: list(s.encode()) + [0]
+        objs = {
+            "/b/sda1": {UD + ".Block": {"HintSystem": True, "IdType": "ext4", "Device": dev("/dev/sda1")}, UD + ".Filesystem": {"MountPoints": [dev("/")]}},
+            "/b/sdb1": {UD + ".Block": {"HintSystem": False, "IdLabel": "ФЛЕШКА", "IdType": "vfat", "Size": 8 << 30,
+                                        "Device": dev("/dev/sdb1"), "Drive": "/d/usb"},
+                        UD + ".Filesystem": {"MountPoints": [dev("/run/media/u/ФЛЕШКА")]}},
+            "/d/usb": {UD + ".Drive": {"Vendor": "Kingston ", "Model": "DataTraveler", "Ejectable": False, "CanPowerOff": True}},
+            "/b/sdc1": {UD + ".Block": {"HintSystem": False, "IdType": "crypto_LUKS", "Device": dev("/dev/sdc1")}, UD + ".Encrypted": {}},
+            "/b/sdd1": {UD + ".Block": {"HintSystem": False, "HintIgnore": True, "IdType": "vfat"}, UD + ".Filesystem": {"MountPoints": []}},
+            "/b/loop0": {UD + ".Block": {"HintSystem": True, "IdLabel": "образ", "IdType": "ext4"}, UD + ".Filesystem": {"MountPoints": []},
+                         UD + ".Loop": {"SetupByUID": 1000}},
+            "/b/loop1": {UD + ".Block": {"HintSystem": True, "IdType": "squashfs"}, UD + ".Filesystem": {"MountPoints": []},
+                         UD + ".Loop": {"SetupByUID": 0}},
+            "/b/sde": {UD + ".Block": {"HintSystem": False, "IdType": ""}},   # без файловой системы (вся флешка) — не раздел
+        }
+        out = {d["id"]: d for d in m.drives(objs, uid=1000)}
+        self.assertEqual(set(out), {"/b/sdb1", "/b/sdc1", "/b/loop0"})   # без системного, скрытого, чужого образа
+        usb = out["/b/sdb1"]
+        self.assertEqual((usb["label"], usb["device"], usb["mounted"], usb["mountPoint"]), ("ФЛЕШКА", "/dev/sdb1", True, "/run/media/u/ФЛЕШКА"))
+        self.assertEqual((usb["driveName"], usb["canPowerOff"], usb["size"]), ("Kingston DataTraveler", True, 8 << 30))
+        self.assertTrue(out["/b/sdc1"]["encrypted"])
+        self.assertTrue(out["/b/loop0"]["image"] and not out["/b/sdb1"]["image"])
+
 class Autostart(Sandbox):
     """XDG-автозапуск: системное выключается своей копией с Hidden=true, своё — добавляется и удаляется."""
 

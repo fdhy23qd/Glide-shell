@@ -392,6 +392,7 @@ ShellRoot {
     }
 
     readonly property bool nightOn: NightLight.on   // синглтон ленивый — без обращения ночной свет не запустится
+    readonly property int drivesMounted: Drives.mounted.length   // и съёмные диски (уведомления о вставленном) — тоже
     readonly property bool updatesAvailable: Updates.available   // и проверка обновлений — тоже
     readonly property int archUpdates: ArchUpdates.count
     onPluginsChanged: Prefs.pluginBars = plugins.filter(p => p.bar).map(p => "plugin:" + p.id)
@@ -1068,7 +1069,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v2.5 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v2.6 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

@@ -156,6 +156,9 @@ Singleton {
 
     // ---- KDE Connect: телефон в панели и баре ----
     readonly property bool kdeconnect: data.kdeconnect !== false
+    // ---- съёмные диски (Drives.qml, плагин drives): следить и подключать вставленное само ----
+    readonly property bool drives: data.drives !== false
+    readonly property bool drivesAutomount: data.drivesAutomount !== false
 
     // ---- погода (Weather.qml) ----
     readonly property bool weather: data.weather !== false

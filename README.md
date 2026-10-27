@@ -64,7 +64,7 @@ screenshot plugin and the Print keys use Glide Apps' editor when it is installed
   whole screen, an area or a single window),
   control centre (Wi-Fi, Bluetooth, sound, per-app mixer, brightness, power profiles, night light), today
   (calendar with Russian public holidays, weather from Open-Meteo), media, clipboard history with images,
-  notifications, phone (KDE Connect), task manager, network and developer tools, text tools, an AI chat (Claude)
+  notifications, phone (KDE Connect), removable drives (mount on insert, “Open / Eject”), task manager, network and developer tools, text tools, an AI chat (Claude)
   and an app launcher. Search across all of them with Ctrl+K or by just typing; the search also finds files
   in your home folder (own lightweight index) and offers a web search as the last result. It answers right in the
   list: math (“2+2*3”, “sqrt(2)”), unit conversion (“5 km to mi”, “100 f to c”) and emoji (“:fire”) — Enter copies;
