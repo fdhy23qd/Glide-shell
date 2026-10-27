@@ -21,7 +21,7 @@ for pair in "$cfg/quickpanel:$cfg/glide-shell" "$state/quickpanel:$state/glide-s
 done
 rm -rf "$cfg/quickshell/quickpanel"
 
-# Тесты помощников и словаря перевода (~3 с): сломано — не ставим (пропустить: GLIDE_SKIP_TESTS=1)
+# Тесты помощников, перевода и сценарии QML (~20 с): сломано — не ставим (пропустить: GLIDE_SKIP_TESTS=1)
 if [ "${GLIDE_SKIP_TESTS:-}" != 1 ] && [ -d "$src/tests" ]; then
     if ! (cd "$src" && python3 -m unittest discover -s tests -q 2>/tmp/glide-tests.$$); then
         tail -25 /tmp/glide-tests.$$ >&2; rm -f /tmp/glide-tests.$$

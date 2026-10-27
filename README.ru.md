@@ -109,7 +109,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.3`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.4`
 ```
 При первом запуске `install.sh` переносит данные со старого имени: `~/.config/quickpanel` →
 `~/.config/glide-shell`, `~/.local/state/quickpanel` → `~/.local/state/glide-shell`,
@@ -509,11 +509,18 @@ Ctrl+Alt+F2 → вход в консоли → `sudo sh …/greeter/install.sh -
 ## <a id="testy"></a>Тесты
 
 ```sh
-python3 -m unittest discover -s tests -v     # ~3 с, без сети; install.sh прогоняет их перед установкой
+python3 -m unittest discover -s tests -v     # ~20 с, без сети; install.sh прогоняет их перед установкой
+python3 -m unittest tests.test_qml -v        # только сценарии QML (~5 с)
 ```
 
 Калькулятор, история буфера, настройки, поиск плагинов (и все plugin.json), обои (цвета, миниатюры), свои виджеты, перевод (у каждой `Tr.t` есть английский; нет голого русского
-текста в QML). Всё — во временных папках, настоящие данные не трогаются. Пропустить в install.sh: `GLIDE_SKIP_TESTS=1`.
+текста в QML), контракт API. **Сценарии QML** (`tests/qml/*.qml`, `tests/test_qml.py`) — на настоящем Quickshell без
+экрана: временная копия оболочки, свои папки XDG, заглушки `niri`, `systemd-run`, `xdg-open` в PATH. Проверяют
+разрешения API плагинов (нет обходов через `launchApp`, `niri.action`, `handoff`, `exec`, `files`), подхват разрешений
+из резервной копии и отмену правки в обход, очередь `JobQueue`, историю уведомлений. Без `qs` пропускаются.
+Новый сценарий — файл `tests/qml/<имя>.qml` (корень — `ShellRoot`, проверки — `QmlCheck { id: t }`: `t.ok(имя, условие,
+подробности)`, шаги с паузой — `t.then(мс, функция)`, конец — `t.done()`) и метод в `tests/test_qml.py`.
+Всё — во временных папках, настоящие данные не трогаются. Пропустить в install.sh: `GLIDE_SKIP_TESTS=1`.
 
 ## <a id="chto-novogo"></a>Что нового
 Список изменений по версиям — [CHANGELOG.md](CHANGELOG.md).
