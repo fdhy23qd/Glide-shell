@@ -221,37 +221,44 @@ Singleton {
     onListChanged: if (restored) saveTimer.restart()
     Timer { id: saveTimer; interval: 1000; onTriggered: ns.saveHistory() }
     function saveHistory() {
-        if (!Prefs.notifKeep) { saver.write(""); return }
+        if (!Prefs.notifKeep) { saver.save(""); return }
         var plain = list.map(e => ({ key: e.key, time: e.time, appName: e.appName, appIcon: e.appIcon,
                                      desktopEntry: e.desktopEntry, summary: e.summary, body: e.body,
                                      image: /^(\/|file:)/.test(e.image || "") ? e.image : "",
                                      urgency: e.urgency, unread: !!e.unread }))
-        saver.write(JSON.stringify(plain))
+        saver.save(JSON.stringify(plain))
     }
+    // текст — через stdin: аргументом команды (как раньше) Linux не пропускает больше 128 КБ — история
+    // из полусотни длинных уведомлений тихо переставала бы сохраняться
     Process {
         id: saver
         property string pending: ""
+        property string sending: ""
         property bool dirty: false
-        function write(t) { pending = t; dirty = true; if (!running) flush() }
+        function save(t) { pending = t; dirty = true; if (!running) flush() }   // не write: так зовётся запись в stdin у Process
         function flush() {
             if (!dirty) return
             dirty = false
-            command = ["sh", "-c", 'umask 077; mkdir -p "${1%/*}"; if [ -z "$2" ]; then rm -f "$1"; else printf %s "$2" > "$1.tmp" && mv "$1.tmp" "$1"; fi',
-                       "sh", ns.historyFile, pending]
+            sending = pending
+            command = ["sh", "-c", 'umask 077; mkdir -p "${1%/*}"; if [ "$2" = rm ]; then rm -f "$1"; else cat > "$1.tmp" && [ -s "$1.tmp" ] && mv "$1.tmp" "$1"; fi',
+                       "sh", ns.historyFile, sending === "" ? "rm" : "write"]
+            stdinEnabled = true
             running = true
         }
+        onStarted: { if (sending !== "") write(sending); stdinEnabled = false }   // записали — закрыть stdin
         onExited: flush()
     }
     FileView {
         path: ns.historyFile
         printErrors: false
         onLoaded: {
+            if (ns.restored) return
             var old = []
             try { old = JSON.parse(text()) } catch (e) {}
             if (!Prefs.notifKeep) old = []
-            var seen = {}
-            for (var e of ns.list) seen[e.key] = true
-            var got = old.filter(x => x && !seen[x.key]).map(x => Object.assign(x, { n: null, actions: [], hasDefault: false, reply: false }))
+            // уведомления, пришедшие до загрузки файла, уже взяли номера 1, 2… — старым даём новые, а не выбрасываем совпавшие
+            var got = old.filter(x => x && typeof x === "object")
+                         .map(x => Object.assign(x, { key: ++ns.seq, n: null, actions: [], hasDefault: false, reply: false }))
             ns.list = ns.list.concat(got).slice(0, ns.maxHistory)
             ns.unread = ns.list.filter(x => x.unread).length
             ns.seq = Math.max(ns.seq, Math.max.apply(null, ns.list.map(x => x.key).concat([0])))

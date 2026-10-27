@@ -194,7 +194,7 @@ Item {
 | `daemon` | Фоновый процесс (argv): стартует вместе с оболочкой и останавливается с ней. У API 2 — только с разрешением `exec`. |
 | `keywords` | Дополнительные слова для поиска. |
 | `wide` | `true` — категория с этим плагином открывается широкой карточкой. |
-| `handoff` | У элемента вместо `command`: `"handoff": "<id плагина>"` (с необязательным `"prompt"`) передаёт текст другому плагину и открывает его категорию. QML-плагин забирает его через `api.takeHandoff(id)`: один раз вернёт `{text, prompt}`, иначе `null`. |
+| `handoff` | У элемента вместо `command`: `"handoff": "<id плагина>"` (с необязательным `"prompt"`) передаёт текст другому плагину и открывает его категорию. QML-плагин забирает его через `api.takeHandoff(id)`: один раз вернёт `{text, prompt}`, иначе `null`. Забрать (и увидеть в `api.handoff`) можно только переданное самому плагину. |
 | `output` | У элемента: `"copy"`, `"notify"` или `"copy+notify"`. Вывод команды уходит в буфер и/или уведомление; ненулевой код возврата тоже придёт уведомлением. |
 | `confirm` | У кнопки: срабатывает только со второго нажатия (в течение 3 секунд). |
 | `close` | У элемента: `false` — не закрывать панель после действия. |
@@ -269,8 +269,8 @@ Item {
 | `api.notify(title, body, icon)` | Уведомление от имени плагина. Пустой `icon` — стандартный значок «информация». |
 | `api.close()` | Закрыть панель |
 | `api.openCategory(id)` | Перейти в категорию панели |
-| `api.openUrl(url)` | Открыть ссылку или файл |
-| `api.launchApp(entry)` | Запустить приложение (`DesktopEntry`) |
+| `api.openUrl(url)` | Открыть ссылку: `http(s):` и `mailto:` — всегда, остальное (`file://`, схемы приложений) — с разрешением `exec` |
+| `api.launchApp(entry)` | Запустить приложение: `DesktopEntry` или его id (`"firefox"`); запускается то, что записано в .desktop |
 | `api.setAwake(on)` | Включить или выключить «не засыпать» (разрешение `system`) |
 | `api.setPref(key, value)` | Изменить настройку оболочки (`config.json`, раздел `panel`; разрешение `system`) |
 | `api.openSettings()` | Открыть «Настройки» → «Плагины» |
@@ -298,7 +298,7 @@ onClicked: api.storage.set("clicks", clicks + 1)
 
 | | |
 |---|---|
-| `api.niri` | Разрешение `windows`. niri: `workspaces` (список), `windows` (id → окно), `focusedWindow`, `focusedOutput`, `action([...])` — любое `niri msg action`, `focusWindow(id)`, `closeWindow(id)` |
+| `api.niri` | Разрешение `windows`. niri: `workspaces` (список), `windows` (id → окно), `focusedWindow`, `focusedOutput`, `action([...])` — `niri msg action` (первым — имя действия; `spawn`, `spawn-sh`, `quit`, `load-config-file` — только с разрешением `exec`; вернёт `false`, если не выполнено), `focusWindow(id)`, `closeWindow(id)`, `iconFor(appId)`, `titleFor(окно)`, `layouts`, `layoutIdx` |
 | `api.player`, `api.players` | Текущий и все плееры MPRIS: `trackTitle`, `trackArtist`, `isPlaying`, `togglePlaying()`… |
 | `api.volume`, `api.muted`, `api.setVolume(0…1.5)`, `api.setMuted(bool)` | Звук основного выхода |
 | `api.battery` | `{present, percent, charging}` |

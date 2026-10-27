@@ -34,13 +34,17 @@ Singleton {
     property var registry: []
     function register(obj, owner, name, m) {
         var r = lookup(obj)
-        if (r) {
-            if (r.owner !== owner) console.warn("glide-shell: попытка выдать api «" + r.owner + "» за «" + owner + "» — отклонено")
+        if (r && r.owner !== owner) {
+            console.warn("glide-shell: попытка выдать api «" + r.owner + "» за «" + owner + "» — отклонено")
             return
         }
-        var spec = Object.freeze({ id: owner, api: apiOf(m), trusted: trusted(m),
+        // тот же объект снова (плагин обновили — новый plugin.json): api и список permissions — свежие, иначе новое
+        // разрешение не действовало бы до перезапуска; trusted — как при первой записи: переписью его не получить
+        var spec = Object.freeze({ id: owner, api: apiOf(m), trusted: r ? r.spec.trusted : trusted(m),
                                    permissions: Object.freeze(((m && m.permissions) || []).filter(x => typeof x === "string")) })
-        registry = registry.concat([Object.freeze({ obj: obj, owner: owner, name: name || owner, spec: spec })])
+        if (r && JSON.stringify(r.spec) === JSON.stringify(spec)) return
+        var e = Object.freeze({ obj: obj, owner: owner, name: name || owner, spec: spec })
+        registry = r ? registry.map(x => x.obj === obj ? e : x) : registry.concat([e])
     }
     function unregister(obj) { registry = registry.filter(r => r.obj !== obj) }
     function lookup(obj) { for (var r of registry) if (r.obj === obj) return r; return null }
@@ -212,7 +216,7 @@ Singleton {
         pam.abort()
         var p = pending
         pending = null; error = ""
-        if (p) change(p.owner, p.manifest, p.perm, false)
+        if (p && p.perm !== "*") change(p.owner, p.manifest, p.perm, false)   // «всё» — не разрешение, в отказы не пишем
     }
     function cancel() { pam.abort(); pending = null; error = "" }
     PamContext {

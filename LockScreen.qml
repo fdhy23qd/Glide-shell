@@ -33,6 +33,7 @@ Scope {
     property string pamInfo: ""        // сообщение PAM без запроса ввода (faillock и т. п.)
     property string buffer: ""         // пароль — только на время одной проверки
     property int responses: 0
+    property bool checking: false      // идёт проверка: finish — один раз (abort по таймауту тоже присылает итог)
     signal failed()                    // поле пароля трясётся и очищается
 
     // instant — без затемнения: перед сном, после падения, когда экран уже погашен
@@ -178,7 +179,9 @@ Scope {
         responses = 0
         pamInfo = ""
         error = ""
+        checking = true
         if (!pam.start()) {
+            checking = false
             buffer = ""
             error = Tr.t("Не удалось запустить проверку пароля")
             failed()
@@ -188,6 +191,8 @@ Scope {
     }
 
     function finish(ok, msg) {
+        if (!checking) return
+        checking = false
         pamTimeout.stop()
         buffer = ""
         if (!mode || unlocking) return

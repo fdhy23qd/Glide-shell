@@ -621,16 +621,22 @@ ShellRoot {
             try { JSON.parse(s); return true } catch (e) { return false }
         case "xml": return /^<[\w?!]/.test(s) && />$/.test(s)
         case "url": return /^https?:\/\/\S+$/.test(s)
-        case "host": return /^([a-z0-9-]+\.)+[a-z]{2,}$/i.test(s)
+        case "host": return /^([a-z0-9-]+\.)+[a-z]{2,}$/i.test(s) && !fileLike.test(s)   // readme.md, main.py — файлы
         case "jwt": return /^eyJ[\w-]*\.[\w-]+\.[\w-]*$/.test(s)
         case "number": return /^-?\d+(\.\d+)?$/.test(s)
         case "timestamp": return /^\d{9,13}(\.\d+)?$/.test(s)
         case "path": return /^(\/|~\/)\S.*$/.test(s) && s.indexOf("\n") < 0
-        case "base64": return /^[A-Za-z0-9+\/=\s]{8,}$/.test(s) && s.replace(/\s/g, "").length % 4 === 0
+        case "base64": {   // «password», «function» — 8 букв, но не base64: нужны цифра, +, /, = или обе регистра на длинном
+            var c = s.replace(/\s/g, "")
+            return /^[A-Za-z0-9+\/=\s]{8,}$/.test(s) && c.length % 4 === 0
+                   && (/[0-9+\/=]/.test(c) || (c.length >= 16 && /[a-z]/.test(c) && /[A-Z]/.test(c)))
+        }
         case "urlenc": return /%[0-9A-Fa-f]{2}/.test(s)
         }
         return false
     }
+    // одно имя и расширение файла — не хост (у .md, .py, .sh есть и такие домены, но в выделении это почти всегда файл)
+    readonly property var fileLike: /^[^.]+\.(md|txt|py|js|ts|qml|json|sh|png|jpe?g|gif|webp|svg|pdf|html?|css|cpp|c|h|hpp|rs|go|java|kt|rb|php|zip|gz|xz|tar|7z|log|conf|cfg|ini|kdl|toml|ya?ml|xml|csv|mp3|mp4|mkv|webm|ogg|flac|wav|docx?|xlsx?|pptx?|odt|desktop|service|lock)$/i
     function matches(when, t) {
         var ws = when === undefined ? ["text"] : (Array.isArray(when) ? when : [when])
         for (var i = 0; i < ws.length; i++) if (test(ws[i], t)) return true
@@ -1060,7 +1066,7 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v2.1 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v2.2 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

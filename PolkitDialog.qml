@@ -52,12 +52,12 @@ Scope {
         function onAuthenticationSucceeded() { pk.busy = false }
     }
 
-    function submit(text) {
-        if (!flow || busy || !text) return
-        if (!flow.isResponseRequired) return
+    function submit(text) {   // true — отправлен (тогда поле очищается; иначе введённое остаётся)
+        if (!flow || busy || !text || !flow.isResponseRequired) return false
         busy = true
         error = ""
         flow.submit(text)
+        return true
     }
     function cancel() { if (flow) flow.cancelAuthenticationRequest() }
 
@@ -172,8 +172,8 @@ Scope {
                             selectionColor: Theme.accentHover
                             clip: true
                             onTextChanged: if (text && pk.error) pk.error = ""
-                            Keys.onReturnPressed: { pk.submit(text); text = "" }
-                            Keys.onEnterPressed: { pk.submit(text); text = "" }
+                            Keys.onReturnPressed: if (pk.submit(text)) text = ""
+                            Keys.onEnterPressed: if (pk.submit(text)) text = ""
                             Keys.onEscapePressed: pk.cancel()
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter

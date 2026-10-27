@@ -47,6 +47,7 @@ Singleton {
         } else if (e.WindowsChanged) {
             m = {}
             var t = {}
+            focusedId = null   // в фокусе может не быть ни одного окна — не оставлять прежнее
             for (w of e.WindowsChanged.windows) {
                 m[w.id] = w
                 t[w.id] = w.layout

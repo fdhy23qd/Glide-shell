@@ -194,7 +194,7 @@ Item {
 | `daemon` | A background process (argv) started with the shell and stopped with it. With API 2, only with the `exec` permission. |
 | `keywords` | Extra words for search. |
 | `wide` | `true`: the category with this plugin opens in a wide card. |
-| `handoff` | On an item instead of `command`: `"handoff": "<plugin id>"` (with an optional `"prompt"`) passes the text to another plugin and opens its category. A QML plugin takes it with `api.takeHandoff(id)`, which returns `{text, prompt}` once, or `null`. |
+| `handoff` | On an item instead of `command`: `"handoff": "<plugin id>"` (with an optional `"prompt"`) passes the text to another plugin and opens its category. A QML plugin takes it with `api.takeHandoff(id)`, which returns `{text, prompt}` once, or `null`. A plugin can only take (and see in `api.handoff`) what was passed to itself. |
 | `output` | On an item: `"copy"`, `"notify"` or `"copy+notify"`. The command's stdout goes to the clipboard and/or a notification. A non-zero exit code is reported as a notification too. |
 | `confirm` | On a button: it only runs on the second press (within 3 seconds). |
 | `close` | On an item: `false` keeps the panel open after the action. |
@@ -271,8 +271,8 @@ Every plugin and widget gets its own object. Storage, settings and notifications
 | `api.notify(title, body, icon)` | A notification under the plugin's name. An empty `icon` means the standard information icon. |
 | `api.close()` | Close the panel |
 | `api.openCategory(id)` | Switch the panel to a category |
-| `api.openUrl(url)` | Open a link or file |
-| `api.launchApp(entry)` | Launch a `DesktopEntry` |
+| `api.openUrl(url)` | Open a link: `http(s):` and `mailto:` always, anything else (`file://`, app schemes) needs the `exec` permission |
+| `api.launchApp(entry)` | Launch an app: a `DesktopEntry` or its id (`"firefox"`); what runs is what its .desktop file says |
 | `api.setAwake(on)` | "Keep awake" on or off (`system` permission) |
 | `api.setPref(key, value)` | Change a shell setting (`config.json`, section `panel`; `system` permission) |
 | `api.openSettings()` | Open Settings → Plugins |
@@ -299,7 +299,7 @@ Settings → Plugins. Bindings update by themselves. `api.setSetting(key, value)
 
 | | |
 |---|---|
-| `api.niri` | `windows` permission. niri: `workspaces` (list), `windows` (id → window), `focusedWindow`, `focusedOutput`, `action([...])` — any `niri msg action`, `focusWindow(id)`, `closeWindow(id)` |
+| `api.niri` | `windows` permission. niri: `workspaces` (list), `windows` (id → window), `focusedWindow`, `focusedOutput`, `action([...])` — `niri msg action` (action name first; `spawn`, `spawn-sh`, `quit`, `load-config-file` need the `exec` permission; returns `false` if not run), `focusWindow(id)`, `closeWindow(id)`, `iconFor(appId)`, `titleFor(window)`, `layouts`, `layoutIdx` |
 | `api.player`, `api.players` | Current and all MPRIS players: `trackTitle`, `trackArtist`, `isPlaying`, `togglePlaying()`… |
 | `api.volume`, `api.muted`, `api.setVolume(0…1.5)`, `api.setMuted(bool)` | Default output |
 | `api.battery` | `{present, percent, charging}` |

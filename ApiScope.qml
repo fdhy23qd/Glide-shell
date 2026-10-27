@@ -51,11 +51,18 @@ QtObject {
     // ---------- прежнее (плагины) ----------
     readonly property bool shown: Core.root.shown
     readonly property string contextText: can("clipboard") ? Core.root.contextText : ""   // выделение или буфер в момент вызова
-    readonly property var handoff: Core.root.handoff
+    // переданный текст (выделение) — только тому, кому его передали: иначе любой плагин читал бы его без «clipboard»
+    readonly property var handoff: me && Core.root.handoff && Core.root.handoff.to === me ? Core.root.handoff : null
     readonly property color accent: Prefs.accent
     readonly property color accentText: Theme.accentText
     readonly property var appCounts: Core.root.appCounts
-    function launchApp(entry) { Core.root.launchApp(entry) }
+    // только настоящее приложение из .desktop: по id; переданный объект с полем command запустил бы что угодно мимо «exec»
+    function launchApp(entry) {
+        var id = String(entry && typeof entry === "object" ? entry.id || "" : entry || "").replace(/\.desktop$/, "")
+        var e = id ? DesktopEntries.byId(id) || DesktopEntries.applications.values.find(x => x.id === id) : null
+        if (e) Core.root.launchApp(e)
+        else console.warn("glide-shell: " + owner + ": launchApp — нет приложения «" + id + "»")
+    }
     readonly property bool awake: Core.root.awake
     readonly property var powerTimer: Core.root.powerTimer
     property var now: Core.root.now                               // у виджета — дата (DeskWidget задаёт свою)
@@ -74,8 +81,9 @@ QtObject {
     function openSettings() { Core.root.showSettings("plugins") }
     function copy(text) { if (need("clipboard", "copy")) Core.root.runRaw(["sh", "-c", 'printf %s "$QP_TEXT" | wl-copy'], text, "") }
     function flash(icon, text, color) { Core.root.flash(icon, text, color) }
-    function openUrl(url) { Qt.openUrlExternally(url) }
-    function takeHandoff(id) { return Core.root.api.takeHandoff(id) }
+    // без «exec» — только веб и почта: file://, свои схемы приложений и т. п. открывают программы
+    function openUrl(url) { if (/^(https?:|mailto:)/i.test(String(url)) || need("exec", "openUrl " + String(url).split(":")[0])) Qt.openUrlExternally(url) }
+    function takeHandoff(id) { return me ? Core.root.api.takeHandoff(me) : null }   // id — для совместимости: забрать можно только своё
 
     // ---------- прежнее (виджеты) — задаёт DeskWidget ----------
     property real k: 1
@@ -98,7 +106,29 @@ QtObject {
     }
 
     // ---------- система ----------
-    readonly property var niri: can("windows") ? Niri : null                  // windows, workspaces, focused…, action(…)
+    readonly property var niri: can("windows") ? niriApi : null               // windows, workspaces, focused…, action(…)
+    // не сам Niri: его action() выполняет и spawn — с одним разрешением «windows» плагин запускал бы что угодно
+    readonly property var niriBlocked: ["spawn", "spawn-sh", "quit", "load-config-file"]
+    property QtObject niriApi: QtObject {
+        readonly property var workspaces: Niri.workspaces
+        readonly property var windows: Niri.windows
+        readonly property var focusedWindow: Niri.focusedWindow
+        readonly property string focusedOutput: Niri.focusedOutput
+        readonly property var layouts: Niri.layouts
+        readonly property int layoutIdx: Niri.layoutIdx
+        function iconFor(appId) { return Niri.iconFor(appId) }
+        function titleFor(w) { return Niri.titleFor(w) }
+        function focusWindow(id) { if (api.can("windows")) Niri.focusWindow(id) }
+        function closeWindow(id) { if (api.can("windows")) Niri.closeWindow(id) }
+        // первым — имя действия (ключи до него не пропускаем: так не спрятать spawn); запуск программ — только с «exec»
+        function action(args) {
+            var a = Array.isArray(args) ? args.map(String) : []
+            if (!a.length || a[0].indexOf("-") === 0 || !api.can("windows")) return false
+            if (api.niriBlocked.indexOf(a[0]) >= 0 && !api.need("exec", "niri " + a[0])) return false
+            Niri.action(a)
+            return true
+        }
+    }
     readonly property var players: Mpris.players.values                     // все плееры MPRIS
     readonly property var player: Core.root.musicPlayer || players[0] || null  // тот, что сейчас играл последним
     readonly property var battery: {                                        // {present, percent, charging}

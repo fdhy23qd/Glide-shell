@@ -241,6 +241,49 @@ if __name__ == "__main__":
     unittest.main()
 
 
+def function_body(qml_text, name):
+    """Тело функции name (до парной скобки)."""
+    m = re.search(r"function\s+" + name + r"\s*\([^)]*\)\s*\{", qml_text)
+    if not m:
+        return ""
+    depth, i = 1, m.end()
+    while depth and i < len(qml_text):
+        depth += {"{": 1, "}": -1}.get(qml_text[i], 0)
+        i += 1
+    return qml_text[m.end():i]
+
+
+class NoBypass(unittest.TestCase):
+    """Через сам api — без разрешений — нельзя запустить программу или прочитать чужое (v2.2: такие обходы были)."""
+    qml = (ROOT / "ApiScope.qml").read_text()
+
+    def test_launch_app_only_real_entries(self):
+        body = function_body(self.qml, "launchApp")
+        self.assertIn("DesktopEntries.byId", body, "launchApp должен искать приложение по id")
+        self.assertNotIn("launchApp(entry)", body, "переданный объект (с полем command) — прямо в запуск")
+
+    def test_niri_without_spawn(self):
+        self.assertNotRegex(self.qml, r"property var niri:[^\n]*\?\s*Niri\s*:", "api.niri — сам Niri (action со spawn)")
+        for a in ("spawn", "spawn-sh", "quit"):
+            self.assertIn('"' + a + '"', re.search(r"niriBlocked: \[(.*?)\]", self.qml).group(1))
+
+    def test_handoff_only_own(self):
+        self.assertRegex(self.qml, r"property var handoff:[^\n]*\.to === me")
+        self.assertIn("takeHandoff(me)", function_body(self.qml, "takeHandoff"))
+
+    def test_open_url_schemes(self):
+        body = function_body(self.qml, "openUrl")
+        self.assertIn("https?:", body)
+        self.assertIn('need("exec"', body)
+
+    def test_notification_history_not_in_argv(self):
+        """История уведомлений — через stdin: аргумент команды больше 128 КБ ядро не пропускает."""
+        notifs = (ROOT / "Notifs.qml").read_text()
+        self.assertNotIn('printf %s "$2"', notifs)
+        self.assertIn("cat >", notifs)
+        self.assertNotRegex(notifs, r"function\s+write\s*\(", "своя write() у Process перекрывает запись в stdin")
+
+
 class Audit(unittest.TestCase):
     """Подсказка «код обходит разрешения»: ловит обращения мимо api к внутренностям оболочки."""
 
