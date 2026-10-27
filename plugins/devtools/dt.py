@@ -24,7 +24,16 @@ def main():
         print(uuid.uuid4())
     elif cmd == "password":
         alphabet = string.ascii_letters + string.digits + "-_.!@#$%^&*"
-        print("".join(secrets.choice(alphabet) for _ in range(24)))
+        pw = "".join(secrets.choice(alphabet) for _ in range(24))
+        # пароль скопирует qp-run обычным wl-copy — пусть история буфера (clip.py) его пропустит
+        skip = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/nonexistent", "glide-shell-clip-skip")
+        try:
+            fd = os.open(skip, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w") as f:
+                f.write(hashlib.sha256(pw.encode()).hexdigest())
+        except OSError:
+            pass
+        print(pw)
     elif cmd == "now":
         print(int(time.time()))
     elif cmd == "json-fmt":

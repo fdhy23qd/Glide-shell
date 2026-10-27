@@ -7,7 +7,7 @@ store зовёт `wl-paste --watch` при каждой смене буфера;
 (`wl-paste --list-types`): текст — в clipboard.json, картинка — файлом в clipboard-img/ (0600),
 а в историю — запись {"img": имя, "type": mime, "w", "h"}. Пароли из менеджеров не сохраняются.
 """
-import hashlib, json, os, struct, subprocess, sys
+import hashlib, json, os, struct, subprocess, sys, time
 from pathlib import Path
 
 MAX_ITEMS, MAX_BYTES, MAX_IMAGE, MAX_IMAGES = 100, 100_000, 15_000_000, 20
@@ -16,6 +16,8 @@ store = state / "clipboard.json"
 pins_file = state / "clipboard-pins.json"
 imgdir = state / "clipboard-img"
 IMAGE_TYPES = ("image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp")
+# разовая метка «не запоминать» (sha256 текста): её оставляет генератор паролей (plugins/devtools), живёт 30 с
+SKIP = Path(os.environ.get("XDG_RUNTIME_DIR") or "/nonexistent") / "glide-shell-clip-skip"
 
 
 def load():
@@ -111,6 +113,14 @@ if cmd == "store":
         if not data or len(data) > MAX_BYTES:
             sys.exit(0)
         text = data.decode("utf-8", "replace")
+        try:
+            fresh = time.time() - SKIP.stat().st_mtime < 30
+            if SKIP.read_text().strip() == hashlib.sha256(data).hexdigest() or not fresh:
+                SKIP.unlink(missing_ok=True)
+                if fresh:
+                    sys.exit(0)
+        except OSError:
+            pass
         if text.strip():
             remember(text, load())
 elif cmd == "list":

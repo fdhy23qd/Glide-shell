@@ -14,7 +14,7 @@ ColumnLayout {
     id: cc
     property var api
     readonly property color accent: api && api.accent ? api.accent : Theme.accent   // акцент из настроек панели
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"   // текст на акценте
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText   // текст на акценте
     readonly property bool shown: api ? api.shown : false
     spacing: 10
 
@@ -35,15 +35,31 @@ ColumnLayout {
     property bool wired: false
     Process {
         id: wifiProc
-        command: ["sh", "-c", "nmcli radio wifi; nmcli -t -f TYPE,STATE,CONNECTION device | awk -F: '$1==\"wifi\" && $2==\"connected\" {print $3; exit}'; nmcli -t -f TYPE,STATE device | grep -c '^ethernet:connected$'"]
+        command: ["sh", "-c", "nmcli radio wifi; nmcli -t -f TYPE,STATE,CONNECTION device"]
         stdout: StdioCollector {
             onStreamFinished: {
-                var l = text.trim().split("\n")   // радио, [имя сети], число подключённых кабелей
-                cc.wifiOn = l[0].trim() === "enabled"
-                cc.wifiName = l.length > 2 ? l[1].trim() : ""
-                cc.wired = +(l[l.length > 2 ? 2 : 1] || 0) > 0
+                var l = text.trim().split("\n")   // радио, затем устройства «тип:состояние:соединение»
+                cc.wifiOn = (l[0] || "").trim() === "enabled"
+                var name = "", wired = false
+                for (var i = 1; i < l.length; i++) {
+                    var f = cc.fields(l[i])
+                    if (f[0] === "wifi" && f[1] === "connected" && !name) name = f[2] || ""
+                    if (f[0] === "ethernet" && f[1] === "connected") wired = true
+                }
+                cc.wifiName = name
+                cc.wired = wired
             }
         }
+    }
+    function fields(line) {   // nmcli -t: «:» внутри значения экранирован как «\:», «\» — как «\\»
+        var out = [""], esc = false
+        for (var c of line) {
+            if (esc) { out[out.length - 1] += c; esc = false }
+            else if (c === "\\") esc = true
+            else if (c === ":") out.push("")
+            else out[out.length - 1] += c
+        }
+        return out
     }
     function toggleWifi() {
         wifiOn = !wifiOn
@@ -133,7 +149,7 @@ ColumnLayout {
         property string sub
         property bool on
         property color accent: Theme.accent
-        property color accentText: "#ffffff"
+        property color accentText: Theme.accentText
         signal clicked()
         Layout.fillWidth: true
         Layout.preferredWidth: 1
@@ -148,7 +164,7 @@ ColumnLayout {
             anchors.verticalCenter: parent.verticalCenter
             text: t.glyph
             color: t.on ? accentText : Theme.textVariant
-            font.family: "JetBrainsMono Nerd Font"
+            font.family: Prefs.iconFont
             font.pixelSize: Theme.fs(20)
             Behavior on color { ColorAnimation { duration: Prefs.ms(180) } }
         }
@@ -184,7 +200,7 @@ ColumnLayout {
         property string glyph
         property bool muted: false
         property color accent: Theme.accent
-        property color accentText: "#ffffff"
+        property color accentText: Theme.accentText
         signal moved(real v)
         signal glyphClicked()
         Layout.fillWidth: true
@@ -221,14 +237,14 @@ ColumnLayout {
         Rectangle {   // значок: клик — выключить/включить
             Behavior on color { ColorAnimation { duration: Prefs.ms(140) } }
             width: 34; height: 34; radius: Theme.r(17)
-            color: gm.pressed ? "#38000000" : gm.containsMouse ? "#20000000" : "transparent"
+            color: gm.pressed ? Qt.rgba(Theme.background.r, Theme.background.g, Theme.background.b, 0.22) : gm.containsMouse ? Qt.rgba(Theme.background.r, Theme.background.g, Theme.background.b, 0.125) : "transparent"
             scale: gm.pressed ? 0.88 : 1
             Behavior on scale { NumberAnimation { duration: Prefs.ms(140); easing.type: Easing.OutBack } }
             Text {
                 anchors.centerIn: parent
                 text: s.glyph
                 color: accentText
-                font.family: "JetBrainsMono Nerd Font"
+                font.family: Prefs.iconFont
                 font.pixelSize: Theme.fs(17)
             }
             MouseArea { id: gm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: s.glyphClicked() }
@@ -249,7 +265,7 @@ ColumnLayout {
         property string text
         property bool on
         property color accent: Theme.accent
-        property color accentText: "#ffffff"
+        property color accentText: Theme.accentText
         signal clicked()
         width: Math.min(chT.implicitWidth + 22, 240)
         height: 28
@@ -393,7 +409,7 @@ ColumnLayout {
             title: Tr.t("Не засыпать")
             sub: cc.inhibit ? Tr.t("экран не гаснет") : Tr.t("выкл")
             on: cc.inhibit
-            onClicked: cc.api.setAwake(!cc.inhibit)
+            onClicked: if (cc.api) cc.api.setAwake(!cc.inhibit)
         }
         Tile {
             accent: cc.accent; accentText: cc.accentText
@@ -474,7 +490,7 @@ ColumnLayout {
         Text {
             text: cc.batt && cc.batt.state === UPowerDeviceState.Charging ? cc.nf(0xF0084) : cc.nf(0xF0079)
             color: cc.batt && cc.batt.state === UPowerDeviceState.Charging ? Theme.success : Theme.textVariant
-            font.family: "JetBrainsMono Nerd Font"
+            font.family: Prefs.iconFont
             font.pixelSize: Theme.fs(16)
         }
         Text {
@@ -532,7 +548,7 @@ ColumnLayout {
                             Behavior on color { ColorAnimation { duration: Prefs.ms(140) } }
                             anchors.verticalCenter: parent.verticalCenter
                             text: cc.nf(prof.glyphs[index])
-                            font.family: "JetBrainsMono Nerd Font"; font.pixelSize: Theme.fs(13)
+                            font.family: Prefs.iconFont; font.pixelSize: Theme.fs(13)
                             color: index === prof.idx ? accentText : Theme.textVariant
                         }
                         Text {

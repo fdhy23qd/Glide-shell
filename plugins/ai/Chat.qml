@@ -9,7 +9,7 @@ ColumnLayout {
     id: chat
     property var api
     readonly property color accent: api && api.accent ? api.accent : Theme.accent   // акцент из настроек панели
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"   // текст на акценте
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText   // текст на акценте
     property var info: ({ ready: false, label: "…", hint: "" })
     property bool busy: false
     property bool waiting: false          // запрос ушёл, первых слов ещё нет
@@ -18,6 +18,8 @@ ColumnLayout {
     spacing: 10
 
     function ai(args) { return ["python3", script].concat(args) }
+    // ответ — Markdown; картинку из него Text загрузил бы сам (в том числе из сети, по тексту из буфера) — делаем ссылкой
+    function safeMd(t) { return t.replace(/!\[([^\]]*)\]\(/g, "[$1](").replace(/<(\/?\s*img\b)/gi, "&lt;$1") }
 
     function send(text) {
         text = text.trim()
@@ -93,6 +95,8 @@ ColumnLayout {
                 if (e.t === "delta") {
                     chat.waiting = false
                     msgs.setProperty(last, "text", msgs.get(last).text + e.text)
+                } else if (e.t === "discard") {   // отказ посреди ответа: начатое неполно — убираем
+                    if (last >= 0 && msgs.get(last).role === "assistant") msgs.setProperty(last, "text", "")
                 } else if (e.t === "error") {
                     chat.error = e.text
                 }
@@ -246,7 +250,7 @@ ColumnLayout {
                     selectByMouse: true
                     wrapMode: TextEdit.Wrap
                     textFormat: row.mine ? TextEdit.PlainText : TextEdit.MarkdownText
-                    text: row.text + (row.live && row.text !== "" ? " ▍" : "")
+                    text: (row.mine ? row.text : chat.safeMd(row.text)) + (row.live && row.text !== "" ? " ▍" : "")
                     color: Theme.text
                     selectionColor: Qt.rgba(chat.accent.r, chat.accent.g, chat.accent.b, 0.42)
                     font.pixelSize: Theme.fs(13)
@@ -319,7 +323,7 @@ ColumnLayout {
                 id: sug
                 required property var modelData
                 required property int index
-                visible: !modelData.ctx || chat.api.contextText !== ""
+                visible: !modelData.ctx || (!!chat.api && chat.api.contextText !== "")
                 width: sugText.implicitWidth + 22
                 height: 28
                 radius: Theme.r(14)

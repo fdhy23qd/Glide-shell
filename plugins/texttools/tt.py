@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import os, re, subprocess, sys
+import os, re, subprocess, sys, tempfile
 
 text = os.environ.get("QP_TEXT") or os.environ.get("QP_SELECTION") or os.environ.get("QP_CLIPBOARD", "")
 cmd = sys.argv[1] if len(sys.argv) > 1 else ""
 
 
 def words(s):
-    return re.findall(r"[A-Za-zА-Яа-я0-9]+", re.sub(r"([a-zа-я0-9])([A-ZА-Я])", r"\1 \2", s))
+    return re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", re.sub(r"([a-zа-яё0-9])([A-ZА-ЯЁ])", r"\1 \2", s))
 
 
 def main():
@@ -39,7 +39,8 @@ def main():
                 out.append(l)
         print("\n".join(out))
     elif cmd == "qr":
-        path = "/tmp/glide-shell-qr.png"
+        # не в общий /tmp: там чужая ссылка с этим именем подменила бы файл, который перезапишет qrencode
+        path = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or tempfile.mkdtemp(), "glide-shell-qr.png")
         subprocess.run(["qrencode", "-s", "8", "-o", path], input=text.encode(), check=True)
         subprocess.Popen(["xdg-open", path], start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

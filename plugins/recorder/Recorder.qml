@@ -11,8 +11,8 @@ ColumnLayout {
     property var api
     readonly property var rec: api ? api.recorder : null
     readonly property color accent: api && api.accent ? api.accent : Theme.accent
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"
-    readonly property string iconFont: api && api.iconFont ? api.iconFont : "JetBrainsMono Nerd Font"
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText
+    readonly property string iconFont: api && api.iconFont ? api.iconFont : Prefs.iconFont
     readonly property bool shown: api ? api.shown : false
     property string audio: ""   // "" | system | mic
     property bool picking: false   // выбирают окно для записи
@@ -183,7 +183,7 @@ ColumnLayout {
         property bool primary: false
         property bool danger: false
         property color accent: Theme.accent
-        property color accentText: "#ffffff"
+        property color accentText: Theme.accentText
         signal clicked()
         implicitWidth: bt.implicitWidth + 28; implicitHeight: 34; radius: Theme.r(17)
         color: danger ? (bm.pressed ? Theme.errorContainer : bm.containsMouse ? Theme.errorHover : Theme.errorContainer)

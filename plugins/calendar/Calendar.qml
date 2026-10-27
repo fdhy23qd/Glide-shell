@@ -12,8 +12,8 @@ ColumnLayout {
     id: cal
     property var api
     readonly property color accent: api && api.accent ? api.accent : Theme.accent
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"
-    readonly property string iconFont: api && api.iconFont ? api.iconFont : "JetBrainsMono Nerd Font"
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText
+    readonly property string iconFont: api && api.iconFont ? api.iconFont : Prefs.iconFont
     readonly property bool shown: api ? api.shown : false
     spacing: 6
 
@@ -217,8 +217,16 @@ ColumnLayout {
             }
         }
 
-        WheelHandler {   // колесо — листать месяцы
-            onWheel: (e) => { if (e.angleDelta.y !== 0) cal.shift(e.angleDelta.y > 0 ? -1 : 1) }
+        WheelHandler {   // колесо — листать месяцы; тачпад шлёт много мелких событий — копим до одного деления (120)
+            property real acc: 0
+            onWheel: (e) => {
+                if (e.angleDelta.y === 0) return
+                if (acc !== 0 && (acc > 0) !== (e.angleDelta.y > 0)) acc = 0   // сменили направление
+                acc += e.angleDelta.y
+                if (Math.abs(acc) < 120) return
+                cal.shift(acc > 0 ? -1 : 1)
+                acc = 0
+            }
         }
     }
 

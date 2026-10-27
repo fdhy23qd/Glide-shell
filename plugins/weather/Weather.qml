@@ -10,13 +10,13 @@ ColumnLayout {
     readonly property var wx: api ? api.weather : null
     readonly property var d: wx && wx.ok ? wx.data : null
     readonly property color accent: api && api.accent ? api.accent : Theme.accent
-    readonly property string iconFont: api && api.iconFont ? api.iconFont : "JetBrainsMono Nerd Font"
+    readonly property string iconFont: api && api.iconFont ? api.iconFont : Prefs.iconFont
     readonly property bool shown: api ? api.shown : false
     property bool editing: false
     spacing: 8
 
     function nf(code) { return String.fromCodePoint(code) }
-    onShownChanged: if (shown && wx) wx.refresh()
+    onShownChanged: { if (!shown) editing = false; else if (wx) wx.refresh() }
     Component.onCompleted: if (wx) wx.refresh()
 
     function dayName(iso, i) {
@@ -177,8 +177,8 @@ ColumnLayout {
                 anchors.verticalCenter: parent.verticalCenter
                 color: Theme.text; font.pixelSize: Theme.fs(12)
                 clip: true
-                Keys.onReturnPressed: { wv.api.setPref("weatherCity", text.trim()); wv.editing = false }
-                Keys.onEnterPressed: { wv.api.setPref("weatherCity", text.trim()); wv.editing = false }
+                Keys.onReturnPressed: { if (wv.api) wv.api.setPref("weatherCity", text.trim()); wv.editing = false }
+                Keys.onEnterPressed: { if (wv.api) wv.api.setPref("weatherCity", text.trim()); wv.editing = false }
                 Keys.onEscapePressed: (e) => { wv.editing = false; e.accepted = true }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter

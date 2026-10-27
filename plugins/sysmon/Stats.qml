@@ -8,25 +8,18 @@ ColumnLayout {
     id: s
     property var api
     readonly property color accent: api && api.accent ? api.accent : Theme.accent   // акцент из настроек панели
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"   // текст на акценте
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText   // текст на акценте
     property var d: ({})
     spacing: 8
 
     function speed(b) { return b > 1048576 ? (b / 1048576).toFixed(1) + Tr.t(" МБ/с") : Math.round(b / 1024) + Tr.t(" КБ/с") }
 
-    Process {
-        id: p
-        command: ["python3", decodeURIComponent(Qt.resolvedUrl("stats.py").toString().replace("file://", ""))]
-        stdout: StdioCollector {
-            onStreamFinished: { try { s.d = JSON.parse(text) } catch (e) {} }
-        }
-    }
-    Timer {
-        interval: 2000
-        repeat: true
+    Process {   // один процесс, пока панель открыта; строка JSON каждые 2 с
         running: !!s.api && s.api.shown
-        triggeredOnStart: true
-        onTriggered: p.running = true
+        command: ["python3", "-I", decodeURIComponent(Qt.resolvedUrl("stats.py").toString().replace("file://", "")), "2"]
+        stdout: SplitParser {
+            onRead: (line) => { try { s.d = JSON.parse(line) } catch (e) {} }
+        }
     }
 
     component Metric: ColumnLayout {

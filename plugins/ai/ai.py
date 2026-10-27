@@ -4,7 +4,7 @@
 Подкоманды:
   info               JSON {backend, label, ready, hint} — чем будем отвечать
   history            JSON-список сообщений текущего чата
-  send               сообщение из $QP_TEXT → поток JSON-строк {"t": "delta"|"done"|"error", ...}
+  send               сообщение из $QP_TEXT → поток JSON-строк {"t": "delta"|"discard"|"done"|"error", ...}
   reset              начать новый чат
   once <задача>      разовое действие над $QP_TEXT (fix, translate, summary), ответ — в stdout
   setup-api          поставить SDK anthropic в отдельное venv (для бэкенда "api")
@@ -118,7 +118,8 @@ def ensure_sdk():
 # ---------- бэкенд: Claude Code CLI ----------
 def claude_stream(prompt, session=None, system=SYSTEM, persist=True):
     """Генератор: ("delta", текст) ... ("done", session_id) | ("error", текст)."""
-    argv = [find_claude(), "-p", prompt, "--output-format", "stream-json", "--include-partial-messages",
+    # текст — через stdin: аргументом «- пункт» или «--help» claude принял бы за свой ключ
+    argv = [find_claude(), "-p", "--output-format", "stream-json", "--include-partial-messages",
             "--verbose", "--tools", "", "--strict-mcp-config", "--system-prompt", system]
     if os.environ.get("QP_AI_MODEL"):
         argv += ["--model", os.environ["QP_AI_MODEL"]]
@@ -129,7 +130,12 @@ def claude_stream(prompt, session=None, system=SYSTEM, persist=True):
     # отдельная рабочая папка: сессии чата не смешиваются с проектами и не видят их CLAUDE.md
     cwd = STATE / "ai-cwd"
     cwd.mkdir(parents=True, exist_ok=True)
-    p = subprocess.Popen(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    p = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        p.stdin.write(prompt)
+        p.stdin.close()
+    except BrokenPipeError:
+        pass
     sid, got = session, False
     try:
         for line in p.stdout:
@@ -185,7 +191,8 @@ def api_stream(messages, system=SYSTEM):
             for text in stream.text_stream:
                 yield "delta", text
             final = stream.get_final_message()
-        if final.stop_reason == "refusal":
+        if final.stop_reason == "refusal":   # и резервная модель отказала: начатый ответ неполный — отбросить
+            yield "discard", None
             yield "error", "Модель отказалась отвечать на этот запрос"
             return
         yield "done", None
@@ -244,6 +251,9 @@ def cmd_send():
                 ok = True
                 if b == "claude" and val:
                     chat["session"] = val
+            elif kind == "discard":
+                answer.clear()
+                emit(t="discard")
             else:
                 emit(t="error", text=val)
     except KeyboardInterrupt:   # «Стоп» в панели
@@ -275,6 +285,8 @@ def cmd_once(task):
     for kind, val in gen:
         if kind == "delta":
             out.append(val)
+        elif kind == "discard":
+            out.clear()
         elif kind == "error":
             raise SystemExit(val)
     print("".join(out).strip())

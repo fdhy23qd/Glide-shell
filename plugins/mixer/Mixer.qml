@@ -11,8 +11,8 @@ ColumnLayout {
     id: mx
     property var api
     readonly property color accent: api && api.accent ? api.accent : Theme.accent
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"
-    readonly property string iconFont: api && api.iconFont ? api.iconFont : "JetBrainsMono Nerd Font"
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText
+    readonly property string iconFont: api && api.iconFont ? api.iconFont : Prefs.iconFont
     spacing: 8
 
     // потоки воспроизведения приложений («Stream/Output/Audio») и микрофоны («Audio/Source»)

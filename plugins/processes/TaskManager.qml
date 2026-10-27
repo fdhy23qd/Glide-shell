@@ -10,7 +10,7 @@ ColumnLayout {
     property var api
     property string pluginDir: ""        // папка плагина — ставит ядро (PluginSection)
     readonly property color accent: api && api.accent ? api.accent : Theme.accent
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText
     spacing: 10
 
     property var d: null                 // последний замер
@@ -49,10 +49,23 @@ ColumnLayout {
         return r.slice(0, 40)
     }
 
-    function kill(pid, sig) {
-        api.run(["kill", "-" + sig, String(pid)], "")
-        if (api.flash) api.flash("✓", (sig === "KILL" ? Tr.t("Убит ") : Tr.t("Завершён ")) + Tr.t("процесс ") + pid)
+    function kill(pid, sig) {   // сообщение — по коду kill: чужой процесс без прав не завершится
+        if (killProc.running) return
+        killProc.pid = pid; killProc.sig = sig
+        killProc.command = ["kill", "-" + sig, String(pid)]
+        killProc.running = true
         selected = -1; armedKill = -1
+    }
+    Process {
+        id: killProc
+        property int pid: 0
+        property string sig: ""
+        stderr: StdioCollector { id: killErr }
+        onExited: (code) => {
+            if (!tm.api || !tm.api.flash) return
+            if (code === 0) tm.api.flash("✓", (sig === "KILL" ? Tr.t("Убит ") : Tr.t("Завершён ")) + Tr.t("процесс ") + pid)
+            else tm.api.flash("✕", (/not permitted/i.test(killErr.text) ? Tr.t("Нет прав на процесс ") : Tr.t("Не удалось завершить процесс ")) + pid, Theme.error)
+        }
     }
 
     // ---- карточка с графиком ----
@@ -110,7 +123,7 @@ ColumnLayout {
         property bool on
         signal clicked()
         property color accent: Theme.accent
-        property color accentText: "#ffffff"
+        property color accentText: Theme.accentText
         width: sgT.implicitWidth + 20; height: 28; radius: Theme.r(14)
         color: on ? (sgm.containsMouse ? Qt.lighter(accent, 1.12) : accent)
                   : (sgm.pressed ? Theme.surfaceHigh : sgm.containsMouse ? Theme.surfaceHigher : Theme.surface)
@@ -138,7 +151,7 @@ ColumnLayout {
             value: tm.d ? tm.gb(tm.d.mem[1]) + " / " + tm.gb(tm.d.mem[0]) + Tr.t(" ГБ") : "…"
             sub: tm.d && tm.d.swap[0] > 0 ? Tr.t("подкачка ") + tm.gb(tm.d.swap[1]) + " / " + tm.gb(tm.d.swap[0]) + Tr.t(" ГБ") : ""
             hist: tm.memHist
-            tint: tm.d && tm.d.mem[1] / tm.d.mem[0] > 0.9 ? Theme.error : "#2bb3e6"
+            tint: tm.d && tm.d.mem[1] / tm.d.mem[0] > 0.9 ? Theme.error : Theme.success
         }
     }
 
@@ -269,7 +282,7 @@ ColumnLayout {
                         else { tm.armedKill = row.modelData[0]; disarm.restart() }
                     }
                 }
-                Seg { text: Tr.t("Копировать PID"); on: false; onClicked: tm.api.copy(String(row.modelData[0])) }
+                Seg { text: Tr.t("Копировать PID"); on: false; onClicked: if (tm.api) tm.api.copy(String(row.modelData[0])) }
             }
         }
     }

@@ -24,8 +24,13 @@ ColumnLayout {
     readonly property int pinnedCount: shownRows.filter(r => r.pinned).length
 
     function reload() { rd.running = false; rd.running = true }
-    function act(args) { api.run(["python3", "-I", py].concat(args), ""); after.restart() }
-    function copy(r) { api.run(["python3", "-I", py, "copy", r.id], ""); if (api) api.flash(String.fromCodePoint(0xF018F), Tr.t("Скопировано"), Theme.success); api.close() }
+    function act(args) { if (!api) return; api.run(["python3", "-I", py].concat(args), ""); after.restart() }
+    function copy(r) {
+        if (!api) return
+        api.run(["python3", "-I", py, "copy", r.id], "")
+        api.flash(String.fromCodePoint(0xF018F), Tr.t("Скопировано"), Theme.success)
+        api.close()
+    }
     Timer { id: after; interval: 250; onTriggered: cb.reload() }
     onShownChanged: if (shown) { filter = ""; search.text = ""; sel = 0; confirmClear = false; reload(); search.forceActiveFocus() }
     Component.onCompleted: { reload(); search.forceActiveFocus() }
@@ -56,7 +61,7 @@ ColumnLayout {
             verticalAlignment: TextInput.AlignVCenter
             color: Theme.text; font.pixelSize: Theme.fs(13); clip: true
             onTextChanged: { cb.filter = text; cb.sel = 0 }
-            Keys.onDownPressed: cb.sel = Math.min(cb.shownRows.length - 1, cb.sel + 1)
+            Keys.onDownPressed: cb.sel = Math.min(Math.min(cb.shownRows.length, 40) - 1, cb.sel + 1)   // показано не больше 40
             Keys.onUpPressed: cb.sel = Math.max(0, cb.sel - 1)
             Keys.onReturnPressed: if (cb.shownRows.length) cb.copy(cb.shownRows[cb.sel])
             Text { visible: !search.text; anchors.verticalCenter: parent.verticalCenter

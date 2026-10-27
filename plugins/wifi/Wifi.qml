@@ -11,8 +11,8 @@ ColumnLayout {
     id: wf
     property var api
     readonly property color accent: api && api.accent ? api.accent : Theme.accent
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"
-    readonly property string iconFont: api && api.iconFont ? api.iconFont : "JetBrainsMono Nerd Font"
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText
+    readonly property string iconFont: api && api.iconFont ? api.iconFont : Prefs.iconFont
     readonly property bool shown: api ? api.shown : false
     spacing: 6
 
@@ -268,7 +268,7 @@ ColumnLayout {
         property string label
         property bool primary: false
         property color accent: Theme.accent
-        property color accentText: "#ffffff"
+        property color accentText: Theme.accentText
         signal clicked()
         implicitWidth: bt.implicitWidth + 24; implicitHeight: 30; radius: Theme.r(15)
         color: primary ? (bm.pressed ? Qt.darker(accent, 1.15) : bm.containsMouse ? Qt.lighter(accent, 1.12) : accent)

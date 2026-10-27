@@ -11,8 +11,8 @@ ColumnLayout {
     property var api
     readonly property var ns: api ? api.notifs : null
     readonly property color accent: api && api.accent ? api.accent : Theme.accent
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"
-    readonly property string iconFont: api && api.iconFont ? api.iconFont : "JetBrainsMono Nerd Font"
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText
+    readonly property string iconFont: api && api.iconFont ? api.iconFont : Prefs.iconFont
     readonly property bool shown: api ? api.shown : false
     readonly property var items: ns ? ns.list.slice(0, 30) : []
     spacing: 8
@@ -122,8 +122,9 @@ ColumnLayout {
                     Text { anchors.centerIn: parent; text: nv.nf(muteBtn.muted ? 0xF009B : 0xF009A)
                            color: muteBtn.muted ? Theme.warning : Theme.textSecondary; font.family: nv.iconFont; font.pixelSize: Theme.fs(13) }
                     MouseArea { id: muteMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onClicked: { Prefs.notifMute(grp.g.app, !muteBtn.muted)
-                                             if (nv.api) nv.api.flash(nv.nf(muteBtn.muted ? 0xF009A : 0xF009B), muteBtn.muted ? Tr.t("Всплывашки снова: ") + grp.g.app
+                                onClicked: { var was = muteBtn.muted   // Prefs.set меняет muted сразу — сообщение по прежнему значению
+                                             Prefs.notifMute(grp.g.app, !was)
+                                             if (nv.api) nv.api.flash(nv.nf(was ? 0xF009A : 0xF009B), was ? Tr.t("Всплывашки снова: ") + grp.g.app
                                                                        : Tr.t("Без всплывашек: ") + grp.g.app, Theme.textVariant) } }
                 }
                 Rectangle {   // убрать всю стопку
@@ -313,8 +314,8 @@ ColumnLayout {
         property string text
         property bool on: false
         property color accent: Theme.accent
-        property color accentText: "#ffffff"
-        property string iconFont: "JetBrainsMono Nerd Font"
+        property color accentText: Theme.accentText
+        property string iconFont: Prefs.iconFont
         signal clicked()
         implicitHeight: 30
         implicitWidth: chRow.implicitWidth + 24

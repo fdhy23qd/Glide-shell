@@ -8,7 +8,7 @@ ColumnLayout {
     id: m
     property var api
     readonly property color accent: api && api.accent ? api.accent : Theme.accent   // акцент из настроек панели
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"   // текст на акценте
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText   // текст на акценте
     property var chosen: null
     readonly property var player: pick()
     spacing: 10

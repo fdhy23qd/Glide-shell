@@ -11,8 +11,8 @@ ColumnLayout {
     id: bt
     property var api
     readonly property color accent: api && api.accent ? api.accent : Theme.accent
-    readonly property color accentText: api && api.accentText ? api.accentText : "#ffffff"
-    readonly property string iconFont: api && api.iconFont ? api.iconFont : "JetBrainsMono Nerd Font"
+    readonly property color accentText: api && api.accentText ? api.accentText : Theme.accentText
+    readonly property string iconFont: api && api.iconFont ? api.iconFont : Prefs.iconFont
     readonly property bool shown: api ? api.shown : false
     spacing: 6
 
@@ -24,7 +24,7 @@ ColumnLayout {
     // заблокированный через rfkill адаптер BlueZ не включит — сначала снимаем блокировку (ACL пользователя)
     function toggle() {
         if (on) { adapter.enabled = false; return }
-        if (adapter.state === BluetoothAdapterState.Blocked) { api.run(["rfkill", "unblock", "bluetooth"]); powerOn.restart() }
+        if (adapter.state === BluetoothAdapterState.Blocked) { if (api) api.run(["rfkill", "unblock", "bluetooth"]); powerOn.restart() }
         else adapter.enabled = true
     }
     Timer { id: powerOn; interval: 600; onTriggered: if (bt.adapter) bt.adapter.enabled = true }
@@ -61,7 +61,7 @@ ColumnLayout {
         if (d.state === BluetoothDeviceState.Connecting) return Tr.t("подключение…")
         if (d.state === BluetoothDeviceState.Disconnecting) return Tr.t("отключение…")
         if (d.connected) return Tr.t("подключено") + (d.batteryAvailable ? " · " + Math.round(d.battery * 100) + "%" : "")
-        return d.paired ? "" : ""
+        return ""
     }
     function pairAndConnect(d) {
         error = ""
@@ -75,7 +75,15 @@ ColumnLayout {
             var d = pairWatch.target
             if (d && d.paired) { d.trusted = true; d.connect(); pairWatch.target = null; bt.selected = "" }
         }
-        function onPairingChanged() {
+        function onPairingChanged() {   // paired может прийти следом за pairing = false — решаем через секунду
+            var d = pairWatch.target
+            if (d && !d.pairing && !d.paired) pairFail.restart()
+        }
+    }
+    Timer {
+        id: pairFail
+        interval: 1000
+        onTriggered: {
             var d = pairWatch.target
             if (d && !d.pairing && !d.paired) { bt.error = Tr.t("Не удалось сопрячь «") + d.name + "»"; pairWatch.target = null }
         }
@@ -227,7 +235,7 @@ ColumnLayout {
         property string label
         property bool primary: false
         property color accent: Theme.accent
-        property color accentText: "#ffffff"
+        property color accentText: Theme.accentText
         signal clicked()
         implicitWidth: btt.implicitWidth + 24; implicitHeight: 30; radius: Theme.r(15)
         color: primary ? (bm.pressed ? Qt.darker(accent, 1.15) : bm.containsMouse ? Qt.lighter(accent, 1.12) : accent)

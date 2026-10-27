@@ -21,8 +21,12 @@ def ev(n):
         return n.value
     if isinstance(n, ast.BinOp) and type(n.op) in BIN:
         a, b = ev(n.left), ev(n.right)
-        if isinstance(n.op, ast.Pow) and abs(b) > 1000:
-            raise ValueError("слишком большая степень")
+        if isinstance(n.op, ast.Pow):
+            if abs(b) > 1000:
+                raise ValueError("слишком большая степень")
+            # целые растут без предела: (9^999)^999 — уже миллионы цифр; > 100 000 бит не считаем
+            if isinstance(a, int) and isinstance(b, int) and b > 0 and abs(a) > 1 and b * math.log2(abs(a)) > 100_000:
+                raise ValueError("слишком большое число")
         return BIN[type(n.op)](a, b)
     if isinstance(n, ast.UnaryOp) and type(n.op) in UN:
         return UN[type(n.op)](ev(n.operand))
