@@ -1205,5 +1205,7 @@
  "Запись одного окна: нужны sudo pacman -S gst-plugin-pipewire gst-plugins-good gst-plugins-bad gst-plugin-va (не хватает: ": "Recording a single window needs sudo pacman -S gst-plugin-pipewire gst-plugins-good gst-plugins-bad gst-plugin-va (missing: ",
  "активное": "active",
  "Нет прав на процесс ": "No permission for process ",
- "Не удалось завершить процесс ": "Could not stop process "
+ "Не удалось завершить процесс ": "Could not stop process ",
+ "Новая версия: снова выдай ": "New version: grant again ",
+ "уже установлен — прежняя версия уйдёт в копию; «Запуск программ» и «Настройки оболочки» придётся выдать снова": "already installed — the old version goes to a backup; “Run programs” and “Shell settings” must be granted again"
 }

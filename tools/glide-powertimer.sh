@@ -18,6 +18,7 @@ case "${1:-}" in
         min=${2:?минуты}; act=${3:-poweroff}
         case $act in poweroff|suspend) ;; *) echo "действие: poweroff | suspend" >&2; exit 2 ;; esac
         case $min in ''|*[!0-9]*) echo "минуты — число" >&2; exit 2 ;; esac
+        [ "$min" -ge 1 ] || { echo "минуты — от 1 (0 выключил бы сразу)" >&2; exit 2; }
         cancel
         mkdir -p "${st%/*}"
         # после срабатывания состояние стирается само (сон — чтобы после пробуждения значок не висел)

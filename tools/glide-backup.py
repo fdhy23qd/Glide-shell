@@ -26,7 +26,7 @@ def members():
     out = []
     if SHELL.is_dir():
         for p in sorted(SHELL.rglob("*")):
-            if p.is_file() and p.name not in SKIP and "__pycache__" not in p.parts:
+            if p.is_file() and p.name not in SKIP and "__pycache__" not in p.parts and not p.name.endswith((".import", ".tmp")):
                 out.append((p, "glide-shell/" + str(p.relative_to(SHELL))))
     for name in ("glide-settings.kdl", "glide-outputs.kdl"):
         if (NIRI / name).is_file():
@@ -46,7 +46,7 @@ def export(folder=None, suffix=""):
 
 
 def safe(name):
-    return not (name.startswith("/") or ".." in Path(name).parts) and name.split("/")[0] in ("glide-shell", "niri")
+    return "/" in name and not (name.startswith("/") or ".." in Path(name).parts) and name.split("/")[0] in ("glide-shell", "niri")
 
 
 def restore(file):
@@ -60,11 +60,15 @@ def restore(file):
         for m in items:
             top, rest = m.name.split("/", 1)
             target = (SHELL if top == "glide-shell" else NIRI) / rest
+            # разрешения плагинов работающая оболочка считает правкой в обход и возвращает — кладём рядом,
+            # Permissions.qml подхватит их при запуске (после восстановления оболочка перезапускается)
+            if top == "glide-shell" and rest == "permissions.json":
+                target = SHELL / "permissions.json.import"
             target.parent.mkdir(parents=True, exist_ok=True)
             data = t.extractfile(m).read()
             tmp = target.with_suffix(target.suffix + ".tmp")
             tmp.write_bytes(data)
-            os.chmod(tmp, 0o600 if target.name == "config.json" else 0o644)
+            os.chmod(tmp, 0o600 if target.name in ("config.json", "permissions.json.import") else 0o644)
             os.replace(tmp, target)
     return len(items)
 

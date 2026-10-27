@@ -38,7 +38,7 @@ def build():
             continue
         with it:
             for e in it:
-                if e.name.startswith("."):
+                if e.name.startswith(".") or "\t" in e.name or "\n" in e.name:   # индекс — TSV по строкам
                     continue
                 try:
                     isdir = e.is_dir(follow_symlinks=False)
@@ -63,8 +63,12 @@ def load():
         for line in INDEX.read_text(errors="replace").splitlines():
             p, _, rest = line.partition("\t")
             mt, _, kind = rest.partition("\t")
+            try:
+                mt = int(mt or 0)
+            except ValueError:   # битая строка (индекс от старой версии с «\t» в имени) — пропустить, а не упасть
+                continue
             name = p.rsplit("/", 1)[-1]
-            out.append((name.lower(), p, int(mt or 0), kind == "d"))
+            out.append((name.lower(), p, mt, kind == "d"))
     except OSError:
         pass
     return out

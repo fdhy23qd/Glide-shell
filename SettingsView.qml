@@ -995,7 +995,7 @@ ColumnLayout {
                 stdout: StdioCollector { onStreamFinished: { if (text.indexOf('"ok": true') >= 0) Quickshell.execDetached(["systemctl", "--user", "restart", "glide-shell.service"]) } }
                 stderr: StdioCollector { onStreamFinished: if (text.trim() && sv.panel) sv.panel.flash("!", text.trim().split("\n").pop(), Theme.error) }
             }
-            ActionBtn { glyph: String.fromCodePoint(0xF0193); text: Tr.t("Сохранить настройки в файл"); onClicked: { bkSave.running = false; bkSave.running = true } }
+            ActionBtn { glyph: String.fromCodePoint(0xF0193); text: Tr.t("Сохранить настройки в файл"); onClicked: if (!bkSave.running) bkSave.running = true }
         }
         Flow {
             visible: bkRow.found.length > 0
@@ -1009,7 +1009,7 @@ ColumnLayout {
                     text: bkRow.pending === modelData.path ? Tr.t("Ещё раз — восстановить") : modelData.name.replace("glide-shell-settings-", "").replace(".tar.gz", "")
                     onClicked: {
                         if (bkRow.pending !== modelData.path) { bkRow.pending = modelData.path; bkPend.restart(); return }
-                        bkRow.pending = ""; bkLoad.file = modelData.path; bkLoad.running = false; bkLoad.running = true
+                        bkRow.pending = ""; if (!bkLoad.running) { bkLoad.file = modelData.path; bkLoad.running = true }
                     }
                 }
             }
@@ -2204,16 +2204,12 @@ ColumnLayout {
             }
         }
         // ввод: правка → glide-niri.py set-input (проверка niri validate, при ошибке — откат)
-        Process {
+        JobQueue {   // по очереди: перезапуск убивал прежнюю правку посреди записи
             id: wr
-            property string patch: ""
-            command: ["python3", "-I", niriPage.tool, "set-input", patch]
-            stdout: StdioCollector {
-                onStreamFinished: {
-                    var r = {}; try { r = JSON.parse(text) } catch (e) {}
-                    if (!r.ok && sv.panel) sv.panel.flash("!", Tr.t("niri не принял настройку — вернул как было"), Theme.error)
-                    niriPage.reload()
-                }
+            onFinished: (out) => {
+                var r = {}; try { r = JSON.parse(out) } catch (e) {}
+                if (!r.ok && sv.panel) sv.panel.flash("!", Tr.t("niri не принял настройку — вернул как было"), Theme.error)
+                if (!wr.jobs.length) niriPage.reload()
             }
         }
         function setInput(patch) {
@@ -2222,7 +2218,7 @@ ColumnLayout {
                 if (typeof patch[sec] === "object") Object.assign(c.input[sec], patch[sec]); else c.input[sec] = patch[sec]
             }
             cfg = c
-            wr.patch = JSON.stringify(patch); wr.running = false; wr.running = true
+            wr.add(["python3", "-I", niriPage.tool, "set-input", JSON.stringify(patch)])
         }
         // мониторы: сразу через niri msg output, затем 15 с «оставить?»; не подтвердили — вернуть
         // команды niri msg output — строго по очереди; список мониторов перечитать, когда очередь опустела
@@ -2492,16 +2488,12 @@ ColumnLayout {
         }
 
         // ---- окна, анимации, курсор, угол (glide-niri.py set-look) ----
-        Process {
+        JobQueue {
             id: lk
-            property string patch: ""
-            command: ["python3", "-I", niriPage.tool, "set-look", patch]
-            stdout: StdioCollector {
-                onStreamFinished: {
-                    var r = {}; try { r = JSON.parse(text) } catch (e) {}
-                    if (!r.ok && sv.panel) sv.panel.flash("!", Tr.t("niri не принял настройку — вернул как было"), Theme.error)
-                    niriPage.reload()
-                }
+            onFinished: (out) => {
+                var r = {}; try { r = JSON.parse(out) } catch (e) {}
+                if (!r.ok && sv.panel) sv.panel.flash("!", Tr.t("niri не принял настройку — вернул как было"), Theme.error)
+                if (!lk.jobs.length) niriPage.reload()
             }
         }
         function setLook(patch) {
@@ -2510,7 +2502,7 @@ ColumnLayout {
                 if (typeof patch[k] === "object" && patch[k] !== null) Object.assign(c.look[k], patch[k]); else c.look[k] = patch[k]
             }
             cfg = c
-            lk.patch = JSON.stringify(patch); lk.running = false; lk.running = true
+            lk.add(["python3", "-I", niriPage.tool, "set-look", JSON.stringify(patch)])
         }
         readonly property var look: cfg ? cfg.look : null
         Header { visible: !!niriPage.look; text: Tr.t("ОКНА") }
@@ -2622,8 +2614,8 @@ ColumnLayout {
             command: ["python3", "-I", Quickshell.shellDir + "/tools/glide-autostart.py", "list"]
             stdout: StdioCollector { onStreamFinished: { try { niriPage.autos = JSON.parse(text) } catch (e) { niriPage.autos = [] } } }
         }
-        Process { id: asAct; onExited: { asList.running = false; asList.running = true } }
-        function autostart(args) { asAct.command = ["python3", "-I", Quickshell.shellDir + "/tools/glide-autostart.py"].concat(args); asAct.running = false; asAct.running = true }
+        JobQueue { id: asAct; onFinished: if (!asAct.jobs.length) { asList.running = false; asList.running = true } }
+        function autostart(args) { asAct.add(["python3", "-I", Quickshell.shellDir + "/tools/glide-autostart.py"].concat(args)) }
         Repeater {
             model: niriPage.cfg ? niriPage.autos : []
             delegate: Rectangle {
@@ -2713,20 +2705,16 @@ ColumnLayout {
         // ---- редактор клавиш (glide-niri.py bind): новые и изменённые — в glide-settings.kdl ----
         property var be: null                     // {key, argv, title, old, kind}
         property string appFilter: ""
-        Process {
+        JobQueue {
             id: bw
-            property string op: ""
-            command: ["python3", "-I", niriPage.tool, "bind", op]
-            stdout: StdioCollector {
-                onStreamFinished: {
-                    var r = {}; try { r = JSON.parse(text) } catch (e) {}
-                    if (r.ok) { niriPage.be = null; if (sv.panel) sv.panel.flash(String.fromCodePoint(0xF012C), Tr.t("Клавиши сохранены"), Theme.success) }
-                    else if (sv.panel) sv.panel.flash("!", Tr.t("niri не принял — проверь сочетание и действие"), Theme.error)
-                    niriPage.reload()
-                }
+            onFinished: (out) => {
+                var r = {}; try { r = JSON.parse(out) } catch (e) {}
+                if (r.ok) { niriPage.be = null; if (sv.panel) sv.panel.flash(String.fromCodePoint(0xF012C), Tr.t("Клавиши сохранены"), Theme.success) }
+                else if (sv.panel) sv.panel.flash("!", Tr.t("niri не принял — проверь сочетание и действие"), Theme.error)
+                if (!bw.jobs.length) niriPage.reload()
             }
         }
-        function bindRun(op) { bw.op = JSON.stringify(op); bw.running = false; bw.running = true }
+        function bindRun(op) { bw.add(["python3", "-I", niriPage.tool, "bind", JSON.stringify(op)]) }
         function keyName(e) {   // событие клавиши Qt → имя niri (Mod — Super)
             var k = e.key, base = ""
             if (k >= Qt.Key_A && k <= Qt.Key_Z) base = String.fromCharCode(k)
@@ -2988,7 +2976,14 @@ ColumnLayout {
                         if (instProc.command.indexOf("install") >= 0) {
                             if (!r.ok) { inst.error = r.error; return }
                             // защита плагинов паролем: новый ставится выключенным — включить можно только с паролем
-                            if (Prefs.pluginLock && !inst.info.installed) sv.panel.togglePlugin(r.id)
+                            // выключить, а не переключить: id мог остаться в выключенных — переключение его бы включило
+                            if (Prefs.pluginLock && !inst.info.installed) Prefs.run(["disable-many", JSON.stringify([r.id])])
+                            // замена: новый код — опасные разрешения («Запуск программ», «Настройки оболочки») не переходят сами
+                            if (inst.info.installed) {
+                                var m = { api: r.api, permissions: r.permissions }, gone = []
+                                for (var p of Permissions.dangerous) if (Permissions.has(r.id, m, p)) { Permissions.revoke(r.id, m, p); gone.push(Permissions.title(p)) }
+                                if (gone.length) Qt.callLater(() => sv.panel.flash("!", Tr.t("Новая версия: снова выдай ") + gone.join(", "), Theme.warning))
+                            }
                             sv.panel.flash("✓", Tr.t("Плагин установлен: ") + r.name, Prefs.accent)
                             inst.info = null
                             findProc.running = true
@@ -3071,7 +3066,7 @@ ColumnLayout {
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: inst.info ? Tr.t("Файлов: ") + inst.info.fileCount + (inst.info.installed ? "  ·  " + Tr.t("уже установлен — прежняя версия уйдёт в копию") : "")
+                        text: inst.info ? Tr.t("Файлов: ") + inst.info.fileCount + (inst.info.installed ? "  ·  " + Tr.t("уже установлен — прежняя версия уйдёт в копию; «Запуск программ» и «Настройки оболочки» придётся выдать снова") : "")
                               + (Prefs.pluginLock && !inst.info.installed ? "  ·  " + Tr.t("встанет выключенным: включить — по паролю") : "") : ""
                         color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
                     }

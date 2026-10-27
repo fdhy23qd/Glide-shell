@@ -35,6 +35,7 @@ def local_tz():
 
 
 def save(place):
+    place["at"] = int(time.time())
     state.mkdir(parents=True, exist_ok=True)
     place_file.write_text(json.dumps(place, ensure_ascii=False))
     return place
@@ -52,7 +53,8 @@ def locate(city):
     """Место {name, lat, lon, query}; query — по чему искали ("" — по IP)."""
     try:
         cached = json.loads(place_file.read_text())
-        if cached.get("query") == city:
+        # город из настроек не меняется; место по IP — заново раз в 6 ч (переехали, первый раз определили через VPN)
+        if cached.get("query") == city and (city or time.time() - cached.get("at", 0) < 6 * 3600):
             return cached
     except (OSError, ValueError):
         pass

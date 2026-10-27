@@ -55,11 +55,15 @@ Singleton {
     property var grants: ({})
     property bool ready: false
     property string written: ""        // что записали сами: другое содержимое файла — правка в обход
+    property string replaced: ""       // содержимое до подмены из резервной копии (его загрузка может прийти позже)
     signal tampered()                  // shell.qml предупреждает вспышкой
     signal asked(string owner)         // плагин попросил разрешение — shell.qml открывает «Плагины»
 
     readonly property string path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config")
                                    + "/glide-shell/permissions.json"
+    // восстановление из резервной копии (glide-backup.py) кладёт разрешения сюда: на ходу файл вернулся бы как «правка
+    // в обход», а при запуске оболочки его принимаем — так же, как сам permissions.json, правленный до запуска
+    FileView { id: importFile; path: perms.path + ".import"; blockLoading: true; printErrors: false }
     FileView {
         id: file
         path: perms.path
@@ -76,12 +80,20 @@ Singleton {
     property var legacy: ({})
     function fromFile(raw) {
         if (!ready) {   // при старте файл принимается как есть: правили его, пока оболочка не работала — значит, человек
+            var imp = ""
+            try { imp = importFile.text() } catch (e) {}
+            if (imp.trim()) {
+                // written — до записи: событие «файл изменился» от неё самой не должно выглядеть правкой в обход
+                try { JSON.parse(imp); replaced = raw; raw = imp; written = imp; file.setText(imp) } catch (e) { console.warn("glide-shell: permissions.json.import повреждён — пропущен") }
+                Quickshell.execDetached(["rm", "-f", importFile.path])
+            }
             try { var d = JSON.parse(raw) || {}; grants = d.plugins || {}; legacy = d.legacy || {} } catch (e) { grants = {}; legacy = {} }
             written = raw
             ready = true
             return
         }
         if (raw === written) return
+        if (replaced !== "" && raw === replaced) { replaced = ""; return }   // запоздалая загрузка прежнего файла (до подмены из копии)
         console.warn("glide-shell: permissions.json изменён в обход настроек — изменение отменено")
         file.setText(written)
         tampered()

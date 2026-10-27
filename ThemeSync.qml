@@ -60,13 +60,12 @@ Scope {
     }
     Process { id: appsProc }
     // рамка фокуса niri — акцентом Glide (Prefs.niriAccent): при смене акцента перекрасить
-    Process { id: niriProc }
+    JobQueue { id: niriProc }   // по очереди: убитая посреди записи правка не откатывала конфиг niri
     function syncNiri() {
         if (!Prefs.niriAccent) return
         var c = Prefs.accent.toString()
-        niriProc.command = ["python3", "-I", Quickshell.shellDir + "/tools/glide-niri.py", "set-look",
-                            JSON.stringify({ ring: { color: c }, border: { color: c } })]
-        niriProc.running = false; niriProc.running = true
+        niriProc.add(["python3", "-I", Quickshell.shellDir + "/tools/glide-niri.py", "set-look",
+                      JSON.stringify({ ring: { color: c }, border: { color: c } })])
     }
     Timer { id: niriDebounce; interval: 600; onTriggered: ts.syncNiri() }
     Connections { target: Prefs; function onAccentChanged() { niriDebounce.restart() } function onNiriAccentChanged() { niriDebounce.restart() } }

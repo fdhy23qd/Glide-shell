@@ -347,6 +347,21 @@ class Files(Sandbox):
         idx = self.cache / "glide-shell" / "files.tsv"
         self.assertEqual(stat.S_IMODE(idx.stat().st_mode), 0o600)
 
+    def test_odd_names_do_not_break_index(self):
+        """Имя с табуляцией или переводом строки ломало TSV-индекс — поиск падал целиком (v2.3)."""
+        root = self.tmp / "home"; (root / "d").mkdir(parents=True)
+        for n in ("отчёт.txt", "с\tтабом.txt", "плохое\nимя.txt"):
+            (root / "d" / n).write_text("x")
+        env = dict(os.environ, GLIDE_FILES_ROOT=str(root), XDG_CACHE_HOME=str(self.cache))
+        run = lambda *a: subprocess.run([sys.executable, "-I", str(TOOLS / "glide-files.py"), *a], env=env,
+                                        capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=30)
+        out = run("search", "отчёт")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual([i["name"] for i in json.loads(out.stdout)], ["отчёт.txt"])
+        idx = self.cache / "glide-shell" / "files.tsv"   # индекс от прежней версии с битой строкой — тоже не падать
+        idx.write_text(idx.read_text() + "\n/x/с\tтабом.txt\t1\tf")
+        self.assertEqual(run("search", "отчёт").returncode, 0)
+
 
 class NiriSettings(Sandbox):
     """Перенос input в glide-settings.kdl: флаги выключаются, неизвестное — дословно, config.kdl — с пометкой."""
@@ -434,6 +449,32 @@ class Backup(Sandbox):
         self.assertTrue(r["ok"])
         self.assertIn("#123456", (sh / "config.json").read_text())
         self.assertTrue(list(home.glob("*-before-import.tar.gz")))
+
+    def test_permissions_restored_for_next_start(self):
+        """Разрешения из копии — в permissions.json.import: работающая оболочка вернула бы permissions.json как «правку в обход»."""
+        home = self.tmp / "home"; home.mkdir()
+        sh = self.cfg / "glide-shell"; sh.mkdir(parents=True, exist_ok=True)
+        (sh / "permissions.json").write_text('{"plugins": {"x": {"api": 2, "granted": ["exec"]}}}')
+        env = {"HOME": str(home)}
+        path = self.run_py(TOOLS / "glide-backup.py", "export", env=env).stdout.strip()
+        (sh / "permissions.json").write_text('{"plugins": {}}')
+        self.assertTrue(json.loads(self.run_py(TOOLS / "glide-backup.py", "import", path, env=env).stdout)["ok"])
+        self.assertEqual((sh / "permissions.json").read_text(), '{"plugins": {}}')   # сам файл не тронут
+        imp = sh / "permissions.json.import"
+        self.assertIn('"exec"', imp.read_text())
+        self.assertEqual(stat.S_IMODE(imp.stat().st_mode), 0o600)
+        import tarfile   # и в следующую копию недоеденный .import не попадает
+        again = self.run_py(TOOLS / "glide-backup.py", "export", str(self.tmp / "b2"), env=env).stdout.strip()
+        self.assertNotIn("glide-shell/permissions.json.import", tarfile.open(again).getnames())
+
+    def test_powertimer_rejects_zero(self):
+        """«set 0» выключил бы компьютер сразу — отказ до любых действий."""
+        self.shim("systemctl", "#!/bin/sh\necho CALLED >> \"$0.log\"\n")
+        self.shim("systemd-run", "#!/bin/sh\necho CALLED >> \"$0.log\"\n")
+        r = subprocess.run(["sh", str(TOOLS / "glide-powertimer.sh"), "set", "0", "poweroff"], env=self.env,
+                           capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=10)
+        self.assertEqual(r.returncode, 2)
+        self.assertFalse((self.bin / "systemd-run.log").exists() or (self.bin / "systemctl.log").exists())
 
 
 class Autostart(Sandbox):
@@ -606,6 +647,14 @@ class Preview(Sandbox):
             self.assertEqual(r["kind"], "video")
             self.assertTrue(Path(r["image"]).exists())
             self.assertTrue(str(self.cache) in r["image"])
+
+    def test_huge_single_line(self):
+        """Файл из одной огромной строки не читается целиком — только начало."""
+        f = self.tmp / "big.json"
+        f.write_text("[" + "1," * 30_000_000 + "1]")   # ~60 МБ без переводов строк
+        r = self.look(f)
+        self.assertEqual(r["kind"], "text")
+        self.assertLessEqual(len(r["text"]), 4000)
 
 
 class ArchUpdates(Sandbox):

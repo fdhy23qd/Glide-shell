@@ -21,10 +21,28 @@ TEXT = {"txt", "md", "py", "js", "ts", "qml", "json", "c", "cpp", "h", "hpp", "r
         "toml", "yaml", "yml", "ini", "conf", "cfg", "kdl", "css", "html", "xml", "csv", "log", "sql", "lua", "rb"}
 
 
+KEEP = 200   # миниатюр в кэше — старые (по времени создания) удаляются
+
+
 def cached(path, st, ext):
     key = hashlib.sha1(f"{path}:{st.st_mtime_ns}:{st.st_size}".encode()).hexdigest()
     CACHE.mkdir(parents=True, exist_ok=True)
-    return CACHE / f"{key}.{ext}"
+    out = CACHE / f"{key}.{ext}"
+    if not out.exists():
+        prune()
+    return out
+
+
+def prune():
+    try:
+        files = sorted(CACHE.iterdir(), key=lambda f: f.stat().st_mtime)
+    except OSError:
+        return
+    for f in files[:max(0, len(files) - KEEP + 1)]:
+        try:
+            f.unlink()
+        except OSError:
+            pass
 
 
 def run(cmd, timeout=8):
@@ -86,8 +104,8 @@ def preview(path):
         out["kind"] = "text"
         try:
             with open(p, encoding="utf-8", errors="replace") as f:
-                lines = [next(f, None) for _ in range(40)]
-            out["text"] = "".join(l for l in lines if l is not None)[:4000]
+                head = f.read(4000)   # не построчно: файл из одной огромной строки (минифицированный JSON, лог) читался целиком
+            out["text"] = "".join(head.splitlines(keepends=True)[:40])
         except OSError:
             pass
     return out

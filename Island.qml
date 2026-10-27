@@ -203,6 +203,7 @@ PanelWindow {
     function playerVolume(dy) {
         var pl = iw.player
         if (!pl) return
+        if (volAcc !== 0 && (volAcc > 0) !== (dy > 0)) volAcc = 0   // сменили направление
         volAcc += dy
         if (Math.abs(volAcc) < 60) return                           // тачпад шлёт мелкие шаги — копим до «щелчка»
         var step = volAcc > 0 ? 0.05 : -0.05; volAcc = 0

@@ -27,7 +27,9 @@ if cmd == "set":
     *parents, last = args[0].split(".")
     node = cfg
     for k in parents:
-        node = node.setdefault(k, {})
+        if not isinstance(node.get(k), dict):   # на месте раздела не словарь — заменить, а не упасть
+            node[k] = {}
+        node = node[k]
     node[last] = json.loads(args[1])
 elif cmd == "toggle-disabled":
     dis = cfg.setdefault("disabled", [])
