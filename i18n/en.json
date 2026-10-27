@@ -1244,5 +1244,12 @@
  "отключаю…": "unmounting…",
  "подключаю…": "mounting…",
  "Флешки, карты памяти и свои образы: подключить, открыть, отключить, безопасно извлечь (udisks2)": "USB sticks, memory cards and your own images: mount, open, unmount, safely eject (udisks2)",
- "ТБ": "TB"
+ "ТБ": "TB",
+ "ПРОВЕРКА": "CHECK-UP",
+ "Проверить установку": "Check the installation",
+ "Всё в порядке: ": "All good: ",
+ " проверок": " checks",
+ "Сломано: ": "Broken: ",
+ ", посмотреть: ": ", worth a look: ",
+ "Зависимости, служба, лишние оболочки рядом, осиротевшие помощники, конфиг niri, права личных файлов, ошибки в журнале. Ничего не меняет — только подсказывает. В терминале: glide-shell doctor": "Dependencies, the service, other shells running alongside, orphaned helpers, the niri config, permissions of private files, errors in the log. Changes nothing — only suggests. In a terminal: glide-shell doctor"
 }

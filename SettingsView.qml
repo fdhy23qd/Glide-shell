@@ -1021,6 +1021,60 @@ ColumnLayout {
             text: Tr.t("Восстановить — щелчок по копии и ещё раз; текущие настройки перед этим сохраняются рядом (…-before-import), оболочка перезапустится")
             color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
         }
+        // ---- проверка установки (tools/glide-doctor.py --json; то же — glide-shell doctor в терминале) ----
+        Header { text: Tr.t("ПРОВЕРКА") }
+        ColumnLayout {
+            id: doc
+            Layout.fillWidth: true
+            spacing: 6
+            property var items: []
+            property bool ran: false
+            readonly property var shown: items.filter(x => x.status === "fail" || x.status === "warn")
+            Process {
+                id: docProc
+                command: ["python3", "-I", Quickshell.shellDir + "/tools/glide-doctor.py", "--json"]
+                stdout: StdioCollector { onStreamFinished: { try { doc.items = JSON.parse(text) } catch (e) { doc.items = [] } doc.ran = true } }
+            }
+            RowLayout {
+                spacing: 8
+                ActionBtn { glyph: String.fromCodePoint(0xF0E1E); text: docProc.running ? Tr.t("Проверяю…") : Tr.t("Проверить установку")
+                            enabled: !docProc.running; onClicked: docProc.running = true }
+                Text {
+                    visible: doc.ran
+                    text: doc.shown.length === 0 ? Tr.t("Всё в порядке: ") + doc.items.filter(x => x.status === "ok").length + Tr.t(" проверок")
+                          : Tr.t("Сломано: ") + doc.items.filter(x => x.status === "fail").length + Tr.t(", посмотреть: ") + doc.items.filter(x => x.status === "warn").length
+                    color: doc.shown.length ? Theme.warning : Theme.success; font.pixelSize: Theme.fs(12)
+                }
+            }
+            Repeater {
+                model: doc.shown
+                delegate: Rectangle {
+                    id: dr
+                    required property var modelData
+                    Layout.fillWidth: true
+                    implicitHeight: dcol.implicitHeight + 16
+                    radius: Theme.r(12)
+                    color: Theme.surface
+                    border.color: modelData.status === "fail" ? Theme.error : Theme.warning
+                    ColumnLayout {
+                        id: dcol
+                        x: 12; y: 8; width: parent.width - 24
+                        spacing: 3
+                        Text { Layout.fillWidth: true; text: (dr.modelData.status === "fail" ? "✗  " : "!  ") + dr.modelData.title
+                               color: Theme.text; font.pixelSize: Theme.fs(12); font.bold: true; wrapMode: Text.WordWrap; textFormat: Text.PlainText }
+                        Text { Layout.fillWidth: true; visible: text !== ""; text: dr.modelData.detail
+                               color: Theme.textSecondary; font.pixelSize: Theme.fs(11); wrapMode: Text.WrapAnywhere; textFormat: Text.PlainText }
+                        Text { Layout.fillWidth: true; visible: text !== ""; text: dr.modelData.fix ? "→ " + dr.modelData.fix : ""
+                               color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WrapAnywhere; textFormat: Text.PlainText }
+                    }
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                text: Tr.t("Зависимости, служба, лишние оболочки рядом, осиротевшие помощники, конфиг niri, права личных файлов, ошибки в журнале. Ничего не меняет — только подсказывает. В терминале: glide-shell doctor")
+                color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
+            }
+        }
         ToggleRow {
             icon: String.fromCodePoint(0xF0214)
             label: Tr.t("Искать файлы")

@@ -506,6 +506,66 @@ class Drives(unittest.TestCase):
         self.assertTrue(out["/b/sdc1"]["encrypted"])
         self.assertTrue(out["/b/loop0"]["image"] and not out["/b/sdb1"]["image"])
 
+class Doctor(Sandbox):
+    """glide-shell doctor: находит недостающее, открытые личные файлы, битые настройки, старую установку, перекрытия в niri."""
+
+    def doctor(self, only, path=None):
+        env = {"PATH": path if path is not None else f"{self.bin}:{os.environ['PATH']}", "HOME": str(self.tmp / "home"),
+               "GLIDE_NIRI_DIR": str(self.cfg / "niri")}
+        r = self.run_py(TOOLS / "glide-doctor.py", "--json", "--only", only, env=env)
+        return {x["id"]: x for x in json.loads(r.stdout)}, r.returncode
+
+    def test_deps_missing(self):
+        r, code = self.doctor("deps", path=str(self.bin))   # в PATH — только заглушки: ничего нужного нет
+        self.assertEqual(r["deps"]["status"], "fail")
+        self.assertIn("qs (Quickshell)", r["deps"]["detail"])
+        self.assertEqual(code, 1)
+
+    def test_files_and_config(self):
+        st = self.state / "glide-shell"; st.mkdir(parents=True)
+        (st / "clipboard.json").write_text("[]"); (st / "clipboard.json").chmod(0o644)
+        img = st / "clipboard-img"; img.mkdir(mode=0o700); (img / "a.png").write_bytes(b"x"); (img / "a.png").chmod(0o644)
+        (st / "notifications.json").write_text("[]"); (st / "notifications.json").chmod(0o600)
+        sh = self.cfg / "glide-shell"; sh.mkdir(parents=True)
+        (sh / "config.json").write_text("{битый")
+        r, code = self.doctor("files,config")
+        self.assertEqual(r["files"]["status"], "warn")
+        self.assertIn("clipboard.json (644)", r["files"]["detail"])
+        self.assertIn("clipboard-img/", r["files"]["detail"])
+        self.assertNotIn("notifications.json", r["files"]["detail"])
+        self.assertEqual((r["config"]["status"], r["config"]["detail"]), ("fail", "config.json"))
+        (sh / "config.json").write_text("{}"); (st / "clipboard.json").chmod(0o600); (img / "a.png").chmod(0o600)
+        r, code = self.doctor("files,config")
+        self.assertEqual((r["files"]["status"], r["config"]["status"], code), ("ok", "ok", 0))
+
+    def test_install_version_drift(self):
+        inst = self.cfg / "quickshell" / "glide-shell"; inst.mkdir(parents=True)
+        (inst / "shell.qml").write_text('console.log("Glide Shell v2.5 (x)")')
+        src = self.tmp / "src"; src.mkdir(); (src / "shell.qml").write_text('console.log("Glide Shell v2.6 (x)")')
+        st = self.state / "glide-shell"; st.mkdir(parents=True); (st / "source").write_text(str(src))
+        r, _ = self.doctor("install")
+        self.assertEqual(r["install"]["status"], "warn")
+        self.assertIn("установлена v2.5, в исходниках v2.6", r["install"]["detail"])
+
+    def test_niri_includes(self):
+        self.shim("niri", "#!/bin/sh\nexit 0\n")   # validate — без ошибок
+        n = self.cfg / "niri"; n.mkdir(parents=True)
+        (n / "glide-settings.kdl").write_text("input {\n}\nbinds {\n}\n")
+        (n / "glide-privacy.kdl").write_text("window-rule {\n}\n")
+        (n / "late.kdl").write_text("input {\n    touchpad { tap; }\n}\n")
+        conf = n / "config.kdl"
+        conf.write_text('binds { Mod+Shift+Escape { spawn "sh" "glide-rescue.sh"; } }\ninclude "glide-settings.kdl"\ninclude "glide-privacy.kdl"\n')
+        r, _ = self.doctor("niri")
+        self.assertEqual(r["niri"]["status"], "ok", r["niri"])   # правила окон после — не перекрытие
+        conf.write_text(conf.read_text() + 'include "late.kdl"\ninclude "нет-такого.kdl"\n')
+        r, _ = self.doctor("niri")
+        self.assertEqual(r["niri"]["status"], "fail")
+        self.assertIn("нет-такого.kdl", r["niri"]["detail"])
+        self.assertIn("late.kdl (input)", r["niri"]["detail"])
+        conf.write_text('include "glide-settings.kdl"\n')
+        r, _ = self.doctor("niri")
+        self.assertIn("аварийного отката", r["niri"]["detail"])
+
 class Autostart(Sandbox):
     """XDG-автозапуск: системное выключается своей копией с Hidden=true, своё — добавляется и удаляется."""
 

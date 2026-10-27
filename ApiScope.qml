@@ -166,7 +166,8 @@ QtObject {
                 finished = true
                 // программа не нашлась: под setpriv это код 127 и его сообщение — для плагина тоже -1, как «не запустилась»
                 var code = exitCode === 127 && /^setpriv: /m.test(jerr.text) ? -1 : exitCode
-                try { if (cb) cb(code, jout.text, jerr.text) } catch (e) { console.warn("glide-shell: api.exec: " + e) }
+                // кто упал — в журнал: без имени не понять, какой плагин (часто — ответ пришёл, а его раздел уже закрыт)
+                try { if (cb) cb(code, jout.text, jerr.text) } catch (e) { console.warn("glide-shell: " + api.owner + ": api.exec: " + e) }
                 destroy()
             }
             function cancel() { if (running) { aborted = true; signal(15) } }
@@ -182,7 +183,7 @@ QtObject {
         if (typeof opts === "function") { cb = opts; opts = {} }
         if (!need("exec", "exec")) {   // без разрешения — как «не запустилась», ответ тоже асинхронный
             var fn = cb
-            if (fn) Qt.callLater(() => { try { fn(-1, "", "glide-shell: no permission: exec") } catch (e) { console.warn("glide-shell: api.exec: " + e) } })
+            if (fn) Qt.callLater(() => { try { fn(-1, "", "glide-shell: no permission: exec") } catch (e) { console.warn("glide-shell: " + api.owner + ": api.exec: " + e) } })
             return { running: false, cancel: function () {} }
         }
         usage.exec++
@@ -374,7 +375,7 @@ QtObject {
         function finish(status, text, headers) {
             if (done) return
             done = true
-            try { if (cb) cb(status, text, headers || {}) } catch (e) { console.warn("glide-shell: api.http: " + e) }
+            try { if (cb) cb(status, text, headers || {}) } catch (e) { console.warn("glide-shell: " + api.owner + ": api.http: " + e) }
         }
         if (!need("network", "http") || !/^https?:\/\//i.test(String(url))) { Qt.callLater(() => finish(0, "", {})); return { abort: function () {} } }
         usage.http++

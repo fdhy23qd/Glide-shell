@@ -13,6 +13,7 @@
     glide-shell install-plugin АРХИВ        — карточка установки плагина в «Настройки» → «Плагины» (ставит человек)
     glide-shell version | api               — версия оболочки | версия API плагинов
     glide-shell watch                       — печатать события (тема, щелчки по активностям) строками JSON
+    glide-shell doctor [--json]             — проверить установку: зависимости, служба, niri, права файлов, журнал
 
 Служба (`--daemon`) запускается шиной сама при первом обращении (~/.local/share/dbus-1/services/org.glide.Shell.service):
 интерфейс org.glide.Shell1 на /org/glide/Shell — описание в docs/API.md. В оболочку передаёт через
@@ -234,6 +235,9 @@ def opt(args, name, default=None):
 
 
 def cli(a):
+    if a[:1] == ["doctor"]:   # без D-Bus и gi: должен работать и тогда, когда сломано всё остальное
+        tool = os.path.join(os.path.dirname(os.path.realpath(__file__)), "glide-doctor.py")
+        os.execv(sys.executable, [sys.executable, "-I", tool] + a[1:])
     from gi.repository import GLib
     if not a:
         sys.exit(__doc__)

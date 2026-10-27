@@ -173,6 +173,9 @@ a reboot. If something goes wrong, press Ctrl+Alt+F2, log in, run `sudo sh greet
   The lock screen has its own target: `qs -c glide-shell ipc call lock lock`. To see all functions:
   `qs -c glide-shell ipc show`.
 - Logs: `journalctl --user -u glide-shell`. Restart: `systemctl --user restart glide-shell`.
+- Check-up: `glide-shell doctor` (or “Behaviour” → “Check the installation”) — dependencies, the service, other shells
+  running alongside, orphaned helpers, version drift, the niri config, permissions of private files, errors in the log.
+  It changes nothing, only tells you what is wrong and how to fix it.
 
 Settings live in the panel (the ⚙ button) and are stored in `~/.config/glide-shell/config.json`. Data (clipboard,
 notification history, chat history) goes to `~/.local/state/glide-shell/`, with private files kept at mode 0600.
