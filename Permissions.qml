@@ -54,6 +54,14 @@ Singleton {
 
     // ---------- что выдано: owner → {api, granted: [...], denied: [...]} ----------
     property var grants: ({})
+    // выдано «до перезапуска»: owner → [разрешения] — только в памяти, в файл не пишется (v2.8)
+    property var session: ({})
+    function setSession(owner, list) {
+        var s = Object.assign({}, session)
+        if (list.length) s[owner] = list; else delete s[owner]
+        session = s
+        grantsChanged()   // для ApiScope и служб плагинов это то же, что смена выданного
+    }
     property bool ready: false
     property string written: ""        // что записали сами: другое содержимое файла — правка в обход
     property string replaced: ""       // содержимое до подмены из резервной копии (его загрузка может прийти позже)
@@ -119,6 +127,7 @@ Singleton {
     function has(owner, m, p) {
         if (trusted(m)) return true
         if (requested(m).indexOf(p) < 0) return false
+        if ((session[owner] || []).indexOf(p) >= 0) return true
         var e = entry(owner, m)
         // без записи — ничего, пока человек не выдаст: и у API 2, и у API 1 (иначе любой скачанный плагин с «"api": 1»
         // молча получал бы всё). Установленное до v1.1 одобрено один раз — migrateLegacy
@@ -178,9 +187,18 @@ Singleton {
     }
 
     // забрать — без пароля (безопасное направление)
-    function revoke(owner, m, p) { if (!trusted(m) && has(owner, m, p)) change(owner, m, p, false) }
+    function revoke(owner, m, p) {
+        if (trusted(m)) return
+        var s = session[owner] || []
+        if (s.indexOf(p) >= 0) setSession(owner, s.filter(x => x !== p))
+        var e = entry(owner, m)
+        if (e && (e.granted || []).indexOf(p) >= 0) change(owner, m, p, false)
+    }
     // забыть решения: плагин снова сможет спросить (API 1 — снова всё разрешено)
-    function forget(owner) { if (grants[owner]) { var g = JSON.parse(JSON.stringify(grants)); delete g[owner]; save(g) } }
+    function forget(owner) {
+        if (session[owner]) setSession(owner, [])
+        if (grants[owner]) { var g = JSON.parse(JSON.stringify(grants)); delete g[owner]; save(g) }
+    }
 
     // ---------- выдать — только через вопрос человеку ----------
     // pending: {owner, name, perm, reason, manifest} — карточка в «Плагинах»; confirm(пароль) выдаёт, deny() — отказ
@@ -209,8 +227,10 @@ Singleton {
         asked(owner)
         return false
     }
-    function confirm(password) {
+    // once — «до перезапуска»: только в памяти
+    function confirm(password, once) {
         if (!pending || pam.active) return
+        pending = Object.assign({}, pending, { once: once === true })
         if (!Prefs.pluginLock) { grantPending(); return }   // защита плагинов снята — хватает нажатия
         if (!password) return
         pam.pw = password
@@ -219,7 +239,10 @@ Singleton {
     function grantPending() {
         var p = pending
         pending = null; error = ""
-        if (p && p.perm === "*") {   // всё объявленное разом
+        if (p && p.once) {   // до перезапуска: в память, не в файл
+            var add = p.perm === "*" ? requested(p.manifest) : [p.perm]
+            setSession(p.owner, (session[p.owner] || []).filter(x => add.indexOf(x) < 0).concat(add))
+        } else if (p && p.perm === "*") {   // всё объявленное разом
             var g = JSON.parse(JSON.stringify(grants))
             g[p.owner] = { api: apiOf(p.manifest), granted: requested(p.manifest).slice(), denied: [] }
             save(g)

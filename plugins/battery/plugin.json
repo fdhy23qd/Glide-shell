@@ -1,0 +1,7 @@
+{
+  "id": "battery", "api": 1, "name": "Батарея", "icon": "󰁹", "author": "glide-shell",
+  "category": "system", "priority": 5,
+  "description": "Состояние батареи: износ (ёмкость сейчас от новой), циклы зарядки, сколько тратит сейчас, модель",
+  "keywords": ["батарея", "аккумулятор", "износ", "циклы", "здоровье", "battery", "health", "wear"],
+  "qml": "Battery.qml"
+}

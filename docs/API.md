@@ -55,6 +55,7 @@ creates a working plugin that uses all of the API below: a panel section, a bar 
   - [Messages between plugins](#messages-between-plugins)
   - [Island color](#island-color)
   - [Search](#search)
+  - [Asking, picking files, reminders, clipboard](#asking-picking-files-reminders-clipboard)
   - [Version 2 reference](#version-2-reference)
 - [3b. Permissions](#3b-permissions)
   - [How to ask](#how-to-ask)
@@ -528,6 +529,49 @@ in a loop. An error in the provider is a log warning; the rest of the search kee
 your provider (it also goes away with the plugin part). The `search` permission sees everything typed into search, so,
 like the others, a person grants it.
 
+### Asking, picking files, reminders, clipboard
+
+Since Glide Shell 2.8.
+
+**Asking the person** — the shell draws the window, not the plugin: the plugin name in the title comes from the
+registry and can't be faked. No permission needed — the person decides. Enter is yes, Esc is no; while the screen
+is locked the question waits.
+
+```qml
+api.confirm("Delete 3 notes?", { yes: "Delete", no: "Keep" }, ok => { if (ok) … })
+```
+
+One question at a time per plugin part (a second one gets `false` right away); plain text up to 500 characters.
+
+**Picking a file** — a file chooser (the FileChooser portal, zenity without it). No permission needed: the person's
+choice is the consent. `read: true` also returns the content (up to 16 MB per file, as text).
+
+```qml
+api.pickFile({ title: "Import", filters: [{ name: "Text", patterns: ["*.txt", "*.md"] }], read: true },
+             (paths, texts) => { if (paths) … })            // cancelled — null
+api.saveFile("notes.md", text, { title: "Export" }, path => { … })   // writes where the person chose
+```
+
+**Reminders** survive a shell restart (`~/.local/state/glide-shell/schedules.json`, 0600). When one is due, every
+live part of the plugin gets `scheduled(id, data, late)`; handle it in the **service**. If no part is alive (the
+service hasn't started yet), the reminder waits. `late` — more than a minute late (the shell wasn't running, sleep).
+
+```qml
+api.schedule.at("call", "2026-11-01T10:00", { who: "mom" })   // or a Date, or ms since 1970
+api.schedule.after("tea", 5 * 60000, {})                      // in 5 minutes
+api.schedule.cancel("tea"); api.schedule.list()               // [{id, at, data}]
+Connections { target: api; ignoreUnknownSignals: true; function onScheduled(id, data, late) { … } }
+```
+
+One-shot; up to 50 per plugin, `data` up to 4 KB of JSON.
+
+**Clipboard changes** — `clipboard` permission. `api.clipboard.listen(true)`, and each text change brings
+`clipboardUpdated(text)` (up to 20,000 bytes; passwords marked by a password manager don't come). The `wl-paste`
+watcher runs only while someone listens; `listen(false)` or a revoked permission stops it.
+
+**“Until restart”.** When asked for a permission, the person can choose “Until restart”: it works until the shell
+restarts and isn't written to `permissions.json`. For the plugin it is an ordinary granted permission.
+
 ### Version 2 reference
 
 | Member | Type / returns | Live | Errors and notes |
@@ -554,9 +598,13 @@ like the others, a person grants it.
 | `send(to, name, data)` | `bool`: sent | — | `data`: anything `JSON.stringify` accepts. Another plugin's id needs `messages` |
 | `island.tint(color)`, `island.clear()` | `bool` / nothing | — | Permission `island`. Color: `#rgb`, `#rrggbb`, `#aarrggbb` or a name |
 | `island.colors` | list of `{owner, color}` | yes | |
+| `confirm(text, opts, cb)` | `bool`: asked | — | Since 2.8. `cb(ok)` once; a second question from the part — `false` |
+| `pickFile(opts, cb)`, `saveFile(name, text, opts, cb)` | `bool` | — | Since 2.8. `cb(paths, texts)` / `cb(path)`; cancelled — `null` |
+| `schedule.at(id, when, data)`, `schedule.after(id, ms, data)`, `schedule.cancel(id)`, `schedule.list()` | `bool` / list | — | Since 2.8. Signal `scheduled(id, data, late)` |
+| `clipboard.listen(on)` | `bool` | — | Since 2.8, `clipboard` permission. Signal `clipboardUpdated(text)` |
 | `search.provide(fn)`, `search.stop()` | `bool` / nothing | — | Since Glide Shell 2.5, `search` permission. `fn(q, done)` — an array or `done(array)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | yes | Since Glide Shell 1.6: this part's live timers, program runs and network requests since it was created. Shown in Settings → Processes |
-| Signals `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)` | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
+| Signals `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)` | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ Contents](#contents)
 
@@ -572,7 +620,7 @@ Everything else needs a permission. **Only a person grants and changes them**; a
 |---|---|
 | `exec` | `api.run`, `api.exec`, plus `daemon` and commands in `items` and `contextActions`. **Full access**: a started program can do anything you can |
 | `network` | `api.http` |
-| `clipboard` | `api.contextText` (selection and clipboard), `api.copy` |
+| `clipboard` | `api.contextText` (selection and clipboard), `api.copy`, `api.clipboard.listen` |
 | `notifications` | `api.notifs` (other apps' notification history) and the `notification` event |
 | `windows` | `api.niri`: windows, workspaces, niri actions |
 | `phone` | `api.kdeconnect`: phones, their notifications and commands |

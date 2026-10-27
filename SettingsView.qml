@@ -85,7 +85,7 @@ ColumnLayout {
         border.width: 2
         border.color: Permissions.error ? Theme.error : risky ? Theme.warning : Prefs.accent
         onVisibleChanged: if (visible && Prefs.pluginLock) permInput.forceActiveFocus()
-        function submit() { Permissions.confirm(permInput.text); permInput.text = "" }
+        function submit(once) { Permissions.confirm(permInput.text, once === true); permInput.text = "" }
         ColumnLayout {
             id: permCol
             x: 14; y: 12; width: parent.width - 28
@@ -150,8 +150,10 @@ ColumnLayout {
                 spacing: 8
                 ActionBtn { glyph: String.fromCodePoint(0xF012C); text: Permissions.checking ? Tr.t("Проверка…") : Tr.t("Разрешить")
                             enabled: !Permissions.checking && (!Prefs.pluginLock || permInput.text !== ""); onClicked: permCard.submit() }
+                ActionBtn { glyph: String.fromCodePoint(0xF0954); text: Tr.t("До перезапуска")
+                            enabled: !Permissions.checking && (!Prefs.pluginLock || permInput.text !== ""); onClicked: permCard.submit(true) }
                 ActionBtn { glyph: String.fromCodePoint(0xF0156); text: Tr.t("Отказать"); onClicked: Permissions.deny() }
-                ActionBtn { glyph: String.fromCodePoint(0xF0954); text: Tr.t("Позже"); onClicked: Permissions.cancel() }
+                ActionBtn { glyph: String.fromCodePoint(0xF0150); text: Tr.t("Позже"); onClicked: Permissions.cancel() }
             }
         }
     }

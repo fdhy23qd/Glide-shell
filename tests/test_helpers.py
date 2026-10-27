@@ -506,6 +506,47 @@ class Drives(unittest.TestCase):
         self.assertTrue(out["/b/sdc1"]["encrypted"])
         self.assertTrue(out["/b/loop0"]["image"] and not out["/b/sdb1"]["image"])
 
+class BatteryHealth(Sandbox):
+    """Состояние батареи (plugins/battery/battery.py): износ из energy_* или charge_*, мышь — не батарея."""
+
+    def test_health(self):
+        ps = self.tmp / "ps"
+        def dev(name, **f):
+            d = ps / name; d.mkdir(parents=True)
+            for k, v in f.items():
+                (d / k).write_text(str(v) + "\n")
+        dev("BAT0", type="Battery", status="Discharging", capacity=70, cycle_count=132, energy_full=30715000,
+            energy_full_design=34560000, energy_now=21000000, power_now=7500000, voltage_now=10800000)
+        dev("BAT1", type="Battery", status="Full", capacity=100, charge_full=2000000, charge_full_design=4000000,
+            voltage_min_design=11100000, cycle_count=0)
+        dev("hidpp_battery_0", type="Battery", scope="Device", capacity=50)   # мышь
+        dev("AC0", type="Mains", online=1)
+        out = json.loads(self.run_py(ROOT / "plugins/battery/battery.py", env={"GLIDE_POWER_SUPPLY": str(ps)}).stdout)
+        self.assertEqual([b["name"] for b in out], ["BAT0", "BAT1"])
+        b0, b1 = out
+        self.assertEqual((b0["health"], b0["full_wh"], b0["design_wh"], b0["cycles"], b0["watts"]), (88.9, 30.7, 34.6, 132, 7.5))
+        self.assertEqual((b1["health"], b1["full_wh"], b1["cycles"]), (50.0, 22.2, None))   # charge × напряжение; 0 циклов — нет данных
+
+class RecentFiles(Sandbox):
+    """Недавние (plugins/recent/recent.py): только существующие локальные файлы, новые сверху, без повторов."""
+
+    def test_parse(self):
+        a, b = self.tmp / "отчёт 1.pdf", self.tmp / "b.txt"
+        a.write_text("x"); b.write_text("y")
+        x = self.tmp / "r.xbel"
+        x.write_text(f"""<?xml version="1.0"?><xbel xmlns:mime="http://www.freedesktop.org/standards/shared-mime-info">
+<bookmark href="file://{str(a).replace(' ', '%20')}" modified="2026-10-01T10:00:00Z" visited="2026-10-02T10:00:00Z">
+ <info><metadata><mime:mime-type type="application/pdf"/></metadata></info></bookmark>
+<bookmark href="file://{b}" modified="2026-10-05T10:00:00Z" visited="2026-10-01T10:00:00Z"/>
+<bookmark href="file://{b}" modified="2026-09-01T10:00:00Z"/>
+<bookmark href="file:///нет/такого.txt" modified="2026-10-09T10:00:00Z"/>
+<bookmark href="https://example.com/x" modified="2026-10-09T10:00:00Z"/>
+</xbel>""")
+        out = json.loads(self.run_py(ROOT / "plugins/recent/recent.py", str(x)).stdout)
+        self.assertEqual([f["name"] for f in out], ["b.txt", "отчёт 1.pdf"])
+        self.assertEqual(out[1]["mime"], "application/pdf")
+        self.assertEqual(json.loads(self.run_py(ROOT / "plugins/recent/recent.py", str(self.tmp / "нет.xbel")).stdout), [])
+
 class Doctor(Sandbox):
     """glide-shell doctor: находит недостающее, открытые личные файлы, битые настройки, старую установку, перекрытия в niri."""
 

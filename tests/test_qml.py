@@ -159,5 +159,44 @@ else:
         self.assertIn("mount D", lines, "кнопка «Подключить» в уведомлении — подключить")
         self.assertIn("eject A", lines)
 
+    def test_extras(self):
+        """v2.8: «до перезапуска», api.confirm, api.schedule, api.pickFile/saveFile, api.clipboard.listen."""
+        self.permissions({"c": {"api": 2, "granted": ["clipboard"], "denied": []}})
+        log = self.tmp / "extras.log"
+        pick = self.tmp / "fake-pick.py"
+        pick.write_text(f"""import json, sys
+a = sys.argv[1:]
+open({str(log)!r}, "a").write(" ".join(a) + "\\n")
+if a[0] == "open":
+    print(json.dumps({{"ok": True, "paths": ["/tmp/выбран.txt"], "texts": ["содержимое"]}}))
+else:
+    open({str(log)!r}, "a").write("TEXT:" + sys.stdin.read() + "\\n")
+    print(json.dumps({{"ok": True, "paths": ["/tmp/куда.txt"]}}))
+""")
+        wl = self.bin / "fake-wl-paste"   # --watch: две смены текста и одна с пометкой пароля
+        wl.write_text("#!/bin/sh\n"
+                      "if [ \"$1\" = -l ]; then [ -f \"$0.pw\" ] && echo x-kde-passwordManagerHint; exit 0; fi\n"
+                      "shift 3; for t in 'привет\nмир' 'пароль' 'второй'; do\n"
+                      "  if [ \"$t\" = пароль ]; then touch \"$0.pw\"; else rm -f \"$0.pw\"; fi\n"
+                      "  printf \"$t\" | \"$@\"; done; exec sleep 600\n")
+        wl.chmod(0o755)
+        self.env_extra = {"GLIDE_PICK_TOOL": str(pick), "GLIDE_WLPASTE": str(wl)}
+        self.scenario("extras")
+        self.assertIn("TEXT:текст для сохранения", log.read_text())
+        f = self.state / "glide-shell" / "schedules.json"
+        self.assertEqual(stat.S_IMODE(f.stat().st_mode), 0o600)
+        self.assertEqual(json.loads(f.read_text()), [], "сработавшие — удалены из файла")
+
+    def test_recent(self):
+        """«Недавние»: служба плагина читает историю и отвечает в поиске."""
+        files = self.tmp / "files"; files.mkdir()
+        (files / "отчёт.pdf").write_text("x"); (files / "b.txt").write_text("y")
+        x = self.tmp / "r.xbel"
+        x.write_text('<?xml version="1.0"?><xbel>'
+                     f'<bookmark href="file://{files}/%D0%BE%D1%82%D1%87%D1%91%D1%82.pdf" modified="2026-10-01T10:00:00Z"/>'
+                     f'<bookmark href="file://{files}/b.txt" modified="2026-10-02T10:00:00Z"/></xbel>')
+        self.env_extra = {"GLIDE_RECENT_XBEL": str(x)}
+        self.scenario("recent")
+
 if __name__ == "__main__":
     unittest.main()

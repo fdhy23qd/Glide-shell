@@ -1,0 +1,8 @@
+{
+  "id": "recent", "api": 1, "name": "Недавние файлы", "icon": "󰋚", "author": "glide-shell",
+  "category": "apps", "priority": 60,
+  "description": "Последние открытые файлы (из recently-used.xbel — его ведут приложения GTK и Qt); в общем поиске — выше остальных файлов",
+  "keywords": ["недавние", "последние", "файлы", "recent", "files"],
+  "qml": "Recent.qml",
+  "service": "Service.qml"
+}

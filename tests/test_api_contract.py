@@ -37,6 +37,7 @@ API_V2 = API_V1 | {
     "lang", "tr", "log", "warn", "setTimeout", "setInterval", "clearTimer",
     "dataDir", "files", "http", "send", "message",
     "search", "searchActivated",   # 2.5: провайдеры поиска (разрешение search)
+    "confirm", "pickFile", "saveFile", "schedule", "scheduled", "clipboard", "clipboardUpdated",   # 2.8
 }
 PERMISSIONS_OBJ_V2 = {"requested", "granted", "has", "request", "state"}
 FILES_V2 = {"read", "write", "list", "remove"}

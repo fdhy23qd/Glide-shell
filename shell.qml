@@ -720,7 +720,9 @@ ShellRoot {
         }
         out = out.concat(providers.rest).slice(0, 20)   // остальное от плагинов — после команд
         // файлы (ответ помощника на этот же запрос) и «искать в интернете» последним
-        if (fileHits.q === q) for (var f of fileHits.items) out.push({ kind: "file", label: f.name, sub: f.dir, path: f.path, isdir: f.isdir })
+        // файлы — без тех, что уже показал плагин (недавние: id результата — путь)
+        if (fileHits.q === q) for (var f of fileHits.items) if (!out.some(r => r.kind === "plugin" && r.id === f.path))
+            out.push({ kind: "file", label: f.name, sub: f.dir, path: f.path, isdir: f.isdir })
         if (Prefs.webSearch !== "off" && q.trim().length >= 2)
             out.push({ kind: "web", label: Tr.t("Искать в интернете: ") + q.trim(), sub: webNames[Prefs.webSearch], q: q.trim() })
         return out
@@ -1069,7 +1071,10 @@ ShellRoot {
 
     Component.onCompleted: {
         Core.root = root   // для ApiScope (вместо прежнего api.shell)
-        console.log("Glide Shell v2.7 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        Core.confirms = confirms
+        Core.schedules = schedules
+        Core.clipwatch = clipwatch
+        console.log("Glide Shell v2.8 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -1190,6 +1195,11 @@ ShellRoot {
             return JSON.stringify({ recording: Recorder.recording, wfRecorder: Recorder.hasRecorder, slurp: Recorder.hasSlurp,
                                     selecting: Recorder.selecting, error: Recorder.error })
         }
+        function confirm(answer: string): string {   // вопрос плагина (api.confirm): yes | no — ответить, "" — какой сейчас
+            if (answer === "yes" || answer === "no") confirms.answer(answer === "yes")
+            var q = confirms.current
+            return q ? JSON.stringify({ name: q.name, text: q.text, queued: confirms.queue.length }) : "none"
+        }
         function awake(mode: string): string {   // on | off | toggle | "" — вернуть состояние
             if (mode === "on") root.setAwake(true)
             else if (mode === "off") root.setAwake(false)
@@ -1225,6 +1235,11 @@ ShellRoot {
         }
     }
     PolkitDialog {}   // окно пароля polkit (за флагом Prefs.polkit)
+    Confirms { id: confirms }                                                // вопросы плагинов человеку (api.confirm)
+    Schedules { id: schedules }                                              // напоминания плагинов (api.schedule)
+    ClipWatch { id: clipwatch }                                              // смена буфера для плагинов (api.clipboard)
+    Connections { target: lockScreen; function onResumed() { schedules.check() } }   // после сна — сразу
+    ConfirmDialog { confirms: confirms; locked: lockScreen.locked }
     ThemeSync {}      // палитра «чёрный + акцент» для обоев (~/.cache/glide-shell/colors.json)
     Wallpaper { id: wallpaper; locked: lockScreen.locked }
     DesktopWidgets { id: desktopWidgets; panel: root }   // часы, погода, музыка… на рабочем столе (Prefs.widgets)

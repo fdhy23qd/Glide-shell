@@ -55,6 +55,7 @@
   - [Сообщения между плагинами](#soobscheniya-mezhdu-plaginami)
   - [Цвет острова](#cvet-ostrova)
   - [Поиск](#poisk)
+  - [Вопрос, выбор файла, напоминания, буфер](#vopros-vybor-fayla-napominaniya-bufer)
   - [Справочник версии 2](#spravochnik-versii-2)
 - [3б. Разрешения](#3b-razresheniya)
   - [Как попросить](#kak-poprosit)
@@ -524,6 +525,48 @@ Connections { target: api; ignoreUnknownSignals: true
 свой провайдер (он убирается и сам вместе с частью плагина). Разрешение `search` видит всё, что набирают в поиске,
 поэтому его, как и остальные, выдаёт человек.
 
+### <a id="vopros-vybor-fayla-napominaniya-bufer"></a>Вопрос, выбор файла, напоминания, буфер
+
+С Glide Shell 2.8.
+
+**Вопрос человеку** — окно рисует оболочка, а не плагин: имя плагина в заголовке берётся из реестра, подделать
+его нельзя. Разрешений не нужно — решает человек. Enter — да, Esc — нет; пока экран заперт, вопрос ждёт.
+
+```qml
+api.confirm("Удалить 3 заметки?", { yes: "Удалить", no: "Оставить" }, ok => { if (ok) … })
+```
+
+От части плагина — один вопрос за раз (второй сразу получает `false`), текст — до 500 знаков, простой.
+
+**Выбор файла** — окно выбора (портал FileChooser, без него — zenity). Разрешений не нужно: выбор человека и есть
+согласие. `read: true` — сразу и содержимое (до 16 МБ на файл, как текст).
+
+```qml
+api.pickFile({ title: "Импорт", filters: [{ name: "Текст", patterns: ["*.txt", "*.md"] }], read: true },
+             (paths, texts) => { if (paths) … })            // отмена — null
+api.saveFile("заметки.md", text, { title: "Экспорт" }, path => { … })   // пишет туда, куда выбрал человек
+```
+
+**Напоминания** переживают перезапуск оболочки (файл `~/.local/state/glide-shell/schedules.json`, 0600). Срок
+пришёл — сигнал `scheduled(id, data, late)` всем живым частям плагина; ловить — в **службе**. Если ни одной части нет
+(служба ещё не запустилась), напоминание ждёт. `late` — опоздало больше чем на минуту (оболочка не работала, сон).
+
+```qml
+api.schedule.at("call", "2026-11-01T10:00", { who: "мама" })   // или Date, или мс с 1970
+api.schedule.after("tea", 5 * 60000, {})                       // через 5 минут
+api.schedule.cancel("tea"); api.schedule.list()                // [{id, at, data}]
+Connections { target: api; ignoreUnknownSignals: true; function onScheduled(id, data, late) { … } }
+```
+
+Одноразовые; у плагина — до 50, `data` — до 4 КБ JSON.
+
+**Смена буфера** — разрешение `clipboard`. `api.clipboard.listen(true)` — и на каждую смену текста приходит
+`clipboardUpdated(text)` (до 20 000 байт; пароли, помеченные менеджером паролей, не приходят). Слушатель `wl-paste`
+работает, только пока кто-то слушает; `listen(false)` или забранное разрешение — перестать.
+
+**«До перезапуска».** В вопросе о разрешении человек может выбрать «До перезапуска»: разрешение действует до
+перезапуска оболочки и в `permissions.json` не пишется. Для плагина это обычное выданное разрешение.
+
 ### <a id="spravochnik-versii-2"></a>Справочник версии 2
 
 | Член | Тип / что возвращает | Обновляется | Ошибки и замечания |
@@ -550,9 +593,13 @@ Connections { target: api; ignoreUnknownSignals: true
 | `send(to, name, data)` | `bool`: ушло | — | `data` — то, что принимает `JSON.stringify`. Чужому id — разрешение `messages` |
 | `island.tint(color)`, `island.clear()` | `bool` / ничего | — | Разрешение `island`. Цвет — `#rgb`, `#rrggbb`, `#aarrggbb` или имя |
 | `island.colors` | список `{owner, color}` | да | |
+| `confirm(text, opts, cb)` | `bool`: спросили | — | С 2.8. `cb(ok)` один раз; второй вопрос от части — `false` |
+| `pickFile(opts, cb)`, `saveFile(name, text, opts, cb)` | `bool` | — | С 2.8. `cb(paths, texts)` / `cb(path)`; отмена — `null` |
+| `schedule.at(id, when, data)`, `schedule.after(id, ms, data)`, `schedule.cancel(id)`, `schedule.list()` | `bool` / список | — | С 2.8. Сигнал `scheduled(id, data, late)` |
+| `clipboard.listen(on)` | `bool` | — | С 2.8, разрешение `clipboard`. Сигнал `clipboardUpdated(text)` |
 | `search.provide(fn)`, `search.stop()` | `bool` / ничего | — | С Glide Shell 2.5, разрешение `search`. `fn(q, done)` — массив или `done(массив)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | да | С Glide Shell 1.6: живые таймеры этой части, запуски программ и запросы в сеть с её создания. Их показывает «Настройки» → «Процессы» |
-| Сигналы `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)` | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
+| Сигналы `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)` | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ К оглавлению](#oglavlenie)
 
@@ -568,7 +615,7 @@ Connections { target: api; ignoreUnknownSignals: true
 |---|---|
 | `exec` | `api.run`, `api.exec`, а ещё `daemon` и команды в `items` и `contextActions`. **Полный доступ**: запущенная программа может всё, что можешь ты |
 | `network` | `api.http` |
-| `clipboard` | `api.contextText` (выделение и буфер), `api.copy` |
+| `clipboard` | `api.contextText` (выделение и буфер), `api.copy`, `api.clipboard.listen` |
 | `notifications` | `api.notifs` (история чужих уведомлений) и событие `notification` |
 | `windows` | `api.niri`: окна, рабочие столы, действия niri |
 | `phone` | `api.kdeconnect`: телефоны, их уведомления и команды |

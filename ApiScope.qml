@@ -45,7 +45,11 @@ QtObject {
     signal permissionsUpdated()          // человек выдал или забрал разрешение
     property Connections permsConn: Connections {
         target: Permissions
-        function onGrantsChanged() { if (api.tinted && !api.can("island")) api.island.clear(); api.permissionsUpdated() }
+        function onGrantsChanged() {
+            if (api.tinted && !api.can("island")) api.island.clear()
+            if (!api.can("clipboard") && Core.clipwatch) Core.clipwatch.listen(api, false)   // забрали — не слушать
+            api.permissionsUpdated()
+        }
     }
 
     // ---------- прежнее (плагины) ----------
@@ -212,6 +216,75 @@ QtObject {
         function start(id, props) { return api.me ? Activities.start(api.me + "/" + id, Object.assign({}, props || {}, { owner: api.me })) : "" }
         function update(id, props) { return api.me ? Activities.update(api.me + "/" + id, Object.assign({}, props || {}, { owner: api.me })) : "" }
         function end(id) { if (api.me) Activities.end(api.me + "/" + id) }
+    }
+
+    // ---------- вопрос человеку: confirm(текст, {yes, no}, cb(bool)) — окно рисует оболочка, имя плагина — из реестра ----------
+    // Разрешений не нужно (решает человек). Один вопрос за раз от этой части плагина; лишний — сразу false.
+    function confirm(text, opts, cb) {
+        if (typeof opts === "function") { cb = opts; opts = {} }
+        if (!me || !Core.confirms) { if (cb) Qt.callLater(() => cb(false)); return false }
+        return Core.confirms.ask(api, meName, text, opts, cb)
+    }
+
+    // ---------- смена буфера (разрешение «clipboard»): clipboard.listen(true) → сигнал clipboardUpdated(text) ----------
+    // Слушатель wl-paste работает, только пока хоть одна часть слушает; пароли менеджеров паролей не приходят.
+    signal clipboardUpdated(string text)
+    readonly property QtObject clipboard: QtObject {
+        function listen(on) {
+            if (!api.me || !Core.clipwatch) return false
+            if (on !== false && !api.need("clipboard", "clipboard.listen")) return false
+            Core.clipwatch.listen(api, on !== false)
+            return true
+        }
+    }
+
+    // ---------- выбор файла человеком (tools/glide-pick.py: портал FileChooser или zenity) — без разрешения «exec» ----------
+    // pickFile({title, multiple, directory, filters: [{name, patterns}], read}, cb(paths | null, texts | null));
+    // saveFile(имя, текст, {title}, cb(path | null)) — пишет туда, куда выбрал человек. Окно одно на часть плагина.
+    property bool picking: false
+    readonly property string pickTool: Quickshell.env("GLIDE_PICK_TOOL") || Quickshell.shellDir + "/tools/glide-pick.py"
+    function pickFile(opts, cb) {
+        if (typeof opts === "function") { cb = opts; opts = {} }
+        if (!me || picking) { if (cb) Qt.callLater(() => cb(null, null)); return false }
+        picking = true
+        spawn(["python3", "-I", pickTool, "open", JSON.stringify(opts || {})], { timeout: 0 }, (code, out) => {
+            api.picking = false
+            var r = {}
+            try { r = JSON.parse(out) } catch (e) {}
+            if (r.error) console.warn("glide-shell: " + api.owner + ": pickFile: " + r.error)
+            try { if (cb) cb(r.ok ? r.paths : null, r.ok && r.texts ? r.texts : null) } catch (e) { console.warn("glide-shell: " + api.owner + ": pickFile: " + e) }
+        })
+        return true
+    }
+    function saveFile(name, text, opts, cb) {
+        if (typeof opts === "function") { cb = opts; opts = {} }
+        if (!me || picking) { if (cb) Qt.callLater(() => cb(null)); return false }
+        picking = true
+        spawn(["python3", "-I", pickTool, "save", JSON.stringify(Object.assign({}, opts || {}, { name: String(name || ""), hasText: String(text === undefined ? "" : text) !== "" }))],
+              { timeout: 0, stdin: String(text === undefined ? "" : text) }, (code, out) => {
+            api.picking = false
+            var r = {}
+            try { r = JSON.parse(out) } catch (e) {}
+            if (r.error) console.warn("glide-shell: " + api.owner + ": saveFile: " + r.error)
+            try { if (cb) cb(r.ok ? r.paths[0] : null) } catch (e) { console.warn("glide-shell: " + api.owner + ": saveFile: " + e) }
+        })
+        return true
+    }
+
+    // ---------- напоминания: переживают перезапуск оболочки (Schedules.qml) ----------
+    // schedule.at(id, когда — мс/Date/ISO, data) / after(id, мс, data) → bool; cancel(id); list() → [{id, at, data}].
+    // Срок — сигнал scheduled(id, data, late) всем живым частям плагина (ловить — в службе). late — опоздало больше минуты.
+    signal scheduled(string id, var data, bool late)
+    readonly property QtObject schedule: QtObject {
+        function at(id, when, data) { return !!api.me && !!Core.schedules && Core.schedules.set(api.me, id, when, data) }
+        function after(id, ms, data) { return at(id, Date.now() + Math.max(0, Number(ms) || 0), data) }
+        function cancel(id) { return !!api.me && !!Core.schedules && Core.schedules.cancel(api.me, id) }
+        function list() { return api.me && Core.schedules ? Core.schedules.of(api.me) : [] }
+    }
+    property Connections schedConn: Connections {
+        target: Core.schedules
+        ignoreUnknownSignals: true
+        function onDue(owner, id, data, late) { if (owner === api.me) api.scheduled(id, data, late) }
     }
 
     // ---------- поиск (разрешение «search»): свои результаты в общем поиске панели ----------
@@ -419,5 +492,5 @@ QtObject {
             api.message(from, name, data)
         }
     }
-    Component.onDestruction: { island.clear(); Core.setSearch(api, me, null); Permissions.unregister(api) }
+    Component.onDestruction: { island.clear(); Core.setSearch(api, me, null); if (Core.confirms) Core.confirms.dropScope(api); if (Core.clipwatch) Core.clipwatch.listen(api, false); Permissions.unregister(api) }
 }
