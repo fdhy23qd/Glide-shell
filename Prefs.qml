@@ -154,10 +154,6 @@ Singleton {
     readonly property string recOutput: typeof data.recOutput === "string" ? data.recOutput : ""   // монитор записи; "" — где фокус
     readonly property var privacyApps: Array.isArray(data.privacyApps) ? data.privacyApps : []   // скрыты на записи (niri)
 
-    // ---- расписание пар (plugins/schedule, campus.syktsu.ru) ----
-    readonly property string scheduleGroup: typeof data.scheduleGroup === "string" ? data.scheduleGroup : ""
-    readonly property int scheduleSubgroup: [0, 1, 2].indexOf(data.scheduleSubgroup) >= 0 ? data.scheduleSubgroup : 0
-
     // ---- KDE Connect: телефон в панели и баре ----
     readonly property bool kdeconnect: data.kdeconnect !== false
 

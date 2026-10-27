@@ -219,11 +219,10 @@ print(str(p.get("notifications") is not False).lower(), str(p.get("polkit") is n
     fi
 else
     mkdir -p "$cfg/glide-shell"
-    disabled='"schedule"'   # расписание пар СыктГУ — включить в «Плагинах», если нужно
     cat > "$conf" <<EOF
 {
   "panel": { "notifications": $notifs, "polkit": $polkit, "welcome": true },
-  "disabled": [$disabled]
+  "disabled": []
 }
 EOF
     chmod 600 "$conf"

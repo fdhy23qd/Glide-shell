@@ -4,8 +4,7 @@
     python3 -m unittest discover -s tests -v        (из корня проекта)
 
 Каждый тест — в своих временных XDG_CONFIG_HOME / XDG_STATE_HOME / XDG_CACHE_HOME: настоящие данные не трогаются.
-Сеть не нужна: расписание разбирается из сохранённой страницы (tests/fixtures). Живую проверку сайта СыктГУ
-(не поменялась ли вёрстка) делает tests/check_schedule_site.py.
+Сеть не нужна.
 """
 import glob
 import importlib.util
@@ -196,7 +195,6 @@ class Discover(Sandbox):
             self.assertTrue(set(p["categories"]) & cats, p["id"])
 
 
-# ---------------------------------------------------------------- расписание СыктГУ
 class PluginArchive(Sandbox):
     """Установка плагина из архива (tools/glide-plugin.py): ничего не пишет мимо своей папки, не ставит чужое."""
     TOOL = TOOLS / "glide-plugin.py"
@@ -286,32 +284,6 @@ class Procs(unittest.TestCase):
         self.m.main_pid = lambda: (111, 0)
         self.assertFalse(self.m.kill(111)["ok"])          # саму оболочку — нет
         self.assertFalse(self.m.kill(os.getpid())["ok"])  # не из группы службы — нет
-
-
-class Schedule(unittest.TestCase):
-    mod = load_module("glide_schedule", TOOLS / "glide-schedule.py")
-
-    def test_parse_saved_page(self):
-        page = (ROOT / "tests/fixtures/schedule-group.html").read_text()
-        d = self.mod.parse(page)
-        self.assertRegex(d["from"], r"^\d\d\.\d\d\.\d{4}$")
-        self.assertRegex(d["to"], r"^\d\d\.\d\d\.\d{4}$")
-        self.assertTrue(d["curr"], "нет кнопки «след. неделя» (curr)")
-        self.assertGreaterEqual(len(d["days"]), 5)
-        lessons = [l for day in d["days"] for l in day["lessons"]]
-        self.assertGreater(len(lessons), 5)
-        for l in lessons:
-            with self.subTest(lesson=l.get("title")):
-                self.assertTrue(l["title"])
-                self.assertIn(l["subgroup"], (0, 1, 2))
-                h, m = map(int, l["start"].split(":"))
-                eh, em = map(int, l["end"].split(":"))
-                self.assertEqual((eh * 60 + em) - (h * 60 + m), 90)   # пара — 90 минут
-                self.assertTrue(1 <= l["n"] <= 8)
-
-    def test_empty_page(self):
-        d = self.mod.parse("<html>нет такой группы</html>")
-        self.assertEqual(d["days"], [])
 
 
 # ---------------------------------------------------------------- обои и виджеты
