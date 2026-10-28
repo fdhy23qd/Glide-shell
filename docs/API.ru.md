@@ -268,7 +268,7 @@ Item {
 | `api.exec(argv, opts, callback)` | Запустить и получить результат: `callback(code, stdout, stderr)` вызывается один раз. `opts`: `stdin` (текст), `timeout` в мс (по умолчанию 60000, 0 — без ограничения), `env` (дополнительные переменные; `$QP_DIR` — всегда папка плагина). Возвращает задачу с `cancel()` и `running`. `code` = -1, если программа не запустилась, отменена или вышло время. Аргументы передаются как есть, без shell: кавычки, переносы строк и `{text}` не толкуются. `opts` можно не писать: `api.exec(["date"], (code, out) => …)`. Разрешение `exec`. |
 | `api.copy(text)` | Скопировать в буфер (разрешение `clipboard`) |
 | `api.flash(icon, text, color)` | Короткое сообщение в острове. Пустой `icon` — галочка, пустой `color` — `Theme.success`. |
-| `api.notify(title, body, icon)` | Уведомление от имени плагина. Пустой `icon` — стандартный значок «информация». |
+| `api.notify(title, body, icon, opts)` | Уведомление от имени плагина. Пустой `icon` — стандартный значок «информация». С 2.11 — кнопки: `opts` = `{id, actions: [{id, label}]}` (до 3; id кнопки — латиница, цифры, `_.-`; `default` — щелчок по самому уведомлению), нажатая — сигнал `notifyAction(id, кнопка)`. Ждут ответа не дольше часа и не больше 5 уведомлений у части (шестое снимает ожидание со старого). |
 | `api.close()` | Закрыть панель |
 | `api.openCategory(id)` | Перейти в категорию панели |
 | `api.openUrl(url)` | Открыть ссылку: `http(s):` и `mailto:` — всегда, остальное (`file://`, схемы приложений) — с разрешением `exec` |
@@ -390,7 +390,7 @@ Connections {
 | `exec(argv, opts, cb)` | задача: `cancel()`, `running` (`bool`) | — | `cb(code: num, stdout: str, stderr: str)` — один раз. `code` = -1, если программа не нашлась, отменена, вышло время или нет разрешения `exec`. Исключение внутри `cb` пишется в журнал и дальше не идёт. |
 | `copy(text)` | ничего | — | Нужен `wl-copy` |
 | `flash(icon, text, color)` | ничего | — | Если остров выключен, ничего не показывается |
-| `notify(title, body, icon)` | ничего | — | Через `notify-send`; «не беспокоить» действует, как на любую программу |
+| `notify(title, body, icon, opts)` | `true` | — | Через `notify-send`; «не беспокоить» действует, как на любую программу. `opts.actions` — кнопки (с 2.11), сигнал `notifyAction(id, action)` |
 | `openCategory(id)` | ничего | — | Закрытую панель открывает на этой категории. Если панель уже открыта на ней — закрывает, как горячая клавиша. Неизвестный `id` — ничего не происходит. |
 | `openUrl(url)`, `launchApp(entry)`, `close()`, `setAwake(on)` | ничего | — | |
 | `setPref(key, value)` | ничего | — | Меняет `config.json` → `panel.<key>`. `pluginLock` так не изменить. |
@@ -611,7 +611,7 @@ Connections { target: api; ignoreUnknownSignals: true; function onScheduled(id, 
 | `clipboard.listen(on)` | `bool` | — | С 2.8, разрешение `clipboard`. Сигнал `clipboardUpdated(text)` |
 | `search.provide(fn)`, `search.stop()` | `bool` / ничего | — | С Glide Shell 2.5, разрешение `search`. `fn(q, done)` — массив или `done(массив)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | да | С Glide Shell 1.6: живые таймеры этой части, запуски программ и запросы в сеть с её создания. Их показывает «Настройки» → «Процессы» |
-| Сигналы `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(окно)` (с 2.10, `windows`) | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
+| Сигналы `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(окно)` (с 2.10, `windows`), `notifyAction(id, кнопка)` (с 2.11) | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ К оглавлению](#oglavlenie)
 

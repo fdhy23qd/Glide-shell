@@ -200,6 +200,18 @@ else:
                           "n": {"api": 2, "granted": [], "denied": ["windows"]}})
         self.scenario("windows")
 
+    def test_notify(self):
+        """api.notify с кнопками: нажатая — сигнал своей части, лишнего нет, ждущих не больше 5, заголовок после «--»."""
+        log = self.tmp / "notify.log"
+        p = self.bin / "notify-send"
+        p.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$NOTIFY_LOG"\nwhile [ "$1" != "--" ]; do shift; done\n'
+                     'case $2 in pick=*) echo "${2#pick=}";; wait) exec sleep 600;; esac\n')
+        self.env_extra = {"NOTIFY_LOG": str(log)}
+        self.scenario("notify")
+        lines = log.read_text().splitlines()
+        self.assertIn("-a a -i dialog-information -- -A bad без кнопок", lines)
+        self.assertIn("-a a -i dialog-information -A default=Открыть -- pick=default ", lines, "кривой id кнопки не отброшен")
+
     def test_lockwall(self):
         """Фон замка: файл, папка (случайная, не та же), «как обои» — картинка или кадр видео, сцена — без картинки."""
         walls = self.tmp / "walls"

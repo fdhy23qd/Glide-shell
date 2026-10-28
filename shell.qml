@@ -1075,7 +1075,7 @@ ShellRoot {
         Core.schedules = schedules
         Core.clipwatch = clipwatch
         Core.wallpaper = wallpaper
-        console.log("Glide Shell v2.10 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v2.11 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -1180,6 +1180,14 @@ ShellRoot {
             if (text === "") { root.islandHover = true; root.replying = true; return "ok" }
             var ok = Notifs.sendReply(Notifs.popup, text); root.replying = false; root.islandHover = false
             return ok ? "sent" : "fail"
+        }
+        // нажать кнопку последнего уведомления приложения — проверка кнопок без мыши (api.notify с actions, диски)
+        function notifAction(app: string, action: string): string {
+            var e = Notifs.list.find(x => x.appName === app && x.n)
+            if (!e) return "no notification"
+            if (!e.n.actions.some(a => a.identifier === action)) return "no action " + action
+            Notifs.invoke(e, action)
+            return "ok"
         }
         function notifClear(app: string): int { return Notifs.removeApp(app) }  // убрать уведомления приложения из истории   // меню значка трея; без ID — список
         // запись экрана: record [""|system|mic] — начать или остановить (для хоткея)

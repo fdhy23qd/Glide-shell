@@ -217,9 +217,28 @@ QtObject {
     }
 
     // ---------- уведомление от имени плагина ----------
-    function notify(title, body, icon) {
-        Quickshell.execDetached(["notify-send", "-a", meName || "Glide Shell", "-i", icon || "dialog-information",
-                                 String(title || ""), String(body || "")])
+    // notify(заголовок, текст, значок, {id, actions: [{id, label}]}) — до 3 кнопок (id "default" — щелчок по самому
+    // уведомлению); нажали — сигнал notifyAction(id уведомления, id кнопки). Пока кнопки ждут, жив notify-send
+    // (не дольше часа, у части — не больше 5: шестое уведомление снимает ожидание с самого старого). «--» — заголовок
+    // с «-» в начале иначе принимался за ключ notify-send.
+    signal notifyAction(string id, string action)
+    property var notifyWaiting: []
+    function notify(title, body, icon, opts) {
+        var argv = ["notify-send", "-a", meName || "Glide Shell", "-i", String(icon || "dialog-information")]
+        var text = ["--", String(title || ""), String(body || "")]
+        var acts = (opts && Array.isArray(opts.actions) ? opts.actions : [])
+            .filter(a => a && /^[A-Za-z0-9_.-]{1,40}$/.test(String(a.id)) && String(a.label || "") !== "").slice(0, 3)
+        if (!acts.length) { Quickshell.execDetached(argv.concat(text)); return true }
+        var nid = String(opts.id === undefined ? "" : opts.id).slice(0, 100)
+        if (notifyWaiting.length >= 5) { notifyWaiting[0].cancel(); notifyWaiting = notifyWaiting.slice(1) }
+        for (var a of acts) argv.push("-A", String(a.id) + "=" + String(a.label).slice(0, 40))
+        var j = spawn(argv.concat(text), { timeout: 3600000 }, (code, out) => {
+            api.notifyWaiting = api.notifyWaiting.filter(x => x !== j)
+            var got = String(out).trim().split("\n").pop()
+            if (acts.some(x => String(x.id) === got)) api.notifyAction(nid, got)
+        })
+        notifyWaiting = notifyWaiting.concat([j])
+        return true
     }
 
     // ---------- «живые активности» в острове (Activities.qml): id — свой, внутри плагина ----------

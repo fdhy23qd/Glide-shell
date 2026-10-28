@@ -24,12 +24,14 @@ ColumnLayout {
         root.api.setTimeout(() => { if (root.replies[reply]) { delete root.replies[reply]; done(false, "служба не ответила за 2 с") } }, 2000)
         root.api.send("apitest", name, data || {})
     }
+    property var notifyDone: null   // проверка кнопок уведомления ждёт нажатия
     function has(p) { return api && api.permissions.has(p) }
 
     Connections {
         target: root.api
         ignoreUnknownSignals: true
         function onNotification(e) { root.notifSeen++ }
+        function onNotifyAction(id, act) { if (id === "probe" && root.notifyDone) { root.notifyDone(true, "нажата кнопка «" + act + "»"); root.notifyDone = null } }
         function onThemeUpdated() { root.themeEvents++ }
         function onPermissionsUpdated() { root.runAll() }
         // ответы своей службы (части одного плагина пишут друг другу без разрешения)
@@ -97,6 +99,11 @@ ColumnLayout {
             root.api.flash("󰙨", "api.flash работает")
             root.api.notify("Проверка API", "api.notify работает", "")
             done(true, "вспышка в острове и уведомление") } },
+        { key: "notifyActions", perm: "", title: "api.notify с кнопками — нажми одну", run: function (done) {
+            root.notifyDone = done
+            root.api.notify("Проверка API", "Нажми кнопку — ответ придёт в плагин", "", { id: "probe",
+                            actions: [{ id: "yes", label: "Да" }, { id: "no", label: "Нет" }] })
+            root.api.setTimeout(() => { if (root.notifyDone === done) { root.notifyDone = null; done(false, "не нажали за минуту") } }, 60000) } },
         { key: "lang", perm: "", title: "api.tr / lang / log / date / today", run: function (done) {
             root.api.log("проверка журнала", { n: 1 })
             done(root.api.today === Qt.formatDate(new Date(), "yyyy-MM-dd") && (root.api.lang === "ru" || root.api.lang === "en"),

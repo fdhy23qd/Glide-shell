@@ -270,7 +270,7 @@ Every plugin and widget gets its own object. Storage, settings and notifications
 | `api.exec(argv, opts, callback)` | Run a program and get the result: `callback(code, stdout, stderr)` is called once. `opts`: `stdin` (text), `timeout` in ms (60000 by default, 0 means none), `env` (extra variables; `$QP_DIR` is always the plugin folder). Returns a job with `cancel()` and `running`. `code` is -1 when the program could not start, was cancelled or timed out. Arguments go to the program as they are, with no shell: quotes, newlines and `{text}` are not interpreted. `opts` can be omitted: `api.exec(["date"], (code, out) => …)`. Needs `exec`. |
 | `api.copy(text)` | Copy to the clipboard (`clipboard` permission) |
 | `api.flash(icon, text, color)` | A short message in the island. An empty `icon` shows ✓, an empty `color` means `Theme.success`. |
-| `api.notify(title, body, icon)` | A notification under the plugin's name. An empty `icon` means the standard information icon. |
+| `api.notify(title, body, icon, opts)` | A notification under the plugin's name. An empty `icon` means the standard information icon. Since 2.11 — buttons: `opts` = `{id, actions: [{id, label}]}` (up to 3; a button id is Latin letters, digits, `_.-`; `default` is a click on the notification itself); the pressed one comes as the `notifyAction(id, action)` signal. Buttons wait at most an hour, at most 5 notifications per part (a sixth stops the oldest one waiting). |
 | `api.close()` | Close the panel |
 | `api.openCategory(id)` | Switch the panel to a category |
 | `api.openUrl(url)` | Open a link: `http(s):` and `mailto:` always, anything else (`file://`, app schemes) needs the `exec` permission |
@@ -391,7 +391,7 @@ that reads the property updates by itself; you never need to poll it.
 | `exec(argv, opts, cb)` | a job: `cancel()`, `running` (`bool`) | — | `cb(code: num, stdout: str, stderr: str)` runs once. `code` is -1 when the program was not found, was cancelled, timed out, or the `exec` permission is missing. An exception thrown in `cb` is written to the log and goes no further. |
 | `copy(text)` | returns nothing | — | Needs `wl-copy` |
 | `flash(icon, text, color)` | returns nothing | — | Nothing is shown when the island is turned off |
-| `notify(title, body, icon)` | returns nothing | — | Through `notify-send`; respects "do not disturb" like any app |
+| `notify(title, body, icon, opts)` | `true` | — | Through `notify-send`; respects "do not disturb" like any app. `opts.actions` — buttons (since 2.11), signal `notifyAction(id, action)` |
 | `openCategory(id)` | returns nothing | — | Opens the panel on that category if it is closed. If the panel is already open on it, it closes, like the hotkey. An unknown `id` does nothing. |
 | `openUrl(url)`, `launchApp(entry)`, `close()`, `setAwake(on)` | return nothing | — | |
 | `setPref(key, value)` | returns nothing | — | Changes `config.json` → `panel.<key>`. `pluginLock` cannot be changed this way. |
@@ -617,7 +617,7 @@ restarts and isn't written to `permissions.json`. For the plugin it is an ordina
 | `clipboard.listen(on)` | `bool` | — | Since 2.8, `clipboard` permission. Signal `clipboardUpdated(text)` |
 | `search.provide(fn)`, `search.stop()` | `bool` / nothing | — | Since Glide Shell 2.5, `search` permission. `fn(q, done)` — an array or `done(array)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | yes | Since Glide Shell 1.6: this part's live timers, program runs and network requests since it was created. Shown in Settings → Processes |
-| Signals `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(window)` (since 2.10, `windows`) | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
+| Signals `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(window)` (since 2.10, `windows`), `notifyAction(id, action)` (since 2.11) | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ Contents](#contents)
 
