@@ -28,7 +28,7 @@ REQUIRED = [("qs", "Quickshell"), ("niri", "niri"), ("python3", "Python"), ("wl-
             ("wl-paste", "wl-clipboard"), ("notify-send", "libnotify"), ("pactl", "libpulse"), ("setpriv", "util-linux"),
             ("gdbus", "glib2"), ("busctl", "systemd"), ("xdg-open", "xdg-utils")]
 OPTIONAL = [("nmcli", "Wi-Fi"), ("bluetoothctl", "Bluetooth"), ("upower", "батарея"), ("powerprofilesctl", "профили питания"),
-            ("udisksctl", "флешки"), ("kdeconnect-cli", "телефон"), ("wf-recorder", "запись экрана"), ("slurp", "запись области"),
+            ("udisksctl", "флешки"), ("kdeconnect-cli", "телефон"), ("wf-recorder", "запись экрана"), ("slurp", "запись области"), ("grim", "текст с экрана"), ("tesseract", "текст с экрана"),
             ("wlsunset", "ночной свет"), ("ffmpeg", "видео-обои и кадры видео")]
 SECRET = [(STATE / "clipboard.json", 0o600), (STATE / "clipboard-pins.json", 0o600), (STATE / "notifications.json", 0o600),
           (STATE / "ai-chat.json", 0o600), (STATE / "clipboard-img", 0o700), (SHELL_CFG / "anthropic-key", 0o600)]

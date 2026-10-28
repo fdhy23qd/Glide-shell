@@ -77,7 +77,7 @@ echo "  Оболочка рабочего стола для niri: бар с ос
 # ---------------------------------------------------------------- 1. зависимости
 bold "1. Зависимости"
 need="quickshell niri python python-gobject wl-clipboard libnotify libpulse networkmanager curl ttf-jetbrains-mono-nerd inter-font util-linux glib2 xdg-utils"
-want="python-pillow ffmpeg bluez-utils upower power-profiles-daemon udisks2 wf-recorder slurp kdeconnect gst-plugin-pipewire gst-plugins-good gst-plugins-bad gst-plugin-va"
+want="python-pillow ffmpeg bluez-utils upower power-profiles-daemon udisks2 wf-recorder slurp grim tesseract tesseract-data-rus tesseract-data-eng kdeconnect gst-plugin-pipewire gst-plugins-good gst-plugins-bad gst-plugin-va"
 # команда или файл, по которым видно, что пакет есть (без pacman — например, на другом дистрибутиве)
 probe() {
     case $1 in

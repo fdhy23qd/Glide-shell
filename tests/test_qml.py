@@ -224,6 +224,18 @@ else:
         settings = (niri / "glide-settings.kdl").read_text()
         self.assertNotIn("hotkey", settings, "убранная привязка осталась:\n" + settings)
 
+    def test_ocr(self):
+        """Текст с экрана: в буфер и вспышка, отмена молча, пусто — предупреждение, нет программ — уведомление."""
+        answer = self.tmp / "ocr-answer.json"
+        tool = self.tmp / "fake-ocr.py"
+        tool.write_text("import sys, time\ntime.sleep(0.5)\nprint(open(sys.argv[0][:-11] + 'ocr-answer.json').read())\n")
+        log = self.tmp / "notify.log"
+        p = self.bin / "notify-send"
+        p.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$NOTIFY_LOG"\n')
+        self.env_extra = {"GLIDE_OCR_TOOL": str(tool), "OCR_ANSWER": str(answer), "NOTIFY_LOG": str(log)}
+        self.scenario("ocr", timeout=60)
+        self.assertIn("sudo pacman -S grim tesseract", log.read_text())
+
     def test_lockwall(self):
         """Фон замка: файл, папка (случайная, не та же), «как обои» — картинка или кадр видео, сцена — без картинки."""
         walls = self.tmp / "walls"

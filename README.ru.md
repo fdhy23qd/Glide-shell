@@ -55,7 +55,9 @@ Quickshell 0.3, Qt 6.
 
 [**Glide Apps**](https://github.com/fdhy23qd/Glide-apps) — лёгкие приложения в том же стиле, которые подхватывают тему
 оболочки на лету: Фото (с правкой), Видео (плеер и редактор), PDF, Скриншоты (разметка) и Архивы. Плагин скриншотов
-и клавиши Print открывают редактор из Glide Apps, если он установлен.
+и клавиши Print открывают редактор из Glide Apps, если он установлен. «Текст с экрана» в том же плагине
+(или `qs -c glide-shell ipc call panel ocr` на клавишу) — выделил область, и распознанный текст уже в буфере
+(нужны `grim` и `tesseract` со словарями `rus`/`eng`).
 
 ## <a id="skrinshoty"></a>Скриншоты
 
@@ -109,7 +111,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.12`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.13`
 glide-shell doctor                           # проверка: что сломано и как исправить
 ```
 **Проверка** (`glide-shell doctor` или «Поведение» → «Проверить установку»): зависимости, служба (работает,

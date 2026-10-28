@@ -31,6 +31,19 @@
         "-c",
         "p=\"$HOME/.local/bin/glide-shot\"; [ -x \"$p\" ] && exec \"$p\" --capture screen || exec niri msg action screenshot-screen"
       ]
+    },
+    {
+      "type": "button",
+      "label": "Текст с экрана",
+      "command": [
+        "qs",
+        "-c",
+        "glide-shell",
+        "ipc",
+        "call",
+        "panel",
+        "ocr"
+      ]
     }
   ],
   "category": "quick"

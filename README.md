@@ -39,7 +39,9 @@ Developed and used daily on Arch Linux with niri 26.04, Quickshell 0.3 and Qt 6.
 
 [**Glide Apps**](https://github.com/fdhy23qd/Glide-apps) are lightweight apps in the same style that follow the shell's
 theme live: Photos (with editing), Video (player and editor), PDF, Screenshots (annotation) and Archives. The
-screenshot plugin and the Print keys use Glide Apps' editor when it is installed.
+screenshot plugin and the Print keys use Glide Apps' editor when it is installed. "Text from screen" in the same
+plugin (or `qs -c glide-shell ipc call panel ocr` on a key) — select an area and the recognised text is in the
+clipboard (needs `grim` and `tesseract` with the `rus`/`eng` data).
 
 ## Screenshots
 

@@ -1302,5 +1302,11 @@
  "Поставить глобальную клавишу ": "Set the global key ",
  "? Нажатие будет передаваться плагину. Убрать — «Устройства» → «Горячие клавиши».": "? Presses will go to the plugin. Remove it in “Devices” → “Hotkeys”.",
  "Поставить": "Set",
- "Не надо": "No"
+ "Не надо": "No",
+ "Текст с экрана: нужны программы": "Text from screen: programs needed",
+ "Не хватает: ": "Missing: ",
+ "Не распознать: ": "Could not recognise: ",
+ "Текста не нашлось": "No text found",
+ "Текст скопирован: ": "Text copied: ",
+ "Текст с экрана": "Text from screen"
 }
