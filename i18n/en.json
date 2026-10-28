@@ -1308,5 +1308,13 @@
  "Не распознать: ": "Could not recognise: ",
  "Текста не нашлось": "No text found",
  "Текст скопирован: ": "Text copied: ",
- "Текст с экрана": "Text from screen"
+ "Текст с экрана": "Text from screen",
+ "К": "K",
+ "М": "M",
+ "Скорость сети": "Network speed",
+ "Загрузка": "Download",
+ "Отдача": "Upload",
+ "Интерфейсы: ": "Interfaces: ",
+ "Нет сетевых устройств": "No network devices",
+ "загрузка и отдача, щелчок — сетевые инструменты": "download and upload, click — network tools"
 }

@@ -203,7 +203,7 @@ Singleton {
     // элементы боковых островов бара: [{id, place: left | right | off}] — порядок и место каждого (Bar.qml, PartSlot)
     readonly property var barLeftDefault: ["power", "workspaces", "window"]
     readonly property var barRightDefault: ["layout", "cpu", "mem", "clipboard", "notifications", "battery", "phone", "vpn", "awake", "control", "tray"]
-    readonly property var barExtra: ["volume", "mic", "bluetooth", "night", "weather", "powerprofile", "screenshot"]   // новые — выключены
+    readonly property var barExtra: ["volume", "mic", "bluetooth", "night", "weather", "powerprofile", "screenshot", "net"]   // новые — выключены
     readonly property var barNewOn: ["updates"].concat(pluginBars)   // новые, но включённые сразу (видны, когда есть что показать)
     property var pluginBars: []   // элементы бара из плагинов («plugin:<id>», plugin.json «bar») — задаёт shell.qml
     readonly property var barItems: {

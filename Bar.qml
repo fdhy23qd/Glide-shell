@@ -136,6 +136,41 @@ PanelWindow {
         }
     }
 
+    // ---------- скорость сети: сумма по физическим интерфейсам (у них есть device — VPN и ZeroTier не считаются
+    // дважды; в подсказке — только поднятые); встроенные bash, sleep раз в 2 с — только пока капсула на баре ----------
+    property real netRx: 0               // байт/с
+    property real netTx: 0
+    property var netIfs: []
+    property var netPrev: null
+    function parseNet(line) {
+        var f = line.trim().split(/\s+/)
+        var r = +f[0], t = +f[1], now = Date.now()
+        netIfs = f.slice(2)
+        // счётчики сбросились (интерфейс пропал или переподключился) — пропустить отсчёт
+        if (netPrev && now > netPrev.at && r >= netPrev.r && t >= netPrev.t) {
+            netRx = (r - netPrev.r) * 1000 / (now - netPrev.at)
+            netTx = (t - netPrev.t) * 1000 / (now - netPrev.at)
+        }
+        netPrev = { r: r, t: t, at: now }
+    }
+    // 0К, 950К, 1,2М, 12М — коротко для капсулы; full — с единицами для подсказки
+    function netFmt(bps, full) {
+        var k = bps / 1024
+        if (k < 1000) return Math.round(k) + (full ? Tr.t(" КБ/с") : Tr.t("К"))
+        var m = k / 1024
+        return (m < 10 ? Tr.num(m, 1) : Math.round(m)) + (full ? Tr.t(" МБ/с") : Tr.t("М"))
+    }
+    Process {
+        id: netProc
+        running: bar.visible && Prefs.barShows("net")
+        onRunningChanged: if (!running) { bar.netPrev = null; bar.netRx = 0; bar.netTx = 0 }
+        command: ["setpriv", "--pdeathsig", "TERM", "bash", "-c",
+                  'while :; do r=0 t=0 n=; for d in /sys/class/net/*; do [ -e "$d/device" ] || continue; '
+                  + 'read a < "$d/statistics/rx_bytes" && read b < "$d/statistics/tx_bytes" || continue; '
+                  + 'r=$((r+a)) t=$((t+b)); read o < "$d/operstate"; [ "$o" = up ] && n="$n ${d##*/}"; done; echo "$r $t$n"; sleep 2; done']
+        stdout: SplitParser { onRead: (line) => bar.parseNet(line) }
+    }
+
     // ---------- «не беспокоить»: свои уведомления (Notifs) или, пока они выключены, DMS ----------
     property bool dmsDnd: false
     readonly property bool dnd: Notifs.active ? Notifs.quiet : dmsDnd   // любая «тишина»: вручную, ночью, при демонстрации
@@ -458,6 +493,17 @@ PanelWindow {
         }
     }
     Component {
+        id: part_net
+        Chip {   // скорость сети: ↓ загрузка ↑ отдача; щелчок — «Сетевые инструменты»
+            visible: want
+            want: Prefs.barShows("net")
+            glyph: bar.nf(0xF04E2)
+            tipKey: "net"; onHotChanged: bar.tipHover(this)
+            label: "↓" + bar.netFmt(bar.netRx) + " ↑" + bar.netFmt(bar.netTx)
+            onClicked: bar.openPlugin("network")
+        }
+    }
+    Component {
         id: part_clipboard
         Chip { visible: want; want: Prefs.barShows("clipboard"); glyph: bar.nf(0xF014C); tipKey: "clipboard"; onHotChanged: bar.tipHover(this); onClicked: bar.p.openCategory("clipboard") }
     }
@@ -720,7 +766,7 @@ PanelWindow {
             onClicked: bar.run(["sh", "-c", 'p="$HOME/.local/bin/glide-shot"; [ -x "$p" ] && exec "$p" --capture region || exec niri msg action screenshot'])
         }
     }
-    readonly property var parts: ({ power: part_power, workspaces: part_workspaces, window: part_window, layout: part_layout, cpu: part_cpu, mem: part_mem, clipboard: part_clipboard, notifications: part_notifications, battery: part_battery, phone: part_phone, vpn: part_vpn, awake: part_awake, control: part_control, tray: part_tray, volume: part_volume, mic: part_mic, bluetooth: part_bluetooth, night: part_night, weather: part_weather, powerprofile: part_powerprofile, screenshot: part_screenshot, updates: part_updates })
+    readonly property var parts: ({ power: part_power, workspaces: part_workspaces, window: part_window, layout: part_layout, cpu: part_cpu, mem: part_mem, net: part_net, clipboard: part_clipboard, notifications: part_notifications, battery: part_battery, phone: part_phone, vpn: part_vpn, awake: part_awake, control: part_control, tray: part_tray, volume: part_volume, mic: part_mic, bluetooth: part_bluetooth, night: part_night, weather: part_weather, powerprofile: part_powerprofile, screenshot: part_screenshot, updates: part_updates })
     property var winTitleItem: null        // заголовок окна (список окон вытекает из-под него)
     property var bellItem: null            // колокольчик (туда «влетают» уведомления)
     property var trayRepItem: null         // значки трея (меню по IPC)
@@ -948,7 +994,7 @@ PanelWindow {
         Loader {
             id: tipLoader
             width: parent.width
-            sourceComponent: capDrop.key.indexOf("plugin:") === 0 ? pluginTip : ({ windows: winTip, cpu: procTip, mem: procTip, battery: battTip, layout: layoutTip,
+            sourceComponent: capDrop.key.indexOf("plugin:") === 0 ? pluginTip : ({ windows: winTip, cpu: procTip, mem: procTip, net: netTip, battery: battTip, layout: layoutTip,
                                 clipboard: clipTip, notifications: notifTip, phone: phoneTip, tray: trayTip, vpn: vpnTip, updates: updatesTip })[capDrop.key] || simpleTip
         }
     }
@@ -1155,6 +1201,16 @@ PanelWindow {
                 textFormat: Text.PlainText
                 color: Theme.textMuted; font.pixelSize: Theme.fs(11); wrapMode: Text.WordWrap
             }
+        }
+    }
+    Component {
+        id: netTip
+        Column {
+            spacing: 3
+            TipTitle { text: Tr.t("Скорость сети") }
+            TipRow { name: Tr.t("Загрузка"); value: bar.netFmt(bar.netRx, true) }
+            TipRow { name: Tr.t("Отдача"); value: bar.netFmt(bar.netTx, true) }
+            TipLine { text: bar.netIfs.length ? Tr.t("Интерфейсы: ") + bar.netIfs.join(", ") : Tr.t("Нет сетевых устройств") }
         }
     }
     Component {

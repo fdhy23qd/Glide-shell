@@ -256,6 +256,7 @@ ColumnLayout {
         power: { glyph: 0xF0425, label: Tr.t("Кнопка питания") }, workspaces: { glyph: 0xF056E, label: Tr.t("Воркспейсы") },
         window: { glyph: 0xF003B, label: Tr.t("Активное окно") }, layout: { glyph: 0xF030C, label: Tr.t("Раскладка клавиатуры") },
         cpu: { glyph: 0xF0EE0, label: Tr.t("Процессор") }, mem: { glyph: 0xF035B, label: Tr.t("Память") },
+        net: { glyph: 0xF04E2, label: Tr.t("Скорость сети"), hint: Tr.t("загрузка и отдача, щелчок — сетевые инструменты") },
         clipboard: { glyph: 0xF014C, label: Tr.t("Буфер обмена") }, notifications: { glyph: 0xF009A, label: Tr.t("Уведомления") },
         battery: { glyph: 0xF0079, label: Tr.t("Батарея") }, phone: { glyph: 0xF011C, label: Tr.t("Телефон (KDE Connect)") },
         vpn: { glyph: 0xF0565, label: Tr.t("VPN (когда включён)") }, awake: { glyph: 0xF0176, label: Tr.t("Значок «не засыпать»") },
