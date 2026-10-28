@@ -313,6 +313,18 @@ onClicked: api.storage.set("clicks", clicks + 1)
 
 Без разрешения `niri`, `notifs`, `recorder` и `kdeconnect` равны `null` — проверяй: `api.niri ? api.niri.windows : {}`.
 
+**События окон** (с 2.10, разрешение `windows`): `windowOpened(окно)`, `windowChanged(окно)` — сменились заголовок
+или приложение (сдвиги и размеры — нет), `windowClosed(окно)`, `windowFocused(окно)` — `null`, если фокуса нет ни у
+одного окна. Окно — копия того, что отдаёт niri (`id`, `title`, `app_id`, `workspace_id`, `is_floating`…). Список окон
+при запуске оболочки событиями не приходит — он уже в `api.niri.windows`. Фокус приходит последним в пачке событий.
+
+```qml
+Connections {
+    target: api; ignoreUnknownSignals: true
+    function onWindowFocused(w) { cur = w ? w.app_id : "" }   // например, считать время по приложениям
+}
+```
+
 ### <a id="zhivye-aktivnosti"></a>«Живые активности»
 
 Строка в острове под часами — загрузка, сборка, отсчёт и т. п. Показывается самая свежая; при наведении — подпись,
@@ -599,7 +611,7 @@ Connections { target: api; ignoreUnknownSignals: true; function onScheduled(id, 
 | `clipboard.listen(on)` | `bool` | — | С 2.8, разрешение `clipboard`. Сигнал `clipboardUpdated(text)` |
 | `search.provide(fn)`, `search.stop()` | `bool` / ничего | — | С Glide Shell 2.5, разрешение `search`. `fn(q, done)` — массив или `done(массив)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | да | С Glide Shell 1.6: живые таймеры этой части, запуски программ и запросы в сеть с её создания. Их показывает «Настройки» → «Процессы» |
-| Сигналы `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)` | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
+| Сигналы `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(окно)` (с 2.10, `windows`) | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ К оглавлению](#oglavlenie)
 
@@ -617,7 +629,7 @@ Connections { target: api; ignoreUnknownSignals: true; function onScheduled(id, 
 | `network` | `api.http` |
 | `clipboard` | `api.contextText` (выделение и буфер), `api.copy`, `api.clipboard.listen` |
 | `notifications` | `api.notifs` (история чужих уведомлений) и событие `notification` |
-| `windows` | `api.niri`: окна, рабочие столы, действия niri |
+| `windows` | `api.niri`: окна, рабочие столы, действия niri; события окон `windowOpened`… |
 | `phone` | `api.kdeconnect`: телефоны, их уведомления и команды |
 | `system` | `api.setPref`, `api.setAwake`, `api.recorder`. **Почти полный доступ**: настройками оболочки можно многое |
 | `messages` | `api.send` другим плагинам и сообщения от них. Между частями своего плагина не нужно |

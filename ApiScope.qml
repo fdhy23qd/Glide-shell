@@ -133,6 +133,18 @@ QtObject {
             return true
         }
     }
+    // события окон (разрешение «windows»): окно — копия {id, title, app_id, workspace_id, is_focused, is_floating…}
+    signal windowOpened(var window)
+    signal windowChanged(var window)        // сменились заголовок или приложение
+    signal windowClosed(var window)
+    signal windowFocused(var window)        // null — фокуса нет ни у одного окна
+    property Connections niriConn: Connections {
+        target: Niri
+        function onWindowOpened(w) { if (api.can("windows")) api.windowOpened(w) }
+        function onWindowChanged(w) { if (api.can("windows")) api.windowChanged(w) }
+        function onWindowClosed(w) { if (api.can("windows")) api.windowClosed(w) }
+        function onWindowFocused(w) { if (api.can("windows")) api.windowFocused(w) }
+    }
     readonly property var players: Mpris.players.values                     // все плееры MPRIS
     readonly property var player: Core.root.musicPlayer || players[0] || null  // тот, что сейчас играл последним
     readonly property var battery: {                                        // {present, percent, charging}

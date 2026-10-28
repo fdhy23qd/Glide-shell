@@ -194,6 +194,12 @@ else:
         self.assertEqual({k: panel.get(k) for k in ("lockBackground", "lockDim", "lockBlur", "lockImage")},
                          {"lockBackground": "image", "lockDim": 0.25, "lockBlur": 0, "lockImage": "~/x"})
 
+    def test_windows(self):
+        """События окон плагинам: открыто, изменилось, закрыто, фокус — только с разрешением «windows»."""
+        self.permissions({"w": {"api": 2, "granted": ["windows"], "denied": []},
+                          "n": {"api": 2, "granted": [], "denied": ["windows"]}})
+        self.scenario("windows")
+
     def test_lockwall(self):
         """Фон замка: файл, папка (случайная, не та же), «как обои» — картинка или кадр видео, сцена — без картинки."""
         walls = self.tmp / "walls"

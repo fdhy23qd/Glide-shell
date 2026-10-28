@@ -23,6 +23,19 @@ Singleton {
         tiles = t
     }
     property var focusedId: null
+    // события окон для плагинов (api.windowOpened…): открыто, заголовок или приложение сменились, закрыто, фокус.
+    // Полный список при подключении (WindowsChanged) — не «открылись»: окна были и раньше.
+    signal windowOpened(var w)
+    signal windowChanged(var w)
+    signal windowClosed(var w)
+    signal windowFocused(var w)             // null — фокуса нет ни у одного окна
+    property var lastFocused: null
+    onFocusedIdChanged: Qt.callLater(niri.focusSettled)   // WindowsChanged сначала сбрасывает в null — дождаться итога
+    function focusSettled() {
+        if (focusedId === lastFocused) return
+        lastFocused = focusedId
+        windowFocused(focusedId !== null && windows[focusedId] ? Object.assign({}, windows[focusedId]) : null)
+    }
     property var layouts: []
     property int layoutIdx: 0
 
@@ -57,12 +70,16 @@ Singleton {
             tiles = t
         } else if (e.WindowOpenedOrChanged) {
             w = e.WindowOpenedOrChanged.window
+            var was = windows[w.id]
             m = Object.assign({}, windows)
             m[w.id] = w
             windows = m
             setTile(w.id, w.layout)
             if (w.is_focused) focusedId = w.id
+            if (!was) windowOpened(Object.assign({}, w))
+            else if (was.title !== w.title || was.app_id !== w.app_id) windowChanged(Object.assign({}, w))
         } else if (e.WindowClosed) {
+            if (windows[e.WindowClosed.id]) windowClosed(Object.assign({}, windows[e.WindowClosed.id]))
             m = Object.assign({}, windows)
             delete m[e.WindowClosed.id]
             windows = m

@@ -314,6 +314,19 @@ Settings → Plugins. Bindings update by themselves. `api.setSetting(key, value)
 
 Without the permission, `niri`, `notifs`, `recorder` and `kdeconnect` are `null`, so check: `api.niri ? api.niri.windows : {}`.
 
+**Window events** (since 2.10, `windows` permission): `windowOpened(window)`, `windowChanged(window)` — the title or
+the app changed (moves and resizes don't count), `windowClosed(window)`, `windowFocused(window)` — `null` when no window
+has focus. The window is a copy of what niri reports (`id`, `title`, `app_id`, `workspace_id`, `is_floating`…). Windows
+that already exist when the shell starts don't come as events — they are in `api.niri.windows`. Focus comes last in a
+batch of events.
+
+```qml
+Connections {
+    target: api; ignoreUnknownSignals: true
+    function onWindowFocused(w) { cur = w ? w.app_id : "" }   // e.g. count time per app
+}
+```
+
 ### Live activities
 
 A row in the island under the clock, for downloads, builds, countdowns and the like. The newest one is shown; hovering
@@ -604,7 +617,7 @@ restarts and isn't written to `permissions.json`. For the plugin it is an ordina
 | `clipboard.listen(on)` | `bool` | — | Since 2.8, `clipboard` permission. Signal `clipboardUpdated(text)` |
 | `search.provide(fn)`, `search.stop()` | `bool` / nothing | — | Since Glide Shell 2.5, `search` permission. `fn(q, done)` — an array or `done(array)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | yes | Since Glide Shell 1.6: this part's live timers, program runs and network requests since it was created. Shown in Settings → Processes |
-| Signals `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)` | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
+| Signals `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(window)` (since 2.10, `windows`) | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ Contents](#contents)
 
@@ -622,7 +635,7 @@ Everything else needs a permission. **Only a person grants and changes them**; a
 | `network` | `api.http` |
 | `clipboard` | `api.contextText` (selection and clipboard), `api.copy`, `api.clipboard.listen` |
 | `notifications` | `api.notifs` (other apps' notification history) and the `notification` event |
-| `windows` | `api.niri`: windows, workspaces, niri actions |
+| `windows` | `api.niri`: windows, workspaces, niri actions; window events `windowOpened`… |
 | `phone` | `api.kdeconnect`: phones, their notifications and commands |
 | `system` | `api.setPref`, `api.setAwake`, `api.recorder`. **Almost full access**: shell settings can do a lot |
 | `messages` | `api.send` to other plugins and messages from them. Not needed between your plugin's own parts |
