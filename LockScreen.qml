@@ -23,6 +23,7 @@ Scope {
     required property var panel
 
     property string mode: ""
+    onModeChanged: if (mode) LockWall.next()   // из папки — новая картинка на каждую блокировку (до заслонки)
     readonly property bool locked: mode === "lock" || mode === "test"
     readonly property bool secure: sessionLock.secure
     readonly property string user: Quickshell.env("USER") || ""

@@ -171,8 +171,11 @@ Singleton {
     readonly property bool lockClockBold: data.lockClockBold === true                  // жирные цифры вместо тонких
     // анимация после верного пароля (замок и экран входа): rise | iris | curtains | tiles | zoom | island | random
     readonly property string unlockStyle: ["rise", "iris", "curtains", "tiles", "zoom", "island", "random"].indexOf(data.unlockStyle) >= 0 ? data.unlockStyle : "rise"
-    readonly property string lockBackground: ["glow", "solid", "image"].indexOf(data.lockBackground) >= 0 ? data.lockBackground : "glow"
-    readonly property string lockImage: typeof data.lockImage === "string" ? data.lockImage.trim() : ""   // путь к картинке
+    // glow | solid | wallpaper (как обои рабочего стола) | image (lockImage: файл или папка — случайная при каждой блокировке)
+    readonly property string lockBackground: ["glow", "solid", "wallpaper", "image"].indexOf(data.lockBackground) >= 0 ? data.lockBackground : "glow"
+    readonly property string lockImage: typeof data.lockImage === "string" ? data.lockImage.trim() : ""   // путь к картинке или папке
+    readonly property real lockDim: Math.max(0, Math.min(0.8, num(data.lockDim, 0.45)))   // затемнение картинки: 0 / 0.25 / 0.45 / 0.65
+    readonly property int lockBlur: [0, 32, 64].indexOf(data.lockBlur) >= 0 ? data.lockBlur : 0   // размытие: нет / лёгкое / сильное
     readonly property string lockGreeting: typeof data.lockGreeting === "string" ? data.lockGreeting : ""
     readonly property bool lockShowUser: data.lockShowUser !== false
     readonly property bool lockShowMedia: data.lockShowMedia !== false
@@ -226,18 +229,10 @@ Singleton {
     function num(v, def) { return typeof v === "number" && isFinite(v) ? v : def }
     function ms(d) { return Math.round(d * anim) }
 
-    // Записи в config.json идут строго по очереди: иначе два быстрых клика затрут друг друга
-    property var queue: []
-    function run(args) {
-        queue = queue.concat([args])
-        if (!writer.running) next()
-    }
-    function next() {
-        if (!queue.length) { saved(); return }
-        writer.command = ["python3", Quickshell.shellDir + "/tools/qp-config.py"].concat(queue[0])
-        queue = queue.slice(1)
-        writer.running = true
-    }
+    // Записи в config.json идут строго по очереди (JobQueue: своя занятость — running становится true не сразу,
+    // и прежняя очередь здесь теряла все быстрые записи, кроме последней)
+    function run(args) { writer.add(["python3", Quickshell.shellDir + "/tools/qp-config.py"].concat(args)) }
+
     function set(key, value) {
         var d = Object.assign({}, data)   // сразу применяем локально, файл догонит
         d[key] = value
@@ -246,9 +241,9 @@ Singleton {
     }
     function reset() { data = ({}); run(["reset-panel"]) }
 
-    Process {
+    JobQueue {
         id: writer
         stderr: StdioCollector { onStreamFinished: if (text.trim()) console.warn("glide-shell:", text.trim()) }
-        onExited: prefs.next()
+        onFinished: if (!jobs.length) prefs.saved()
     }
 }

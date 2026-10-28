@@ -1074,7 +1074,8 @@ ShellRoot {
         Core.confirms = confirms
         Core.schedules = schedules
         Core.clipwatch = clipwatch
-        console.log("Glide Shell v2.8 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        Core.wallpaper = wallpaper
+        console.log("Glide Shell v2.9 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

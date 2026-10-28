@@ -9,6 +9,7 @@ Singleton {
     property var confirms: null   // вопросы плагинов человеку (Confirms.qml, окно — ConfirmDialog.qml)
     property var schedules: null  // напоминания плагинов (Schedules.qml)
     property var clipwatch: null  // смена буфера для плагинов (ClipWatch.qml)
+    property var wallpaper: null  // обои рабочего стола (Wallpaper.qml) — для фона замка «как обои»
 
     // провайдеры поиска (api.search.provide): [{scope, owner, fn}] — у части плагина один; опрашивает SearchProviders.qml
     property var searchProviders: []

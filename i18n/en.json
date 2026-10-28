@@ -1281,5 +1281,22 @@
  "Нет": "No",
  "Плагин «": "Plugin “",
  "До перезапуска": "Until restart",
- " · недавний": " · recent"
+ " · недавний": " · recent",
+ "сияние": "glow",
+ "обои": "wallpaper",
+ "Обои сейчас — HTML-сцена: картинки нет, на замке будет сияние": "The wallpaper is an HTML scene right now: there is no picture, the lock screen will use the glow",
+ "Картинка или папка": "Picture or folder",
+ "~/Изображения/фон.jpg → Enter": "~/Pictures/background.jpg → Enter",
+ "Выбрать файл…": "Choose file…",
+ "Выбрать папку…": "Choose folder…",
+ "Папка: при каждой блокировке — другая картинка из неё": "Folder: a different picture from it on every lock",
+ "Затемнение картинки": "Picture dimming",
+ "слабое": "light",
+ "среднее": "medium",
+ "сильное": "strong",
+ "Размытие картинки": "Picture blur",
+ "лёгкое": "light",
+ "Папка с картинками для экрана блокировки": "Folder with pictures for the lock screen",
+ "Картинка для экрана блокировки": "Picture for the lock screen",
+ "Картинки": "Pictures"
 }

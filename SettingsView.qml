@@ -11,6 +11,27 @@ ColumnLayout {
     property var panel
     spacing: 14
 
+    // выбор картинки или папки для фона замка (tools/glide-pick.py: портал FileChooser или zenity)
+    Process {
+        id: lockPick
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var r = {}
+                try { r = JSON.parse(text) } catch (e) {}
+                if (r.ok && r.paths && r.paths.length) Prefs.set("lockImage", r.paths[0])
+                else if (r.error) console.warn("glide-shell: выбор фона замка: " + r.error)
+            }
+        }
+    }
+    function pickLockImage(dir) {
+        if (lockPick.running) return
+        lockPick.command = ["python3", "-I", Quickshell.shellDir + "/tools/glide-pick.py", "open", JSON.stringify(dir
+            ? { title: Tr.t("Папка с картинками для экрана блокировки"), directory: true }
+            : { title: Tr.t("Картинка для экрана блокировки"),
+                filters: [{ name: Tr.t("Картинки"), patterns: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.bmp"] }] })]
+        lockPick.running = true
+    }
+
     // ---- элементы ----
     component Header: Text {
         color: Theme.textSecondary
@@ -2151,17 +2172,50 @@ ColumnLayout {
         }
         ChoiceRow {
             label: Tr.t("Фон")
-            options: [{ label: Tr.t("сияние акцента"), value: "glow" }, { label: Tr.t("сплошной"), value: "solid" },
-                      { label: Tr.t("своя картинка"), value: "image" }]
+            options: [{ label: Tr.t("сияние"), value: "glow" }, { label: Tr.t("сплошной"), value: "solid" },
+                      { label: Tr.t("обои"), value: "wallpaper" }, { label: Tr.t("картинка"), value: "image" }]
             current: Prefs.lockBackground
             onPicked: (v) => Prefs.set("lockBackground", v)
         }
+        Text {
+            visible: Prefs.lockBackground === "wallpaper" && Prefs.wallMode !== "image"
+            Layout.fillWidth: true; wrapMode: Text.Wrap
+            text: Tr.t("Обои сейчас — HTML-сцена: картинки нет, на замке будет сияние")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(12)
+        }
         TextRow {
             visible: Prefs.lockBackground === "image"
-            label: Tr.t("Картинка")
-            placeholder: "~/Изображения/фон.jpg → Enter"
+            label: Tr.t("Картинка или папка")
+            placeholder: Tr.t("~/Изображения/фон.jpg → Enter")
             value: Prefs.lockImage
             onSubmitted: (v) => Prefs.set("lockImage", v)
+        }
+        RowLayout {
+            visible: Prefs.lockBackground === "image"
+            spacing: 8
+            ActionBtn { glyph: String.fromCodePoint(0xF02E9); text: Tr.t("Выбрать файл…"); enabled: !lockPick.running; onClicked: sv.pickLockImage(false) }
+            ActionBtn { glyph: String.fromCodePoint(0xF024B); text: Tr.t("Выбрать папку…"); enabled: !lockPick.running; onClicked: sv.pickLockImage(true) }
+        }
+        Text {
+            visible: Prefs.lockBackground === "image" && Prefs.lockImage !== "" && !LockWall.isFile
+            Layout.fillWidth: true; wrapMode: Text.Wrap
+            text: Tr.t("Папка: при каждой блокировке — другая картинка из неё")
+            color: Theme.textMuted; font.pixelSize: Theme.fs(12)
+        }
+        ChoiceRow {
+            visible: Prefs.lockBackground === "image" || Prefs.lockBackground === "wallpaper"
+            label: Tr.t("Затемнение картинки")
+            options: [{ label: Tr.t("нет"), value: 0 }, { label: Tr.t("слабое"), value: 0.25 },
+                      { label: Tr.t("среднее"), value: 0.45 }, { label: Tr.t("сильное"), value: 0.65 }]
+            current: Prefs.lockDim
+            onPicked: (v) => Prefs.set("lockDim", v)
+        }
+        ChoiceRow {
+            visible: Prefs.lockBackground === "image" || Prefs.lockBackground === "wallpaper"
+            label: Tr.t("Размытие картинки")
+            options: [{ label: Tr.t("нет"), value: 0 }, { label: Tr.t("лёгкое"), value: 32 }, { label: Tr.t("сильное"), value: 64 }]
+            current: Prefs.lockBlur
+            onPicked: (v) => Prefs.set("lockBlur", v)
         }
         TextRow {
             label: Tr.t("Приветствие под датой")

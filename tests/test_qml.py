@@ -187,6 +187,22 @@ else:
         self.assertEqual(stat.S_IMODE(f.stat().st_mode), 0o600)
         self.assertEqual(json.loads(f.read_text()), [], "сработавшие — удалены из файла")
 
+    def test_prefs(self):
+        """Prefs.set подряд: в config.json доходят все записи, последняя — побеждает."""
+        self.scenario("prefs")
+        panel = json.loads((self.cfg / "glide-shell" / "config.json").read_text())["panel"]
+        self.assertEqual({k: panel.get(k) for k in ("lockBackground", "lockDim", "lockBlur", "lockImage")},
+                         {"lockBackground": "image", "lockDim": 0.25, "lockBlur": 0, "lockImage": "~/x"})
+
+    def test_lockwall(self):
+        """Фон замка: файл, папка (случайная, не та же), «как обои» — картинка или кадр видео, сцена — без картинки."""
+        walls = self.tmp / "walls"
+        walls.mkdir()
+        for n in ("one.png", "two.JPG", "three.webp", "notes.txt"):
+            (walls / n).write_bytes(b"x")
+        self.env_extra = {"GLIDE_TEST_WALLS": str(walls)}
+        self.scenario("lockwall")
+
     def test_recent(self):
         """«Недавние»: служба плагина читает историю и отвечает в поиске."""
         files = self.tmp / "files"; files.mkdir()
