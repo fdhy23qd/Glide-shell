@@ -249,6 +249,27 @@ QtObject {
         function end(id) { if (api.me) Activities.end(api.me + "/" + id) }
     }
 
+    // ---------- глобальные клавиши (Hotkeys.qml): ставит человек — по вопросу; занятую не отнять ----------
+    // hotkey.request(имя, "Mod+Shift+W", подпись, cb(ok, причина: "" | bad | busy | denied | error…)), remove(имя, cb(ok)),
+    // list() → [{name, key, title}]; нажали — сигнал hotkeyPressed(имя) всем живым частям плагина.
+    signal hotkeyPressed(string name)
+    readonly property QtObject hotkey: QtObject {
+        function request(name, key, title, cb) {
+            if (!api.me || !Core.hotkeys) { if (cb) Qt.callLater(() => cb(false, "bad")); return false }
+            return Core.hotkeys.request(api, api.me, api.meName, name, key, title, cb)
+        }
+        function remove(name, cb) {
+            if (!api.me || !Core.hotkeys) { if (cb) Qt.callLater(() => cb(false)); return false }
+            return Core.hotkeys.remove(api.me, name, cb)
+        }
+        function list() { return api.me && Core.hotkeys ? Core.hotkeys.of(api.me) : [] }
+    }
+    property Connections hotkeyConn: Connections {
+        target: Core.hotkeys
+        ignoreUnknownSignals: true
+        function onPressed(owner, name) { if (owner === api.me) api.hotkeyPressed(name) }
+    }
+
     // ---------- вопрос человеку: confirm(текст, {yes, no}, cb(bool)) — окно рисует оболочка, имя плагина — из реестра ----------
     // Разрешений не нужно (решает человек). Один вопрос за раз от этой части плагина; лишний — сразу false.
     function confirm(text, opts, cb) {

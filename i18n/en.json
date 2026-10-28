@@ -1298,5 +1298,9 @@
  "лёгкое": "light",
  "Папка с картинками для экрана блокировки": "Folder with pictures for the lock screen",
  "Картинка для экрана блокировки": "Picture for the lock screen",
- "Картинки": "Pictures"
+ "Картинки": "Pictures",
+ "Поставить глобальную клавишу ": "Set the global key ",
+ "? Нажатие будет передаваться плагину. Убрать — «Устройства» → «Горячие клавиши».": "? Presses will go to the plugin. Remove it in “Devices” → “Hotkeys”.",
+ "Поставить": "Set",
+ "Не надо": "No"
 }

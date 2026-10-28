@@ -313,6 +313,19 @@ onClicked: api.storage.set("clicks", clicks + 1)
 
 Без разрешения `niri`, `notifs`, `recorder` и `kdeconnect` равны `null` — проверяй: `api.niri ? api.niri.windows : {}`.
 
+**Глобальные клавиши** (с 2.12, без разрешения — каждую подтверждает человек). `api.hotkey.request(имя, клавиша,
+подпись, cb(ok, причина))` — клавиша в записи niri (`Mod+Shift+W`, `Ctrl+Alt+F5`; без модификатора — только `F1…F24`
+и `XF86…`), имя — латиница, цифры, `_.-`. Оболочка спрашивает человека от имени плагина; согласие — привязка niri в
+`glide-settings.kdl` (видна в «Устройства» → «Горячие клавиши», там же убирается). Причины отказа: `bad` — кривые
+имя или клавиша, `busy` — клавиша уже занята (чужую не отнять), `denied` — человек отказал, `error: …` — niri не
+принял. То же имя с другой клавишей — переставить. `api.hotkey.remove(имя, cb(ok))`, `api.hotkey.list()` →
+`[{name, key, title}]`. Нажатие — сигнал `hotkeyPressed(имя)` всем живым частям плагина (ловить — в службе).
+
+```qml
+api.hotkey.request("grab", "Mod+Shift+G", "Захватить", (ok, why) => console.log(ok, why))
+Connections { target: api; ignoreUnknownSignals: true; function onHotkeyPressed(name) { if (name === "grab") … } }
+```
+
 **События окон** (с 2.10, разрешение `windows`): `windowOpened(окно)`, `windowChanged(окно)` — сменились заголовок
 или приложение (сдвиги и размеры — нет), `windowClosed(окно)`, `windowFocused(окно)` — `null`, если фокуса нет ни у
 одного окна. Окно — копия того, что отдаёт niri (`id`, `title`, `app_id`, `workspace_id`, `is_floating`…). Список окон
@@ -609,9 +622,10 @@ Connections { target: api; ignoreUnknownSignals: true; function onScheduled(id, 
 | `pickFile(opts, cb)`, `saveFile(name, text, opts, cb)` | `bool` | — | С 2.8. `cb(paths, texts)` / `cb(path)`; отмена — `null` |
 | `schedule.at(id, when, data)`, `schedule.after(id, ms, data)`, `schedule.cancel(id)`, `schedule.list()` | `bool` / список | — | С 2.8. Сигнал `scheduled(id, data, late)` |
 | `clipboard.listen(on)` | `bool` | — | С 2.8, разрешение `clipboard`. Сигнал `clipboardUpdated(text)` |
+| `hotkey.request(name, key, title, cb)`, `hotkey.remove(name, cb)`, `hotkey.list()` | `bool` / список | — | С 2.12, каждую клавишу подтверждает человек. Сигнал `hotkeyPressed(name)` |
 | `search.provide(fn)`, `search.stop()` | `bool` / ничего | — | С Glide Shell 2.5, разрешение `search`. `fn(q, done)` — массив или `done(массив)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | да | С Glide Shell 1.6: живые таймеры этой части, запуски программ и запросы в сеть с её создания. Их показывает «Настройки» → «Процессы» |
-| Сигналы `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(окно)` (с 2.10, `windows`), `notifyAction(id, кнопка)` (с 2.11) | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
+| Сигналы `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(окно)` (с 2.10, `windows`), `notifyAction(id, кнопка)` (с 2.11), `hotkeyPressed(имя)` (с 2.12) | | | Через `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ К оглавлению](#oglavlenie)
 

@@ -1075,7 +1075,8 @@ ShellRoot {
         Core.schedules = schedules
         Core.clipwatch = clipwatch
         Core.wallpaper = wallpaper
-        console.log("Glide Shell v2.11 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        Core.hotkeys = hotkeys
+        console.log("Glide Shell v2.12 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true
@@ -1181,6 +1182,8 @@ ShellRoot {
             var ok = Notifs.sendReply(Notifs.popup, text); root.replying = false; root.islandHover = false
             return ok ? "sent" : "fail"
         }
+        // клавиша плагина (api.hotkey): её привязку niri ставит Hotkeys.qml — "плагин/имя"
+        function hotkey(id: string): string { return hotkeys.press(id) ? "ok" : "bad id" }
         // нажать кнопку последнего уведомления приложения — проверка кнопок без мыши (api.notify с actions, диски)
         function notifAction(app: string, action: string): string {
             var e = Notifs.list.find(x => x.appName === app && x.n)
@@ -1246,6 +1249,7 @@ ShellRoot {
     PolkitDialog {}   // окно пароля polkit (за флагом Prefs.polkit)
     Confirms { id: confirms }                                                // вопросы плагинов человеку (api.confirm)
     Schedules { id: schedules }                                              // напоминания плагинов (api.schedule)
+    Hotkeys { id: hotkeys }                                                  // клавиши плагинов (api.hotkey)
     ClipWatch { id: clipwatch }                                              // смена буфера для плагинов (api.clipboard)
     Connections { target: lockScreen; function onResumed() { schedules.check() } }   // после сна — сразу
     ConfirmDialog { confirms: confirms; locked: lockScreen.locked }

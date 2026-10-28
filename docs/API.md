@@ -314,6 +314,20 @@ Settings → Plugins. Bindings update by themselves. `api.setSetting(key, value)
 
 Without the permission, `niri`, `notifs`, `recorder` and `kdeconnect` are `null`, so check: `api.niri ? api.niri.windows : {}`.
 
+**Global keys** (since 2.12, no permission — the person confirms each one). `api.hotkey.request(name, key, title,
+cb(ok, reason))` — the key in niri notation (`Mod+Shift+W`, `Ctrl+Alt+F5`; without a modifier only `F1…F24` and
+`XF86…`), the name is Latin letters, digits, `_.-`. The shell asks the person on the plugin's behalf; a yes becomes
+a niri bind in `glide-settings.kdl` (shown in “Devices” → “Hotkeys”, removable there). Reasons for a no: `bad` —
+malformed name or key, `busy` — the key is already taken (someone else's key is never taken over), `denied` — the
+person said no, `error: …` — niri rejected it. The same name with another key moves it. `api.hotkey.remove(name,
+cb(ok))`, `api.hotkey.list()` → `[{name, key, title}]`. A press comes as `hotkeyPressed(name)` to every live part
+of the plugin (handle it in the service).
+
+```qml
+api.hotkey.request("grab", "Mod+Shift+G", "Grab", (ok, why) => console.log(ok, why))
+Connections { target: api; ignoreUnknownSignals: true; function onHotkeyPressed(name) { if (name === "grab") … } }
+```
+
 **Window events** (since 2.10, `windows` permission): `windowOpened(window)`, `windowChanged(window)` — the title or
 the app changed (moves and resizes don't count), `windowClosed(window)`, `windowFocused(window)` — `null` when no window
 has focus. The window is a copy of what niri reports (`id`, `title`, `app_id`, `workspace_id`, `is_floating`…). Windows
@@ -615,9 +629,10 @@ restarts and isn't written to `permissions.json`. For the plugin it is an ordina
 | `pickFile(opts, cb)`, `saveFile(name, text, opts, cb)` | `bool` | — | Since 2.8. `cb(paths, texts)` / `cb(path)`; cancelled — `null` |
 | `schedule.at(id, when, data)`, `schedule.after(id, ms, data)`, `schedule.cancel(id)`, `schedule.list()` | `bool` / list | — | Since 2.8. Signal `scheduled(id, data, late)` |
 | `clipboard.listen(on)` | `bool` | — | Since 2.8, `clipboard` permission. Signal `clipboardUpdated(text)` |
+| `hotkey.request(name, key, title, cb)`, `hotkey.remove(name, cb)`, `hotkey.list()` | `bool` / list | — | Since 2.12, the person confirms each key. Signal `hotkeyPressed(name)` |
 | `search.provide(fn)`, `search.stop()` | `bool` / nothing | — | Since Glide Shell 2.5, `search` permission. `fn(q, done)` — an array or `done(array)` |
 | `usage.timers`, `usage.exec`, `usage.http` | `num` | yes | Since Glide Shell 1.6: this part's live timers, program runs and network requests since it was created. Shown in Settings → Processes |
-| Signals `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(window)` (since 2.10, `windows`), `notifyAction(id, action)` (since 2.11) | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
+| Signals `permissionsUpdated`, `message(from, name, data)`, `searchActivated(id)`, `scheduled(id, data, late)`, `clipboardUpdated(text)`, `windowOpened/Changed/Closed/Focused(window)` (since 2.10, `windows`), `notifyAction(id, action)` (since 2.11), `hotkeyPressed(name)` (since 2.12) | | | Use `Connections { target: api; ignoreUnknownSignals: true }` |
 
 [↑ Contents](#contents)
 

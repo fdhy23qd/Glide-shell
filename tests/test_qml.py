@@ -212,6 +212,18 @@ else:
         self.assertIn("-a a -i dialog-information -- -A bad без кнопок", lines)
         self.assertIn("-a a -i dialog-information -A default=Открыть -- pick=default ", lines, "кривой id кнопки не отброшен")
 
+    def test_hotkeys(self):
+        """api.hotkey: занятую не отнять, ставится только после «Поставить», нажатие — своему, remove — убирает."""
+        niri = self.tmp / "niri"
+        niri.mkdir()
+        cfg = 'binds {\n    Mod+T { spawn "alacritty"; }\n}\n'
+        (niri / "config.kdl").write_text(cfg)
+        self.env_extra = {"GLIDE_NIRI_DIR": str(niri)}
+        self.scenario("hotkeys", timeout=60)
+        self.assertIn('Mod+T { spawn "alacritty"; }', (niri / "config.kdl").read_text(), "чужая клавиша тронута")
+        settings = (niri / "glide-settings.kdl").read_text()
+        self.assertNotIn("hotkey", settings, "убранная привязка осталась:\n" + settings)
+
     def test_lockwall(self):
         """Фон замка: файл, папка (случайная, не та же), «как обои» — картинка или кадр видео, сцена — без картинки."""
         walls = self.tmp / "walls"
