@@ -38,6 +38,7 @@ ColumnLayout {
     function strength(n) { var s = n.signalStrength || 0; return s > 1 ? s / 100 : s }
     function rebuild() {
         if (!dev) { nets = []; netsSig = ""; return }
+        if (typing) return
         var l = dev.networks.values.filter(n => n.name)
         l.sort((a, b) => (b.connected - a.connected) || (b.known - a.known) || (strength(b) - strength(a)))
         l = l.slice(0, 10)
@@ -51,11 +52,15 @@ ColumnLayout {
         onTriggered: wf.rebuild()
     }
     onDevChanged: rebuild()
+    onTypingChanged: if (!typing) rebuild()
 
     readonly property var selNet: {
         for (var n of nets) if (n.name === selected) return n
         return null
     }
+    // пока вводят пароль, список не трогаем: смена порядка (сила сигнала скачет) пересоздала бы
+    // делегаты, поле пароля пропало бы вместе с фокусом, и набранное уходило бы в поиск панели
+    readonly property bool typing: !!selNet && needsPassword(selNet)
     function isOpen(n) { return n.security === WifiSecurityType.Open || n.security === WifiSecurityType.Owe }
     function isEnterprise(n) {
         return n.security === WifiSecurityType.Wpa2Eap || n.security === WifiSecurityType.WpaEap
