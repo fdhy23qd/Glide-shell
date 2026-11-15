@@ -85,7 +85,8 @@ class Scenarios(unittest.TestCase):
     def test_api(self):
         """API плагинов: права — только по разрешениям, обходов через api нет (launchApp, niri, handoff, exec, files)."""
         self.permissions({"t": {"api": 2, "granted": ["windows"], "denied": []},
-                          "e": {"api": 2, "granted": ["exec"], "denied": []}})
+                          "e": {"api": 2, "granted": ["exec"], "denied": []},
+                          "ph": {"api": 2, "granted": ["phone"], "denied": []}})
         self.scenario("api")
         self.assertFalse(Path("/tmp/glide-qmltest-pwned").exists())
         actions = [l for l in self.niri_log.read_text().splitlines() if l.startswith("msg action")]
@@ -193,6 +194,88 @@ else:
         panel = json.loads((self.cfg / "glide-shell" / "config.json").read_text())["panel"]
         self.assertEqual({k: panel.get(k) for k in ("lockBackground", "lockDim", "lockBlur", "lockImage")},
                          {"lockBackground": "image", "lockDim": 0.25, "lockBlur": 0, "lockImage": "~/x"})
+
+    def test_phones(self):
+        """Телефоны: Glide Link и KDE Connect одним списком, главный, помощник действия, флаги настроек."""
+        self.scenario("phones")
+
+    def fake_glide_link(self, answers):
+        """Поддельный демон Glide Link на $XDG_RUNTIME_DIR/glide-link.sock: answers(req) -> dict ответа.
+        Возвращает (список запросов, функция остановки)."""
+        import socketserver
+        import threading
+        got = []
+
+        class Handler(socketserver.StreamRequestHandler):
+            def handle(self):
+                req = json.loads(self.rfile.readline())
+                got.append(req)
+                self.wfile.write((json.dumps({"done": True, "ok": True, **answers(req)}) + "\n").encode())
+
+        srv = socketserver.ThreadingUnixStreamServer(str(self.run_dir / "glide-link.sock"), Handler)
+        srv.daemon_threads = True
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+
+        def stop():
+            srv.shutdown()
+            srv.server_close()
+        return got, stop
+
+    def test_phone_sms(self):
+        """SMS через Glide Link: SmsView → glide-link.py → поддельный демон; отправка доходит до демона."""
+        conv = [{"thread_id": "7", "address": "+79001234567", "contact": "Мама", "snippet": "Позвони", "date": 1, "read": False},
+                {"thread_id": "8", "address": "900", "contact": None, "snippet": "Код 1234", "date": 2, "read": True}]
+        msgs = [{"id": "1", "address": "+79001234567", "body": "Позвони", "date": 1, "outgoing": False},
+                {"id": "2", "address": "+79001234567", "body": "Ок", "date": 2, "outgoing": True}]
+        got, stop = self.fake_glide_link(lambda req: {"conversations": conv} if req["cmd"] == "sms-list"
+                                         else {"messages": msgs} if req["cmd"] == "sms-read"
+                                         else {"result": {"ok": True}} if req["cmd"] == "sms-send" else {})
+        try:
+            self.scenario("phone_sms")
+        finally:
+            stop()
+        sent = [r for r in got if r["cmd"] == "sms-send"]
+        self.assertEqual(sent, [{"cmd": "sms-send", "device": "p1", "address": "+79001234567", "text": "Уже еду"}])
+        self.assertEqual(sum(1 for r in got if r["cmd"] == "sms-read"), 2, "по sms_rev — одно перечитывание, без цикла")
+
+    def test_phone_files(self):
+        """Файлы телефона через Glide Link: хранилища → папка → скачать и открыть → вверх; нет доступа."""
+        root = "/storage/emulated/0"
+        tree = {"": [{"name": "Внутренняя память", "path": root, "dir": True, "size": 0, "mtime": 0}],
+                root: [{"name": "DCIM", "path": root + "/DCIM", "dir": True, "size": 0, "mtime": 0},
+                       {"name": "a.txt", "path": root + "/a.txt", "dir": False, "size": 3, "mtime": 0}]}
+
+        def answer(req):
+            if req["cmd"] == "files-list":
+                return {"path": req["path"], "entries": tree[req["path"]]} if req["path"] in tree else {"error": "no_permission"}
+            if req["cmd"] == "files-get":
+                return {"path": str(self.tmp / "a.txt")}
+            return {}
+        got, stop = self.fake_glide_link(answer)
+        try:
+            self.scenario("phone_files")
+        finally:
+            stop()
+        self.assertIn({"cmd": "files-get", "device": "p1", "path": root + "/a.txt"}, got, "скачивание не запрошено")
+
+    def test_phone_commands(self):
+        """«Телефон» + Glide Link: команды ПК для кнопок телефона — список и добавление (пробелы обрезаются)."""
+        cmds = [{"key": "k1", "name": "Заблокировать", "command": "loginctl lock-session"}]
+
+        def answer(req):
+            if req["cmd"] == "commands-add":
+                cmds.append({"key": "k2", "name": req["name"], "command": req["command"]})
+                return {"key": "k2"}
+            if req["cmd"] == "commands":
+                return {"commands": list(cmds)}
+            return {}
+        got, stop = self.fake_glide_link(answer)
+        try:
+            self.scenario("phone_commands")
+        finally:
+            stop()
+        adds = [r for r in got if r["cmd"] == "commands-add"]
+        self.assertEqual(adds, [{"cmd": "commands-add", "name": "Сон", "command": "systemctl suspend"}])
 
     def test_windows(self):
         """События окон плагинам: открыто, изменилось, закрыто, фокус — только с разрешением «windows»."""

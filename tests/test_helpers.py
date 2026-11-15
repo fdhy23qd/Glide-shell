@@ -277,6 +277,7 @@ class Procs(unittest.TestCase):
         self.assertEqual(n("wl-paste --watch python3 /x/plugins/clipboard/clip.py store")[0], "История буфера обмена")
         self.assertEqual(n("python3 /home/u/.config/glide-shell/plugins/devhub/d.py"), ("Плагин devhub", "devhub"))
         self.assertEqual(n("/usr/bin/qs -c glide-shell")[0], "Оболочка")
+        self.assertEqual(n("python3 -I /x/tools/glide-link.py watch")[0], "Glide Link (телефон)")
         self.assertEqual(n("/usr/bin/something --flag")[0], "something")
 
     def test_kill_refuses_foreign(self):
@@ -284,6 +285,116 @@ class Procs(unittest.TestCase):
         self.m.main_pid = lambda: (111, 0)
         self.assertFalse(self.m.kill(111)["ok"])          # саму оболочку — нет
         self.assertFalse(self.m.kill(os.getpid())["ok"])  # не из группы службы — нет
+
+
+# ---------------------------------------------------------------- Glide Link (телефон)
+class GlideLink(Sandbox):
+    """tools/glide-link.py против поддельного демона на unix-сокете: формат устройств, живые обновления, команды."""
+
+    def setUp(self):
+        super().setUp()
+        import socketserver
+        import threading
+        self.run_dir = self.tmp / "run"
+        self.run_dir.mkdir()
+        self.env["XDG_RUNTIME_DIR"] = str(self.run_dir)
+        self.requests = []
+        self.push = threading.Event()   # watch: послать второе состояние
+        dev = {"id": "p1", "name": "Pixel", "trusted": True, "state": "connected", "via": "relay",
+               "battery": {"level": 40, "charging": False}, "capabilities": ["core.blob", "share", "screen"],
+               "streams": {"screen_in": False}}
+        stranger = {"id": "x", "name": "Чужой", "trusted": False, "state": None, "capabilities": [], "address": "10.0.0.9"}
+        pairing = [{"id": "x", "name": "Чужой", "code": "123456", "key_changed": False}]
+        test = self
+
+        class Handler(socketserver.StreamRequestHandler):
+            def handle(self):
+                req = json.loads(self.rfile.readline())
+                test.requests.append(req)
+                if req["cmd"] == "watch":
+                    self.wfile.write((json.dumps({"devices": [dev, stranger], "pairing": pairing,
+                                                  "me": {"id": "me", "name": "ПК", "relay": True}}) + "\n").encode())
+                    self.wfile.flush()
+                    test.push.wait(5)
+                    self.wfile.write((json.dumps({"devices": [dict(dev, battery={"level": 39, "charging": True})]}) + "\n").encode())
+                    self.wfile.flush()
+                    self.rfile.read()   # до отключения клиента
+                    return
+                reply = {"done": True, "ok": True}
+                if req["cmd"] == "status":
+                    reply["devices"] = [dev, stranger]
+                self.wfile.write((json.dumps(reply) + "\n").encode())
+
+        self.server = socketserver.ThreadingUnixStreamServer(str(self.run_dir / "glide-link.sock"), Handler)
+        self.server.daemon_threads = True
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def tearDown(self):
+        self.push.set()
+        self.server.shutdown()
+        self.server.server_close()
+        super().tearDown()
+
+    def test_watch(self):
+        p = subprocess.Popen([sys.executable, "-I", str(TOOLS / "glide-link.py"), "watch"], env=self.env,
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        try:
+            st = json.loads(p.stdout.readline())
+            first = st["devices"]
+            self.assertEqual([d["id"] for d in first], ["p1"], "несопряжённые не показываются")
+            self.assertEqual(st["discovered"], [{"id": "x", "name": "Чужой", "address": "10.0.0.9"}], "найденные — отдельно")
+            self.assertEqual(st["pairing"], [{"id": "x", "name": "Чужой", "code": "123456", "keyChanged": False}])
+            self.assertEqual(st["me"]["name"], "ПК")
+            d = first[0]
+            self.assertEqual((d["backend"], d["reachable"], d["battery"], d["charging"]), ("glidelink", True, 40, False))
+            self.assertEqual(d["plugins"], ["share", "screen"], "служебные core.* — не плагины")
+            self.assertEqual(d["network"], "через интернет")
+            self.push.set()
+            second = json.loads(p.stdout.readline())["devices"]
+            self.assertEqual((second[0]["battery"], second[0]["charging"]), (39, True))
+            p.stdin.close()   # оболочка закрыла stdin — помощник выходит
+            self.assertEqual(p.wait(5), 0)
+        finally:
+            p.kill()
+            p.stdout.close()
+
+    def test_doctor(self):
+        """glide-shell doctor: демон отвечает — ок; нет ни сокета, ни службы — пропуск; служба есть, демона нет — предупреждение."""
+        def doctor(env):
+            r = self.run_py(TOOLS / "glide-doctor.py", "--json", "--only", "phone", env=env)
+            return json.loads(r.stdout)[0]["status"]
+        self.assertEqual(doctor({}), "ok")
+        empty = self.tmp / "empty"
+        empty.mkdir()
+        self.shim("systemctl", "#!/bin/sh\nexit 1\n")
+        self.assertEqual(doctor({"XDG_RUNTIME_DIR": str(empty)}), "skip")
+        self.shim("systemctl", "#!/bin/sh\nexit 0\n")
+        self.assertEqual(doctor({"XDG_RUNTIME_DIR": str(empty)}), "warn")
+
+    def test_network_text(self):
+        """Строка сети в карточке: мобильная сеть и полоски (отчёт о связи) + «через интернет» для relay."""
+        m = load_module("glide_link_helper", TOOLS / "glide-link.py")
+        self.assertEqual(m.network({"battery": {"network": "LTE", "signal": 3}, "via": "relay"}), "LTE ●●●○ · через интернет")
+        self.assertEqual(m.network({"battery": {"network": "5G"}, "via": "lan"}), "5G")
+        self.assertEqual(m.network({"battery": {"network": "3G", "signal": 9}}), "3G ●●●●", "сигнал за пределами 0–4 — не падать")
+        self.assertEqual(m.network({"via": "lan"}), "")
+
+    def test_watch_without_daemon(self):
+        r = self.run_py(TOOLS / "glide-link.py", "watch", env={"XDG_RUNTIME_DIR": str(self.tmp)})
+        self.assertEqual(r.returncode, 1)
+
+    def test_act(self):
+        tool = TOOLS / "glide-link.py"
+        self.assertEqual(self.run_py(tool, "act", "p1", "text", "https://glidehub.ru").returncode, 0)
+        self.assertEqual(self.run_py(tool, "act", "p1", "text", "привет, мир").returncode, 0)
+        self.assertEqual(self.run_py(tool, "act", "p1", "screen-stop").returncode, 0)
+        self.assertEqual(self.run_py(tool, "act", "auto", "ping").returncode, 0)
+        self.assertEqual(self.run_py(tool, "act", "p1", "чтото").returncode, 2)
+        sent = [r for r in self.requests if r["cmd"] != "status"]
+        self.assertEqual(sent[0], {"cmd": "share-url", "url": "https://glidehub.ru", "device": "p1"})
+        self.assertEqual(sent[1], {"cmd": "share-text", "text": "привет, мир", "device": "p1"})
+        self.assertEqual(sent[2], {"cmd": "stop-streams", "kind": "screen", "device": "p1"})
+        self.assertEqual(sent[3], {"cmd": "ping", "device": "p1"}, "auto — первое устройство на связи")
 
 
 # ---------------------------------------------------------------- обои и виджеты

@@ -66,7 +66,7 @@ clipboard (needs `grim` and `tesseract` with the `rus`/`eng` data).
   whole screen, an area or a single window),
   control centre (Wi-Fi, Bluetooth, sound, per-app mixer, brightness, power profiles, night light), today
   (calendar with Russian public holidays, weather from Open-Meteo), media, clipboard history with images,
-  notifications, phone (KDE Connect), removable drives (mount on insert, “Open / Eject”), battery health, recent files, task manager, network and developer tools, text tools, an AI chat (Claude)
+  notifications, phone (Glide Link or KDE Connect; with Glide Link: pairing, SMS, phone files, PC commands for the phone, the phone's screen and audio on the PC and back, phone players as MPRIS, optionally PC notifications on the phone), removable drives (mount on insert, “Open / Eject”), battery health, recent files, task manager, network and developer tools, text tools, an AI chat (Claude)
   and an app launcher. Search across all of them with Ctrl+K or by just typing; the search also finds files
   in your home folder (own lightweight index) and offers a web search as the last result. It answers right in the
   list: math (“2+2*3”, “sqrt(2)”), unit conversion (“5 km to mi”, “100 f to c”) and emoji (“:fire”) — Enter copies;
@@ -82,7 +82,7 @@ clipboard (needs `grim` and `tesseract` with the `rus`/`eng` data).
   and history that survives restarts. Privacy: show everything, only the title or only the app; while the screen
   is recorded or shared, notifications hide their text, and windows of chosen apps are blacked out by niri.
 - **Automation:** "when → if → do" rules in Settings → Automation. Triggers: an app opened, closed or focused, a time
-  and days, phone connected or disconnected (KDE Connect), charger, battery below N%, lock and unlock, screen
+  and days, phone connected or disconnected (Glide Link or KDE Connect), charger, battery below N%, lock and unlock, screen
   recording or sharing, VPN, shell start. Conditions: time of day, on AC or battery. Actions: do not disturb, launch
   or close an app, stay awake, night light, volume, mute, a notification, an island flash, a command, a niri action,
   wait. Rules that keep triggering each other are paused.

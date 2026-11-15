@@ -309,10 +309,18 @@ Settings → Plugins. Bindings update by themselves. `api.setSetting(key, value)
 | `api.weather` | `data.now`, `data.days`, `temp(t)`, `icon(code, day)`, `describe(code)` |
 | `api.notifs` | Notification history and "do not disturb" (`notifications` permission) |
 | `api.recorder` | Screen recording (`system` permission) |
-| `api.kdeconnect` | KDE Connect phones (`phone` permission) |
+| `api.kdeconnect` | Glide Link and KDE Connect phones (`phone` permission), see below |
 | `api.awake`, `api.powerTimer`, `api.appCounts` | See the names |
 
 Without the permission, `niri`, `notifs`, `recorder` and `kdeconnect` are `null`, so check: `api.niri ? api.niri.windows : {}`.
+
+`api.kdeconnect` (the name dates from when phones meant KDE Connect only): `devices` is `[{id, name, type, reachable,
+plugins, battery, charging, network, backend}]` with `backend` `"glidelink"` or `"kdeconnect"`; Glide Link devices
+also have `streams: {screen_in, screen_out, audio_in, audio_out}`. `phone` is the main device (first reachable,
+Glide Link first). `act(d, action, text)`: shared — `ping`, `ring`, `clipboard`, `text`, `files`; KDE Connect —
+`browse`, `sms`; Glide Link — `screen`, `screen-stop`, `audio`, `audio-stop`, `screen-share`, `audio-share` (the list
+is `actions`). `has(d, plugin)`, `isLink(d)`, `streaming(d, "screen_in")`, `glyph(d)`, `batteryGlyph(d)`. Pairing,
+SMS, phone files and raw daemon commands are not available to plugins — only to the built-in "Phone" plugin.
 
 **Global keys** (since 2.12, no permission — the person confirms each one). `api.hotkey.request(name, key, title,
 cb(ok, reason))` — the key in niri notation (`Mod+Shift+W`, `Ctrl+Alt+F5`; without a modifier only `F1…F24` and

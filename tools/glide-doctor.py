@@ -339,7 +339,35 @@ def c_disk():
     return res("ok", "Место", f"кэш {mb(c)}, данные {mb(s)}")
 
 
-CHECKS = {"deps": c_deps, "optional": c_optional, "service": c_service, "instances": c_instances, "orphans": c_orphans,
+def c_phone():
+    """Glide Link (телефон): демон отвечает на управляющем сокете. Не установлен или выключен — не беда."""
+    try:
+        panel = json.loads((SHELL_CFG / "config.json").read_text()).get("panel", {})
+    except (OSError, ValueError):
+        panel = {}
+    if panel.get("glidelink") is False:
+        return res("skip", "Glide Link выключен в настройках")
+    sock = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/glide-link-{os.getuid()}") / "glide-link.sock"
+    if sock.exists():
+        import socket as _s
+        try:
+            with _s.socket(_s.AF_UNIX, _s.SOCK_STREAM) as c:
+                c.settimeout(3)
+                c.connect(str(sock))
+                c.sendall(b'{"cmd": "status"}\n')
+                st = json.loads(c.makefile().readline())
+            n = sum(1 for d in st.get("devices", []) if d.get("trusted"))
+            return res("ok", "Glide Link: демон работает", f"сопряжено телефонов: {n}")
+        except (OSError, ValueError):
+            pass
+    code, _ = run(["systemctl", "--user", "cat", "glide-link"])
+    if code != 0:
+        return res("skip", "Glide Link не установлен (по желанию)")
+    return res("warn", "Glide Link: демон не отвечает", "телефон через Glide Link не работает",
+               "systemctl --user enable --now glide-link; почему упал — journalctl --user -u glide-link")
+
+
+CHECKS = {"deps": c_deps, "optional": c_optional, "phone": c_phone, "service": c_service, "instances": c_instances, "orphans": c_orphans,
           "install": c_install, "niri": c_niri, "files": c_files, "config": c_config, "journal": c_journal, "disk": c_disk}
 
 

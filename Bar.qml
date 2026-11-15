@@ -545,8 +545,8 @@ PanelWindow {
         id: part_phone
         Chip {   // телефон через KDE Connect: заряд, пока на связи; клик — категория «Телефон»
             visible: want
-            readonly property var ph: KdeConnect.phone
-            want: KdeConnect.available && !!ph && ph.reachable && Prefs.barShows("phone")
+            readonly property var ph: Phones.phone
+            want: Phones.available && !!ph && ph.reachable && Prefs.barShows("phone")
             glyph: bar.nf(0xF011C)
             tipKey: "phone"; onHotChanged: bar.tipHover(this)
             label: ph && ph.battery !== undefined ? ph.battery + "%" : ""
@@ -1133,13 +1133,18 @@ PanelWindow {
         id: phoneTip
         Column {
             spacing: 3
-            readonly property var ph: KdeConnect.phone
+            readonly property var ph: Phones.phone
             TipTitle { text: parent.ph ? parent.ph.name : Tr.t("Телефон") }
             TipRow {
                 name: Tr.t("Заряд")
                 value: parent.ph && parent.ph.battery !== undefined ? parent.ph.battery + "%" + (parent.ph.charging ? Tr.t(" · заряжается") : "") : "—"
             }
-            TipHint { text: Tr.t("Щелчок — файлы, буфер, звонок телефону") }
+            TipRow {
+                name: Tr.t("Связь")
+                value: !parent.ph ? "—" : (parent.ph.backend === "glidelink" ? "Glide Link" : "KDE Connect")
+                       + (parent.ph.network ? " · " + parent.ph.network : "")
+            }
+            TipHint { text: Tr.t("Щелчок — файлы, SMS, буфер, звонок телефону") }
         }
     }
     Component {

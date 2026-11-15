@@ -23,12 +23,14 @@ ShellRoot {
     ApiScope { id: win; owner: "t"; manifest: ({ api: 2, permissions: ["windows"] }) }
     ApiScope { id: ex; owner: "e"; manifest: ({ api: 2, permissions: ["exec"] }) }
     ApiScope { id: ai; owner: "ai"; manifest: ({ api: 1, trusted: true }) }
+    ApiScope { id: phn; owner: "ph"; manifest: ({ api: 2, permissions: ["phone"] }) }
 
     Component.onCompleted: {
         Core.root = root
         Permissions.register(win, "t", "t", { api: 2, permissions: ["windows"] })
         Permissions.register(ex, "e", "e", { api: 2, permissions: ["exec"] })
         Permissions.register(ai, "ai", "ai", { api: 1, trusted: true })
+        Permissions.register(phn, "ph", "ph", { api: 2, permissions: ["phone"] })
 
         t.then(300, () => {
             t.ok("права по реестру", win.can("windows") && !win.can("exec") && ex.can("exec") && !ex.can("windows") && ai.can("exec"))
@@ -69,6 +71,13 @@ ShellRoot {
                 win.files.read("note.txt", (txt) => t.ok("files.read", txt === "текст", txt))
             })
             win.files.write("../наружу.txt", "x", (ok) => t.ok("files: путь наружу — отказ", ok === false))
+            // телефон: без «Телефона» — null; с ним — обёртка без request() и без сопряжения (v2.16)
+            t.ok("kdeconnect без разрешения — null", win.kdeconnect === null)
+            var k = phn.kdeconnect
+            t.ok("kdeconnect с разрешением — есть", !!k && Array.isArray(k.devices))
+            t.ok("нет произвольных команд демону", !!k && k.request === undefined && k.connectTo === undefined)
+            t.ok("сопряжение и «забыть» плагину недоступны", !!k && k.actions.indexOf("unpair") < 0 && k.actions.indexOf("accept") < 0
+                 && k.actions.indexOf("upload") < 0)
         })
         t.then(1500, () => t.done())   // что дошло до niri — проверяет test_qml.py по журналу заглушки
     }

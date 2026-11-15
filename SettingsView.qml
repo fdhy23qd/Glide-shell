@@ -258,7 +258,7 @@ ColumnLayout {
         cpu: { glyph: 0xF0EE0, label: Tr.t("Процессор") }, mem: { glyph: 0xF035B, label: Tr.t("Память") },
         net: { glyph: 0xF04E2, label: Tr.t("Скорость сети"), hint: Tr.t("загрузка и отдача, щелчок — сетевые инструменты") },
         clipboard: { glyph: 0xF014C, label: Tr.t("Буфер обмена") }, notifications: { glyph: 0xF009A, label: Tr.t("Уведомления") },
-        battery: { glyph: 0xF0079, label: Tr.t("Батарея") }, phone: { glyph: 0xF011C, label: Tr.t("Телефон (KDE Connect)") },
+        battery: { glyph: 0xF0079, label: Tr.t("Батарея") }, phone: { glyph: 0xF011C, label: Tr.t("Телефон") },
         vpn: { glyph: 0xF0565, label: Tr.t("VPN (когда включён)") }, awake: { glyph: 0xF0176, label: Tr.t("Значок «не засыпать»") },
         control: { glyph: 0xF062E, label: Tr.t("Центр управления") }, tray: { glyph: 0xF01D8, label: Tr.t("Трей") },
         volume: { glyph: 0xF057E, label: Tr.t("Громкость"), hint: Tr.t("колесо — громче/тише, щелчок — без звука") },
@@ -1128,6 +1128,21 @@ ColumnLayout {
                       { label: Tr.t("сильно"), value: 3500 }, { label: Tr.t("очень сильно"), value: 2700 }]
             current: Prefs.nightTemp
             onPicked: (v) => Prefs.set("nightTemp", v)
+        }
+        ToggleRow {
+            icon: String.fromCodePoint(0xF011C)
+            label: Tr.t("Glide Link (телефон)")
+            hint: Prefs.glidelink ? Tr.t("Телефон через Glide Link: заряд, файлы, буфер, экран и звук телефона на ПК") : Tr.t("Выключено")
+            checked: Prefs.glidelink
+            onToggled: Prefs.set("glidelink", !Prefs.glidelink)
+        }
+        ToggleRow {
+            visible: Prefs.glidelink
+            icon: String.fromCodePoint(0xF009A)
+            label: Tr.t("Уведомления ПК на телефоне")
+            hint: Prefs.phoneNotifs ? Tr.t("Новые уведомления ПК приходят на телефон (кроме «не беспокоить» и уведомлений самого телефона)") : Tr.t("Выключено")
+            checked: Prefs.phoneNotifs
+            onToggled: Prefs.set("phoneNotifs", !Prefs.phoneNotifs)
         }
         ToggleRow {
             icon: String.fromCodePoint(0xF011C)

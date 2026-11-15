@@ -549,7 +549,7 @@ ShellRoot {
         readonly property var notifs: Notifs                            // уведомления: list, dnd, setDnd, remove…
         readonly property var weather: Weather                          // погода: data, ok, refresh, temp, icon, describe
         readonly property var recorder: Recorder                        // запись экрана: start, stop, recording, elapsed
-        readonly property var kdeconnect: KdeConnect                    // телефон: devices, phone, act(d, действие)
+        readonly property var kdeconnect: Phones                        // телефон (Glide Link и KDE Connect): devices, phone, act(d, действие)
         readonly property var theme: Theme                              // цвета, r(n) — скругление, fs(n) — шрифт
         function setPref(key, value) { Prefs.set(key, value) }          // записать настройку панели
         function setAwake(on) { root.setAwake(on) }
@@ -1076,7 +1076,7 @@ ShellRoot {
         Core.clipwatch = clipwatch
         Core.wallpaper = wallpaper
         Core.hotkeys = hotkeys
-        console.log("Glide Shell v2.14 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v2.16 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

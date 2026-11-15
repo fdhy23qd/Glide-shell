@@ -30,6 +30,7 @@ NAMES = [
     (r"wl-paste --watch", "История буфера обмена"),
     (r"gdbus monitor --system --dest org.freedesktop.login1", "logind: сон и блокировка"),
     (r"glide-kdeconnect\.py", "KDE Connect"),
+    (r"glide-link\.py", "Glide Link (телефон)"),
     (r"LauncherEntry", "Значки и прогресс в доке"),
     (r"glide-privacy\.py", "Камера (кто её использует)"),
     (r"glide-bt-agent\.py", "Агент Bluetooth"),

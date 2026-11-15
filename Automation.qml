@@ -5,7 +5,7 @@ import Quickshell.Services.UPower
 
 // Автоматизация: правила «когда → (если) → сделать» из Prefs.automations (config.json — попадают в резервную копию).
 // Правило: {id, name, on, when: {type, app, at, days, percent}, only: {from, to, power}, then: [{type, …}]}.
-// События — из того, что оболочка и так знает (окна niri, KDE Connect, UPower, замок, запись/демонстрация, VPN, часы);
+// События — из того, что оболочка и так знает (окна niri, телефон, UPower, замок, запись/демонстрация, VPN, часы);
 // своих процессов и опроса нет, кроме таймера раз в минуту для правил «в заданное время».
 // Защита от зацикливания: правило — не чаще раза в 2 с; одно правило больше 6 раз за минуту или все больше 20 раз
 // за 10 с — пауза до перезапуска
@@ -215,9 +215,9 @@ Item {
     property bool phoneSeen: false
     property bool phoneWas: false
     Connections {
-        target: KdeConnect
+        target: Phones
         function onDevicesChanged() {
-            var on = KdeConnect.devices.some(d => d.reachable)
+            var on = Phones.devices.some(d => d.reachable)
             if (auto.phoneSeen && on !== auto.phoneWas) auto.emit(on ? "phoneOn" : "phoneOff", {})
             auto.phoneSeen = true
             auto.phoneWas = on

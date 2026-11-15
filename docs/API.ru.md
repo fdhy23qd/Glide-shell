@@ -308,10 +308,19 @@ onClicked: api.storage.set("clicks", clicks + 1)
 | `api.weather` | `data.now`, `data.days`, `temp(t)`, `icon(code, day)`, `describe(code)` |
 | `api.notifs` | История уведомлений и «не беспокоить» (разрешение `notifications`) |
 | `api.recorder` | Запись экрана (разрешение `system`) |
-| `api.kdeconnect` | Телефоны KDE Connect (разрешение `phone`) |
+| `api.kdeconnect` | Телефоны Glide Link и KDE Connect (разрешение `phone`), см. ниже |
 | `api.awake`, `api.powerTimer`, `api.appCounts` | Понятно по названию |
 
 Без разрешения `niri`, `notifs`, `recorder` и `kdeconnect` равны `null` — проверяй: `api.niri ? api.niri.windows : {}`.
+
+`api.kdeconnect` (имя осталось с тех пор, когда телефон был только через KDE Connect): `devices` — `[{id, name, type,
+reachable, plugins, battery, charging, network, backend}]`, где `backend` — `"glidelink"` или `"kdeconnect"`; у
+Glide Link ещё `streams: {screen_in, screen_out, audio_in, audio_out}`. `phone` — главное устройство (первое на
+связи: сначала Glide Link). `act(d, действие, текст)`: общие — `ping`, `ring`, `clipboard`, `text`, `files`;
+KDE Connect — `browse`, `sms`; Glide Link — `screen`, `screen-stop`, `audio`, `audio-stop`, `screen-share`,
+`audio-share` (список — `actions`). `has(d, плагин)`, `isLink(d)`, `streaming(d, "screen_in")`, `glyph(d)`,
+`batteryGlyph(d)`. Сопряжения, SMS, файлов телефона и произвольных команд демону у плагинов нет — это только
+встроенный плагин «Телефон».
 
 **Глобальные клавиши** (с 2.12, без разрешения — каждую подтверждает человек). `api.hotkey.request(имя, клавиша,
 подпись, cb(ok, причина))` — клавиша в записи niri (`Mod+Shift+W`, `Ctrl+Alt+F5`; без модификатора — только `F1…F24`

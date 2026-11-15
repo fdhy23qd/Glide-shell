@@ -18,7 +18,7 @@ Singleton {
     property var data: { try { return JSON.parse(cachedRaw).panel || {} } catch (e) { return {} } }
     signal saved()
 
-    // «тёплый» старт: фоновые помощники на Python (погода, KDE Connect, камера, агент Bluetooth) запускаются
+    // «тёплый» старт: фоновые помощники на Python (погода, телефон, камера, агент Bluetooth) запускаются
     // через несколько секунд — пока оболочка и бар грузятся, они не толкаются с ними за диск
     property bool warm: false
     Timer { running: true; interval: 6000; onTriggered: prefs.warm = true }
@@ -154,7 +154,9 @@ Singleton {
     readonly property string recOutput: typeof data.recOutput === "string" ? data.recOutput : ""   // монитор записи; "" — где фокус
     readonly property var privacyApps: Array.isArray(data.privacyApps) ? data.privacyApps : []   // скрыты на записи (niri)
 
-    // ---- KDE Connect: телефон в панели и баре ----
+    // ---- телефон в панели и баре (Phones.qml): Glide Link и KDE Connect, каждый можно выключить ----
+    readonly property bool glidelink: data.glidelink !== false
+    readonly property bool phoneNotifs: data.phoneNotifs === true   // уведомления ПК → телефон (Glide Link); по умолчанию нет
     readonly property bool kdeconnect: data.kdeconnect !== false
     // ---- съёмные диски (Drives.qml, плагин drives): следить и подключать вставленное само ----
     readonly property bool drives: data.drives !== false

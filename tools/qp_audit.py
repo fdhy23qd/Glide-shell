@@ -14,7 +14,7 @@ AUDIT = [(re.compile(r"import\s+Quickshell\.Io\b"), "Quickshell.Io"), (re.compil
          (re.compile(r"\bPermissions\s*\."), "Permissions"), (re.compile(r"\bPrefs\s*\.\s*(?:set|run|reset|data)\b"), "Prefs"),
          # внутренние объекты оболочки (через import qs): ими можно выдать себе права или действовать мимо api
          (re.compile(r"\bCore\s*\.\s*root\b"), "Core.root"),
-         (re.compile(r"\b(?:Notifs|Niri|KdeConnect|Recorder|Activities|LockScreen|Updates|ArchUpdates|LauncherEntries)\s*\."), "внутренние объекты"),
+         (re.compile(r"\b(?:Notifs|Niri|Phones|KdeConnect|Recorder|Activities|LockScreen|Updates|ArchUpdates|LauncherEntries)\s*\."), "внутренние объекты"),
          (re.compile(r"\bApiScope\b"), "ApiScope"), (re.compile(r"\bQt\s*\.\s*createComponent\b"), "createComponent"), (re.compile(r"[\"']data:"), "data: URL")]
 
 

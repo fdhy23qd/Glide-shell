@@ -73,7 +73,21 @@ QtObject {
     readonly property var notifs: can("notifications") ? Notifs : null
     readonly property var weather: Weather
     readonly property var recorder: can("system") ? Recorder : null
-    readonly property var kdeconnect: can("phone") ? KdeConnect : null
+    readonly property var kdeconnect: can("phone") ? phoneApi : null
+    // Телефоны для плагинов — без Phones.request() и сопряжения: иначе плагин с «Телефоном» мог бы слать SMS,
+    // удалять файлы телефона или подложить команду ПК под кнопку на телефоне. Только просмотр и обычные действия.
+    readonly property QtObject phoneApi: QtObject {
+        readonly property var devices: Phones.devices
+        readonly property var phone: Phones.phone
+        readonly property var actions: ["ping", "ring", "clipboard", "text", "files", "browse", "sms",
+                                        "screen", "screen-stop", "audio", "audio-stop", "screen-share", "audio-share"]
+        function act(d, action, text) { if (actions.indexOf(action) >= 0) Phones.act(d, action, text) }
+        function has(d, plugin) { return Phones.has(d, plugin) }
+        function isLink(d) { return Phones.isLink(d) }
+        function streaming(d, what) { return Phones.streaming(d, what) }
+        function glyph(d) { return Phones.glyph(d) }
+        function batteryGlyph(d) { return Phones.batteryGlyph(d) }
+    }
     readonly property var theme: Theme
     readonly property string iconFont: Prefs.iconFont
     // защиту плагинов паролем плагин снять не может (иначе выключил бы её сам себе)
