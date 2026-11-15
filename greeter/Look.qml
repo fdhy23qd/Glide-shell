@@ -65,6 +65,11 @@ Singleton {
     readonly property bool clockBold: data.lockClockBold === true
     // анимация после пароля — та же настройка, что у замка Glide Shell (Reveal.qml)
     readonly property string unlockStyle: ["rise", "iris", "curtains", "tiles", "zoom", "island", "random"].indexOf(data.unlockStyle) >= 0 ? data.unlockStyle : "rise"
-    readonly property string background_: ["glow", "solid", "image"].indexOf(data.lockBackground) >= 0 ? data.lockBackground : "glow"
-    readonly property string image: typeof data.lockImage === "string" ? data.lockImage.trim().replace(/^~/, home) : ""
+    // фон «обои» при HTML-сцене — её кадр: ASCII-обои webpaper раз в 10 минут кладут его в ~/.config/glide-shell
+    // (здесь у greeter есть право читать). При обоях-картинке старый кадр не берём — сияние. Нет файла — тоже сияние.
+    readonly property bool sceneFrame: data.lockBackground === "wallpaper" && data.wallMode !== "image"
+    readonly property string background_: sceneFrame ? "image"
+        : ["glow", "solid", "image"].indexOf(data.lockBackground) >= 0 ? data.lockBackground : "glow"
+    readonly property string image: sceneFrame ? (home ? home + "/.config/glide-shell/greeter-scene.png" : "")
+        : typeof data.lockImage === "string" ? data.lockImage.trim().replace(/^~/, home) : ""
 }
