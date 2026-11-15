@@ -40,6 +40,7 @@ API_V2 = API_V1 | {
     "confirm", "pickFile", "saveFile", "schedule", "scheduled", "clipboard", "clipboardUpdated",   # 2.8
 }
 PERMISSIONS_OBJ_V2 = {"requested", "granted", "has", "request", "state"}
+ISLAND_V2 = {"colors", "tint", "clear", "backdrop", "clearBackdrop", "backdropOwner"}   # backdrop — с 2.19
 FILES_V2 = {"read", "write", "list", "remove"}
 PERMISSIONS_V2 = ["exec", "network", "clipboard", "notifications", "windows", "phone", "system", "messages", "island", "search"]
 STORAGE_V1 = {"get", "set", "remove", "all"}
@@ -90,6 +91,7 @@ class Contract(unittest.TestCase):
         self.assertFalse(ACTIVITY_V1 - members(block(qml, "activity")), "api.activity неполный")
         self.assertFalse(PERMISSIONS_OBJ_V2 - members(block(qml, "permissions")), "api.permissions неполный")
         self.assertFalse(FILES_V2 - members(block(qml, "files")), "api.files неполный")
+        self.assertFalse(ISLAND_V2 - members(block(qml, "island")), "api.island неполный")
         self.assertIn("readonly property int shellApi: 2", qml)
 
     def test_permission_names(self):

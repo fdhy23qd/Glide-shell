@@ -24,6 +24,7 @@ ShellRoot {
     ApiScope { id: ex; owner: "e"; manifest: ({ api: 2, permissions: ["exec"] }) }
     ApiScope { id: ai; owner: "ai"; manifest: ({ api: 1, trusted: true }) }
     ApiScope { id: phn; owner: "ph"; manifest: ({ api: 2, permissions: ["phone"] }) }
+    ApiScope { id: isl; owner: "is"; manifest: ({ api: 2, permissions: ["island"] }) }
 
     Component.onCompleted: {
         Core.root = root
@@ -31,6 +32,7 @@ ShellRoot {
         Permissions.register(ex, "e", "e", { api: 2, permissions: ["exec"] })
         Permissions.register(ai, "ai", "ai", { api: 1, trusted: true })
         Permissions.register(phn, "ph", "ph", { api: 2, permissions: ["phone"] })
+        Permissions.register(isl, "is", "is", { api: 2, permissions: ["island"] })
 
         t.then(300, () => {
             t.ok("права по реестру", win.can("windows") && !win.can("exec") && ex.can("exec") && !ex.can("windows") && ai.can("exec"))
@@ -78,6 +80,24 @@ ShellRoot {
             t.ok("нет произвольных команд демону", !!k && k.request === undefined && k.connectTo === undefined)
             t.ok("сопряжение и «забыть» плагину недоступны", !!k && k.actions.indexOf("unpair") < 0 && k.actions.indexOf("accept") < 0
                  && k.actions.indexOf("upload") < 0)
+            // фон острова картинкой (v2.19): только с «island», только локальный файл-картинка, снимает только свой
+            t.ok("backdrop без разрешения — отказ", win.island.backdrop("/tmp/w.png") === false && Core.islandBackdrop === null)
+            t.ok("backdrop: сеть — отказ", isl.island.backdrop("https://example.com/w.png") === false)
+            t.ok("backdrop: относительный путь — отказ", isl.island.backdrop("w.png") === false)
+            t.ok("backdrop: путь наружу — отказ", isl.island.backdrop("/tmp/../etc/w.png") === false)
+            t.ok("backdrop: не картинка — отказ", isl.island.backdrop("/tmp/w.txt") === false && Core.islandBackdrop === null)
+            t.ok("backdrop: файл с запросом", isl.island.backdrop("/tmp/w.png?v=1", { mode: "fill", dim: 5 }) === true)
+            var bdp = Core.islandBackdrop
+            t.ok("backdrop: разобран", !!bdp && bdp.owner === "is" && bdp.src === "file:///tmp/w.png?v=1" && bdp.mode === "fill" && bdp.dim === 0.8,
+                 JSON.stringify(bdp))
+            isl.island.backdrop("file:///tmp/w.png")
+            t.ok("backdrop: по умолчанию screen и 0.35", Core.islandBackdrop.mode === "screen" && Core.islandBackdrop.dim === 0.35
+                 && isl.island.backdropOwner === "is", JSON.stringify(Core.islandBackdrop))
+            ai.island.backdrop("/tmp/ai.jpg")
+            isl.island.clearBackdrop()
+            t.ok("чужой фон не снять", Core.islandBackdrop !== null && Core.islandBackdrop.owner === "ai")
+            ai.island.clearBackdrop()
+            t.ok("свой — снимается", Core.islandBackdrop === null)
         })
         t.then(1500, () => t.done())   // что дошло до niri — проверяет test_qml.py по журналу заглушки
     }

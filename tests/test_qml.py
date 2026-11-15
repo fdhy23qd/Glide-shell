@@ -83,10 +83,12 @@ class Scenarios(unittest.TestCase):
         return out
 
     def test_api(self):
-        """API плагинов: права — только по разрешениям, обходов через api нет (launchApp, niri, handoff, exec, files)."""
+        """API плагинов: права — только по разрешениям, обходов через api нет (launchApp, niri, handoff, exec, files,
+        фон острова — только локальная картинка и только свой снимается)."""
         self.permissions({"t": {"api": 2, "granted": ["windows"], "denied": []},
                           "e": {"api": 2, "granted": ["exec"], "denied": []},
-                          "ph": {"api": 2, "granted": ["phone"], "denied": []}})
+                          "ph": {"api": 2, "granted": ["phone"], "denied": []},
+                          "is": {"api": 2, "granted": ["island"], "denied": []}})
         self.scenario("api")
         self.assertFalse(Path("/tmp/glide-qmltest-pwned").exists())
         actions = [l for l in self.niri_log.read_text().splitlines() if l.startswith("msg action")]

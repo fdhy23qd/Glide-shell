@@ -19,6 +19,31 @@ Singleton {
         searchProviders = typeof fn === "function" ? rest.concat([{ scope: scope, owner: owner, fn: fn }]) : rest
     }
 
+    // фон острова картинкой от плагина (api.island.backdrop): {owner, src, mode, dim} или null; один на всех —
+    // побеждает последний задавший, снять может только он. Только локальный файл-картинка: без сети — остров не
+    // должен ничего тянуть из интернета (счётчики просмотров и т. п.). Путь может нести ?запрос — чтобы перечитать файл.
+    property var islandBackdrop: null
+    function setBackdrop(owner, src, opts) {
+        if (src === "" || src === null || src === undefined) {
+            if (islandBackdrop && islandBackdrop.owner === owner) islandBackdrop = null
+            return true
+        }
+        var s = String(src).trim()
+        if (s.length > 4096) return false
+        var path = s.indexOf("file://") === 0 ? s.slice(7) : s
+        var q = path.indexOf("?")
+        var bare = q >= 0 ? path.slice(0, q) : path
+        if (bare.charAt(0) !== "/" || bare.indexOf("/../") >= 0 || !/\.(png|jpe?g|webp|bmp)$/i.test(bare)) return false
+        var o = opts || {}
+        var dim = Number(o.dim)
+        islandBackdrop = {
+            owner: owner, src: "file://" + path,
+            mode: o.mode === "fill" ? "fill" : "screen",
+            dim: isNaN(dim) || o.dim === undefined || o.dim === null ? 0.35 : Math.max(0, Math.min(0.8, dim))
+        }
+        return true
+    }
+
     // цвета плагинов для острова (api.island.tint): [{owner, color}] в порядке, в каком их задали; у плагина — один
     property var islandTints: []
     function setTint(owner, c) {

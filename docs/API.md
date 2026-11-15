@@ -54,6 +54,7 @@ creates a working plugin that uses all of the API below: a panel section, a bar 
   - [Network](#network)
   - [Messages between plugins](#messages-between-plugins)
   - [Island color](#island-color)
+  - [Island background](#island-background)
   - [Search](#search)
   - [Asking, picking files, reminders, clipboard](#asking-picking-files-reminders-clipboard)
   - [Version 2 reference](#version-2-reference)
@@ -528,6 +529,30 @@ dropped. The color goes away by itself when the part that set it is destroyed, a
 permission, so set a long-lived color from the service. `api.island.colors` is what plugins have put on the island
 right now (`[{owner, color}]`).
 
+### Island background
+
+Since Glide Shell 2.19, the same permission `island`. A plugin can put a picture behind the island:
+
+```qml
+api.island.backdrop("/path/to/picture.png", { mode: "screen", dim: 0.35 })   // true: accepted
+api.island.backdrop(file + "?v=" + n)   // re-read the same file (the query only makes the address new)
+api.island.clearBackdrop()              // remove your background
+```
+
+- The picture is a **local file only**: an absolute path or a `file://` address of a `png`, `jpg`, `webp` or `bmp`.
+  Network addresses are refused, so the island never fetches anything from the internet.
+- `mode: "screen"` (default): the picture is laid out over the whole screen and the island is a window into it. It
+  shows the part of the picture that is right under it, so when the island grows for a notification or music, it
+  shows more of the same picture and nothing stretches. Pass a screenshot-like frame of the desktop to make the
+  island look cut out of the wallpaper. `mode: "fill"`: the picture is fitted into the island itself.
+- `dim` darkens the picture so the text stays readable: `0`…`0.8`, `0.35` by default.
+- Camera, microphone and screen sharing stay visible: one color tints the picture, several are drawn as the usual
+  gradient on top. The outline stays.
+- One background at a time: the most recent one wins. A plugin can only remove its own. Like the color, it goes away
+  when the part that set it is destroyed or the permission is revoked. `api.island.backdropOwner` is whose
+  background is on the island now (`""` — none).
+- A new picture replaces the old one only when it has loaded, so updating it every few seconds does not flicker.
+
 ### Search
 
 Since Glide Shell 2.5, `search` permission. A plugin adds its own results to the panel's search — an answer right in
@@ -633,6 +658,8 @@ restarts and isn't written to `permissions.json`. For the plugin it is an ordina
 | `send(to, name, data)` | `bool`: sent | — | `data`: anything `JSON.stringify` accepts. Another plugin's id needs `messages` |
 | `island.tint(color)`, `island.clear()` | `bool` / nothing | — | Permission `island`. Color: `#rgb`, `#rrggbb`, `#aarrggbb` or a name |
 | `island.colors` | list of `{owner, color}` | yes | |
+| `island.backdrop(src, opts)`, `island.clearBackdrop()` | `bool` / nothing | — | 2.19, permission `island`. Local `png`/`jpg`/`webp`/`bmp` only; `opts.mode` `"screen"` or `"fill"`, `opts.dim` 0…0.8 |
+| `island.backdropOwner` | `string` | yes | 2.19. Whose background is on the island, `""` — none |
 | `confirm(text, opts, cb)` | `bool`: asked | — | Since 2.8. `cb(ok)` once; a second question from the part — `false` |
 | `pickFile(opts, cb)`, `saveFile(name, text, opts, cb)` | `bool` | — | Since 2.8. `cb(paths, texts)` / `cb(path)`; cancelled — `null` |
 | `schedule.at(id, when, data)`, `schedule.after(id, ms, data)`, `schedule.cancel(id)`, `schedule.list()` | `bool` / list | — | Since 2.8. Signal `scheduled(id, data, late)` |
@@ -662,7 +689,7 @@ Everything else needs a permission. **Only a person grants and changes them**; a
 | `phone` | `api.kdeconnect`: phones, their notifications and commands |
 | `system` | `api.setPref`, `api.setAwake`, `api.recorder`. **Almost full access**: shell settings can do a lot |
 | `messages` | `api.send` to other plugins and messages from them. Not needed between your plugin's own parts |
-| `island` | `api.island.tint`: the island's color |
+| `island` | `api.island.tint`, `api.island.backdrop`: the island's color and background |
 | `search` | `api.search`: see what is typed into the panel's search and add your own results there |
 
 Without the permission, functions do nothing (`exec` answers `code` = -1, `http` answers `status` = 0), properties are

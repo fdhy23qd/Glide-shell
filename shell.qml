@@ -1076,7 +1076,7 @@ ShellRoot {
         Core.clipwatch = clipwatch
         Core.wallpaper = wallpaper
         Core.hotkeys = hotkeys
-        console.log("Glide Shell v2.18 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
+        console.log("Glide Shell v2.19 (search, context, profiles, settings, ai, island, bar, controls) from " + Quickshell.shellDir)
         if (Prefs.cachedRaw) applyDiscovery(Prefs.cachedRaw.trim(), false)
         discover.running = true
         stateInit.running = true

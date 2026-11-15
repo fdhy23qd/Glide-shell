@@ -38,6 +38,11 @@ PanelWindow {
     visible: p.islandShown
     anchors.top: true
     margins.top: 0   // отступ сверху — у самой фигуры (pill.y): так подъём к краю анимируется
+    // где окно на экране — для фона-картинки острова (IslandBackdrop, режим screen): окно привязано только к верху,
+    // поэтому layer-shell ставит его по центру
+    readonly property real screenW: screen ? screen.width : 0
+    readonly property real screenH: screen ? screen.height : 0
+    readonly property real originX: Math.round((screenW - width) / 2)
     implicitWidth: 440
     implicitHeight: 360   // хватает на часы + все строки в раскрытом виде
     exclusionMode: p.islandOver ? ExclusionMode.Ignore : ExclusionMode.Normal
@@ -317,6 +322,12 @@ PanelWindow {
         visible: !(iw.p.island && iw.p.panelVisible && !iw.p.blobAtCompact)
         scale: tap.pressed ? 0.96 : 1
         clip: true
+        IslandBackdrop {   // фон-картинка от плагина (api.island.backdrop): «окно» в картинку размером с экран
+            radius: pill.radius
+            screenX: iw.originX + pill.x; screenY: pill.y
+            screenW: iw.screenW; screenH: iw.screenH
+            tint: iw.p.islandColors.length === 1 ? iw.p.islandOne : "transparent"
+        }
         IslandTint { colors: iw.p.islandColors; radius: pill.radius }
         Behavior on width { enabled: Prefs.anim > 0; Spring { bounce: 0.3 } }
         Behavior on height { enabled: Prefs.anim > 0; Spring { bounce: 0.24; speed: 0.9 } }
@@ -910,6 +921,12 @@ PanelWindow {
         x: pill.x + pill.width + (iw.bubbleOn ? 8 : -height)
         color: iw.p.islandColor
         border.color: bubbleMa.containsMouse ? Theme.textFaint : iw.p.islandBorder   // наведение — обводка ярче
+        IslandBackdrop {
+            radius: bubble.radius
+            screenX: iw.originX + bubble.x; screenY: bubble.y
+            screenW: iw.screenW; screenH: iw.screenH
+            tint: iw.p.islandColors.length === 1 ? iw.p.islandOne : "transparent"
+        }
         IslandTint { colors: iw.p.islandColors; radius: bubble.radius }
         opacity: iw.bubbleOn ? 1 : 0
         scale: !iw.bubbleOn ? 0.4 : bubbleMa.pressed ? 0.88 : 1

@@ -47,6 +47,7 @@ QtObject {
         target: Permissions
         function onGrantsChanged() {
             if (api.tinted && !api.can("island")) api.island.clear()
+            if (api.backdropSet && !api.can("island")) api.island.clearBackdrop()
             if (!api.can("clipboard") && Core.clipwatch) Core.clipwatch.listen(api, false)   // забрали — не слушать
             api.permissionsUpdated()
         }
@@ -367,9 +368,10 @@ QtObject {
         function stop() { Core.setSearch(api, api.me, null) }
     }
 
-    // ---------- цвет острова (разрешение «island»): камера, микрофон и демонстрация экрана всегда впереди ----------
-    // цвет живёт, пока жива часть плагина, которая его задала: надолго — из службы (service)
+    // ---------- цвет и фон острова (разрешение «island»): камера, микрофон и демонстрация экрана всегда впереди ----------
+    // цвет и фон живут, пока жива часть плагина, которая их задала: надолго — из службы (service)
     property bool tinted: false
+    property bool backdropSet: false
     readonly property QtObject island: QtObject {
         readonly property var colors: Core.islandTints
         function tint(c) {
@@ -379,6 +381,17 @@ QtObject {
             return ok
         }
         function clear() { if (api.me && api.tinted) { Core.setTint(api.me, ""); api.tinted = false } }
+        // фон картинкой (2.19): src — абсолютный путь или file:// к png/jpg/webp/bmp (можно с ?запросом — перечитать);
+        // opts.mode: "screen" — окно в картинку размером с экран (при росте острова ничего не растягивается),
+        // "fill" — картинка по размеру острова; opts.dim — затемнение 0…0.8 (по умолчанию 0.35), чтобы текст читался
+        readonly property string backdropOwner: Core.islandBackdrop ? Core.islandBackdrop.owner : ""
+        function backdrop(src, opts) {
+            if (!api.me || !api.need("island", "api.island.backdrop")) return false
+            var ok = Core.setBackdrop(api.me, src, opts)
+            if (ok) api.backdropSet = !(src === "" || src === null || src === undefined)
+            return ok
+        }
+        function clearBackdrop() { if (api.me && api.backdropSet) { Core.setBackdrop(api.me, ""); api.backdropSet = false } }
     }
 
     // ---------- хранилище: свой JSON в ~/.local/state/glide-shell/plugin-<id>.json ----------
@@ -558,5 +571,5 @@ QtObject {
             api.message(from, name, data)
         }
     }
-    Component.onDestruction: { island.clear(); Core.setSearch(api, me, null); if (Core.confirms) Core.confirms.dropScope(api); if (Core.clipwatch) Core.clipwatch.listen(api, false); Permissions.unregister(api) }
+    Component.onDestruction: { island.clear(); island.clearBackdrop(); Core.setSearch(api, me, null); if (Core.confirms) Core.confirms.dropScope(api); if (Core.clipwatch) Core.clipwatch.listen(api, false); Permissions.unregister(api) }
 }

@@ -111,7 +111,7 @@ Glide Shell работает **службой systemd** `glide-shell.service` (�
 ```sh
 systemctl --user status glide-shell          # состояние
 systemctl --user restart glide-shell         # перезапуск
-journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.18`
+journalctl --user -u glide-shell -f          # лог; в начале — строка `Glide Shell v2.19`
 glide-shell doctor                           # проверка: что сломано и как исправить
 ```
 **Проверка** (`glide-shell doctor` или «Поведение» → «Проверить установку»): зависимости, служба (работает,

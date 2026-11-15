@@ -23,7 +23,7 @@ Singleton {
         phone:         { glyph: 0xF011C, title: Tr.t("Телефон"), hint: Tr.t("api.kdeconnect — устройства, их уведомления и команды") },
         system:        { glyph: 0xF0493, title: Tr.t("Настройки оболочки"), hint: Tr.t("api.setPref, api.setAwake, api.recorder — менять настройки, «не засыпать», запись экрана") },
         messages:      { glyph: 0xF0369, title: Tr.t("Сообщения другим плагинам"), hint: Tr.t("api.send и onMessage с другими плагинами (между своими частями — без разрешения)") },
-        island:        { glyph: 0xF0266, title: Tr.t("Цвет острова"), hint: Tr.t("api.island.tint — окрашивать остров (камера, микрофон и демонстрация экрана всегда впереди)") },
+        island:        { glyph: 0xF0266, title: Tr.t("Цвет и фон острова"), hint: Tr.t("api.island.tint и api.island.backdrop — окрашивать остров и ставить ему фон-картинку (камера, микрофон и демонстрация экрана всегда видны)") },
         search:        { glyph: 0xF0349, title: Tr.t("Поиск"), hint: Tr.t("api.search — видеть, что ты набираешь в поиске панели, и добавлять туда свои результаты") }
     })
     function title(p) { return p === "*" ? Tr.t("все разрешения (плагин старого формата)") : meta[p] ? meta[p].title : p }
