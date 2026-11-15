@@ -2196,7 +2196,7 @@ ColumnLayout {
         Text {
             visible: Prefs.lockBackground === "wallpaper" && Prefs.wallMode !== "image"
             Layout.fillWidth: true; wrapMode: Text.Wrap
-            text: Tr.t("Обои сейчас — HTML-сцена: картинки нет, на замке будет сияние")
+            text: Tr.t("Обои сейчас — HTML-сцена: на замке будет её кадр (обновляется раз в 15 с), если сцена его отдаёт, иначе — сияние")
             color: Theme.textMuted; font.pixelSize: Theme.fs(12)
         }
         TextRow {

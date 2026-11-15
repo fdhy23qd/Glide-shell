@@ -87,8 +87,8 @@ clipboard (needs `grim` and `tesseract` with the `rus`/`eng` data).
   or close an app, stay awake, night light, volume, mute, a notification, an island flash, a command, a niri action,
   wait. Rules that keep triggering each other are paused.
 - **Lock screen** (PAM): locks on `loginctl lock-session`, before sleep and when idle; shows what is playing
-  and unread notifications. Background: accent glow, solid, the desktop wallpaper, or your own picture or folder
-  (a different picture on every lock), with dimming and blur. A crash never unlocks the session.
+  and unread notifications. Background: accent glow, solid, the desktop wallpaper (for an HTML scene — its live
+  frame, if the scene exports one), or your own picture or folder (a different picture on every lock), with dimming and blur. A crash never unlocks the session.
 - **Login screen** for greetd, in the same style (`greeter/`, optional).
 - **Wallpapers:** image, folder slideshow, GIF or video (decoded in a separate process, paused under windows
   and on battery). The theme colours can follow the wallpaper.

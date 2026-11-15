@@ -25,6 +25,8 @@ Scope {
     property string mode: ""
     onModeChanged: if (mode) LockWall.next()   // из папки — новая картинка на каждую блокировку (до заслонки)
     readonly property bool locked: mode === "lock" || mode === "test"
+    // кадр HTML-сцены на фоне перечитывается, пока замок на экране; на уходе — нет (заслонка показывает тот же)
+    Binding { target: LockWall; property: "live"; value: locker.locked && !locker.unlocking && !locker.finishing }
     readonly property bool secure: sessionLock.secure
     readonly property string user: Quickshell.env("USER") || ""
 

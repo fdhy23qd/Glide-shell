@@ -2,7 +2,8 @@ import QtQuick
 import Quickshell
 
 // Фон замка (LockWall, v2.9): файл, папка — случайная и не та же при каждой блокировке, «как обои» — текущая
-// картинка рабочего стола или кадр GIF/видео, HTML-сцена — без картинки. Папка — $GLIDE_TEST_WALLS (три файла).
+// картинка рабочего стола или кадр GIF/видео, HTML-сцена (v2.17) — её кадр из webpaper, перечитывается на каждую
+// блокировку и раз в 15 с, пока замок на экране. Папка — $GLIDE_TEST_WALLS (три файла).
 ShellRoot {
     id: root
     QmlCheck { id: t }
@@ -28,9 +29,19 @@ ShellRoot {
             wall.kind = "video"; wall.current = "/w/v.mp4"
             t.ok("как обои — кадр видео", LockWall.source === "file:///w/t.png", LockWall.source)
             wall.on = false
-            t.ok("сцена — без картинки", LockWall.source === "", LockWall.source)
+            var scene = Quickshell.env("XDG_RUNTIME_DIR") + "/webpaper/scene.png"
+            t.ok("сцена — её кадр", LockWall.file === scene && LockWall.source === "file://" + scene + "?v=" + LockWall.rev, LockWall.source)
+            var r0 = LockWall.rev
+            LockWall.next()
+            t.ok("новая блокировка — свежий кадр", LockWall.rev === r0 + 1, LockWall.rev)
+            t.ok("пока замка нет — не перечитывается", !LockWall.refresh.running)
+            LockWall.live = true
+            t.ok("замок на экране — перечитывается", LockWall.refresh.running)
+            LockWall.live = false
             Prefs.data = { lockBackground: "glow", lockImage: root.dir }
-            t.ok("сияние — без картинки", LockWall.source === "")
+            LockWall.live = true
+            t.ok("сияние — без картинки и без перечитывания", LockWall.source === "" && !LockWall.refresh.running)
+            LockWall.live = false
             t.done()
         })
     }

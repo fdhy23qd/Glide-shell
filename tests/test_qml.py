@@ -320,7 +320,7 @@ else:
         self.assertIn("sudo pacman -S grim tesseract", log.read_text())
 
     def test_lockwall(self):
-        """Фон замка: файл, папка (случайная, не та же), «как обои» — картинка или кадр видео, сцена — без картинки."""
+        """Фон замка: файл, папка (случайная, не та же), «как обои» — картинка, кадр видео или кадр HTML-сцены."""
         walls = self.tmp / "walls"
         walls.mkdir()
         for n in ("one.png", "two.JPG", "three.webp", "notes.txt"):

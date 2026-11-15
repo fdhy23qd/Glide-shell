@@ -1282,7 +1282,7 @@
  " · недавний": " · recent",
  "сияние": "glow",
  "обои": "wallpaper",
- "Обои сейчас — HTML-сцена: картинки нет, на замке будет сияние": "The wallpaper is an HTML scene right now: there is no picture, the lock screen will use the glow",
+ "Обои сейчас — HTML-сцена: на замке будет её кадр (обновляется раз в 15 с), если сцена его отдаёт, иначе — сияние": "The wallpaper is an HTML scene right now: the lock screen will show its frame (refreshed every 15 s) if the scene provides one, otherwise the glow",
  "Картинка или папка": "Picture or folder",
  "~/Изображения/фон.jpg → Enter": "~/Pictures/background.jpg → Enter",
  "Выбрать файл…": "Choose file…",
